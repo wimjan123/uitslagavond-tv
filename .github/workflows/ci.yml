@@ -1,0 +1,102 @@
+name: CI
+
+# Zuinig met Actions-minuten: alleen main, de integratiebranch van het bouwplan en PR's naar main.
+# Featurebranches draaien dezelfde checks lokaal (zie README).
+on:
+  push:
+    branches: [main, "feat/implement-spec-issue-*"]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  # Bevy en wgpu bouwen sneller zonder debug-info; CI heeft die niet nodig.
+  CARGO_PROFILE_DEV_DEBUG: "0"
+
+jobs:
+  rust-tests:
+    name: Rust-tests
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Systeembibliotheken voor Bevy en de gamepad
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends libwayland-dev libxkbcommon-dev libudev-dev
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test --workspace --locked
+      - name: TypeScript-typen zijn bijgewerkt
+        run: |
+          git status --porcelain dashboard/src/typen
+          test -z "$(git status --porcelain dashboard/src/typen)" || {
+            echo "::error::dashboard/src/typen loopt achter op de Rust-code: draai cargo test -p gedeeld en commit de typen"
+            exit 1
+          }
+
+  dashboard-typecheck:
+    name: Dashboard-typecheck
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: dashboard
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: dashboard/package-lock.json
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+      - run: npm run build
+
+  renderer-beeld:
+    name: Renderer-beeld
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Software-Vulkan (lavapipe) en systeembibliotheken
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends mesa-vulkan-drivers libvulkan1 libwayland-dev libxkbcommon-dev libudev-dev jq
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --locked -p server -p renderer
+      # Zonder Zaal: CI heeft geen GPU en de Zaal (zaal/maak.sh, ~300 MB) staat niet in Git.
+      # De proef met de echte Zaal (proef_gpu, ignored) draait op een machine met een GPU.
+      - name: Beeld uit de Renderer zonder venster
+        env:
+          WGPU_BACKEND: vulkan
+        run: |
+          # alleen lavapipe, zodat zeker software-Vulkan tekent
+          export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -n 1)
+          echo "Vulkan-driver: $VK_ICD_FILENAMES"
+          scripts/renderer-beeld.sh renderer-beeld
+      - name: Beeldproeven zonder Zaal (Stijl, scherpe tekst tijdens beweging, verloop, naambalk)
+        env:
+          WGPU_BACKEND: vulkan
+          UITSLAGAVOND_BEWIJS: ${{ github.workspace }}/renderer-beeld/proef
+        run: |
+          export VK_ICD_FILENAMES=$(ls /usr/share/vulkan/icd.d/lvp_icd*.json | head -n 1)
+          cargo test --locked -p renderer -- --ignored --test-threads 1 proef_beeld::de_titelkaart proef_beeld::tekst proef_beeld::een_kleurverloop proef_beeld::de_naambalk
+      - uses: actions/upload-artifact@v5
+        with:
+          name: renderer-beeld
+          path: renderer-beeld/
+          if-no-files-found: error
+
+  # Reserve-OS van de beeldmachines (#19, #64): Windows met DirectX 12. Alleen bouwen, geen tests;
+  # de Renderer kiest DX12 op Windows zelf (scherm::wgpu_instelling).
+  windows-dx12:
+    name: Windows-build (DirectX 12)
+    # Windows-minuten tellen dubbel en een koude build duurt bijna een uur: alleen op main of met de hand.
+    if: github.event_name == 'workflow_dispatch' || github.ref == 'refs/heads/main'
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo build --locked -p server -p renderer

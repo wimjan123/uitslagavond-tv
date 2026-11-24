@@ -1,0 +1,101 @@
+/* De tablet van de Presentator (ontwerp T2): zelfde kleuren als het dashboard (DESIGN.md), maar
+   grote tikvlakken. Bovenin een smalle strook, onderin twee tabbladen, ertussen het vlak dat scrolt. */
+.tablet {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  font-size: 16px;
+  background: var(--graphite-ground);
+}
+.tablet .tablet-kop {
+  flex: none;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 0 16px;
+  font-size: 14px;
+  background: var(--graphite-panel);
+  border-bottom: 1px solid var(--graphite-line);
+}
+.tablet .status-punt { display: inline-flex; align-items: center; gap: 6px; color: var(--slate-mute); }
+.tablet-ruimte { flex: 1; }
+.tablet .tablet-melding {
+  padding: 10px 16px;
+  font-weight: 600;
+  color: var(--warn-amber-ink);
+  background: var(--warn-amber);
+}
+.tablet .tablet-vlak { flex: 1; min-height: 0; overflow: auto; padding: 18px 20px; }
+.tablet .tablet-uitleg { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; font-size: 15px; }
+.tablet .tablet-uitleg .stempel { margin-left: 0; }
+.tablet .stempel-live { color: var(--ether-red-ink); background: var(--ether-red); border-color: var(--ether-red); }
+.tablet .stempel-klaar { color: var(--klaar-green-ink); background: var(--klaar-green); border-color: var(--klaar-green); }
+.tablet .tablet-leeg { padding: 40px 0; font-size: 18px; color: var(--slate-mute); text-align: center; }
+
+/* Presets: één rij per Preset met een groot klein beeld en één grote knop. */
+.tablet .tablet-presets { display: flex; flex-direction: column; gap: 10px; }
+.tablet .tablet-rij {
+  display: grid;
+  grid-template-columns: 200px minmax(0, 1fr) 190px;
+  align-items: center;
+  gap: 18px;
+  padding: 10px 12px;
+  background: var(--graphite-panel);
+  border: 1px solid var(--graphite-line);
+  border-radius: 3px;
+}
+.tablet .tablet-rij .schets { width: 200px; }
+.tablet .tablet-rij.rij-klaar { background: color-mix(in srgb, var(--klaar-green) 12%, var(--graphite-panel)); box-shadow: inset 4px 0 0 var(--klaar-green); }
+.tablet .tablet-rij.rij-live { background: color-mix(in srgb, var(--ether-red) 12%, var(--graphite-panel)); box-shadow: inset 4px 0 0 var(--ether-red); }
+.tablet .tablet-rij-tekst { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.tablet .tablet-rij-naam { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 650; }
+.tablet .tablet-rij-naam .stempel { margin-left: 0; font-size: 12px; padding: 3px 7px; }
+.tablet .tablet-rij .zacht { font-size: 15px; }
+.tablet .toets-kap { width: 28px; height: 28px; font-size: 14px; }
+.tablet .tablet-klaarzetten {
+  justify-content: center;
+  height: 64px;
+  font-size: 19px;
+  font-weight: 650;
+  color: var(--klaar-green-ink);
+  background: var(--klaar-green);
+  border-color: var(--klaar-green);
+}
+.tablet .tablet-klaarzetten:disabled { color: var(--klaar-green-text); background: none; opacity: 1; }
+
+/* Coalitiebouwer: dezelfde boog als op het dashboard, met grotere tegels. */
+.tablet .tablet-coalitie { display: flex; flex-direction: column; align-items: center; }
+.tablet .tablet-coalitie .tablet-uitleg { align-self: flex-start; }
+.tablet .coalitie-boog { padding: 30px 0 16px; width: 100%; }
+.tablet .boog-partij { width: 72px; padding: 8px 4px 6px; gap: 4px; }
+.tablet .boog-partij .logo-tegel { width: 56px; height: 35px; }
+.tablet .boog-zetels { font-size: 17px; }
+.tablet .boog-vink { width: 20px; height: 20px; font-size: 13px; }
+.tablet .boog-totaal { font-size: 72px; }
+.tablet .boog-midden .zacht { font-size: 15px; }
+.tablet .coalitie-zetelbalk { height: 18px; }
+.tablet .tablet-wis { height: 52px; padding: 0 22px; font-size: 16px; }
+
+/* De twee tabbladen onderin. */
+.tablet .tablet-tabs { flex: none; height: 76px; display: grid; grid-template-columns: 1fr 1fr; border-top: 1px solid var(--graphite-line); }
+.tablet .tablet-tab {
+  font: inherit;
+  font-size: 19px;
+  font-weight: 650;
+  color: var(--slate-mute);
+  background: var(--graphite-panel);
+  border: 0;
+  border-top: 3px solid transparent;
+  cursor: pointer;
+}
+.tablet .tablet-tab + .tablet-tab { border-left: 1px solid var(--graphite-line); }
+.tablet .tablet-tab[aria-selected="true"] { color: var(--paper-ink); background: var(--selection-fill); border-top-color: var(--steel-blue); }
+
+/* Staand: het klein beeld en de knop smaller. */
+@media (max-width: 900px) {
+  .tablet .tablet-rij { grid-template-columns: 160px minmax(0, 1fr) 160px; gap: 14px; }
+  .tablet .tablet-rij .schets { width: 160px; }
+  .tablet .boog-partij { width: 62px; }
+  .tablet .boog-partij .logo-tegel { width: 48px; height: 30px; }
+}

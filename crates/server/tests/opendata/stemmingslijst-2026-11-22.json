@@ -1,0 +1,1 @@
+{"@odata.context":"https://gegevensmagazijn.tweedekamer.nl/OData/v4/2.0/$metadata#Activiteit(Id,Datum,Aanvangstijd,Onderwerp,Status,Agendapunt(Id,Onderwerp,Volgorde,Zaak(Id,Nummer,Soort,Onderwerp,Titel,Volgnummer,Kamerstukdossier(Nummer,Toevoeging))))","value":[]}

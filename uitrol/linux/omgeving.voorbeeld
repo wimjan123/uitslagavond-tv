@@ -1,0 +1,23 @@
+# Instellingen van uitslagavond-tv op deze machine. installeer.sh zet dit bestand in
+# ~/.config/uitslagavond/omgeving (alleen leesbaar voor jou). Pas het daar aan en herstart:
+#   systemctl --user restart 'uitslagavond-*'
+
+# De gedeelde sleutel: op alle machines dezelfde. Kies een lange willekeurige tekst.
+UITSLAGAVOND_SLEUTEL=vervang-door-een-lange-gedeelde-sleutel
+
+# Adres en poort van de server op de regie-pc (voor de Renderers).
+UITSLAGAVOND_SERVER=127.0.0.1:7400
+
+# Map met de gebakken Zaal (zaal/maak.sh). Haal het # weg zodra de Zaal er staat en
+# controleer-zaal.sh alles goed vindt; zonder Zaal tekent de Renderer alleen de graphics.
+#UITSLAGAVOND_ZAAL=/home/uitslagavond/uitslagavond/zaal
+
+# Beeldmachine: op welke monitor de Renderer komt (hoofdscherm, een nummer of een naam
+# zoals HDMI-A-1; de lijst staat bij de start in `journalctl --user -u 'uitslagavond-*'`)
+# en het beeld dat hij uitgeeft. Zet dezelfde verversing (50 Hz) in de scherminstellingen.
+UITSLAGAVOND_MONITOR=hoofdscherm
+UITSLAGAVOND_BEELDFORMAAT=1080p50
+
+# Regie-pc: extra opties voor de server, zoals het invoerbestand met cijfers en de Zaalindeling:
+#   UITSLAGAVOND_SERVER_OPTIES=--invoer /home/uitslagavond/uitslagavond/cijfers.json --zaalindeling /home/uitslagavond/uitslagavond/zaalindeling.json
+UITSLAGAVOND_SERVER_OPTIES=

@@ -1,0 +1,138 @@
+{
+ "date": "2026-11-19",
+ "debates": [
+  {
+   "id": "2ba62fe7-c2a4-47cb-8d09-7925f1a3fd8a",
+   "name": "Arbeidsmarktbeleid - duurzame inzetbaarheid",
+   "debateType": "Commissiedebat",
+   "startsAt": "2026-11-19T10:00:15+0100",
+   "endsAt": "2026-11-19T13:39:07+0100"
+  },
+  {
+   "id": "9825e042-a76b-450b-a38e-851a4b7d8340",
+   "name": "Vergunningverlening, toezicht en handhaving (VTH-stelsel)",
+   "debateType": "Commissiedebat",
+   "startsAt": "2026-11-19T10:01:12+0100",
+   "endsAt": "2026-11-19T13:32:32+0100"
+  },
+  {
+   "id": "9bc11e50-d95b-483c-90ad-c8d61de3a375",
+   "name": "Opening",
+   "debateType": "Opening",
+   "startsAt": "2026-11-19T10:15:00+0100",
+   "endsAt": "2026-11-19T10:15:05+0100"
+  },
+  {
+   "id": "50adcecf-d1b3-4c61-8dfd-1d3f971d3de2",
+   "name": "Mededelingen",
+   "debateType": "Mededelingen",
+   "startsAt": "2026-11-19T10:15:05+0100",
+   "endsAt": "2026-11-19T10:15:12+0100"
+  },
+  {
+   "id": "3cea5e66-f81b-48da-b9aa-51d58a24db30",
+   "name": "Landbouw- en Visserijraad d.d. 23-24 november 2026",
+   "debateType": "Plenair debat",
+   "startsAt": "2026-11-19T10:15:12+0100",
+   "endsAt": "2026-11-19T10:41:54+0100"
+  },
+  {
+   "id": "9675d7d6-a8f3-4d67-8b48-bbfcf6bd13c3",
+   "name": "Procedurevergadering commissie voor Onderwijs, Cultuur en Wetenschap",
+   "debateType": "Procedurevergadering",
+   "startsAt": "2026-11-19T10:15:00+0100",
+   "endsAt": "2026-11-19T11:15:00+0100"
+  },
+  {
+   "id": "50b0034a-79e7-4b24-a456-887484d5e71e",
+   "name": "Begroting Justitie en Veiligheid 2027",
+   "debateType": "Plenair debat",
+   "startsAt": "2026-11-19T10:41:54+0100",
+   "endsAt": "2026-11-19T13:34:34+0100"
+  },
+  {
+   "id": "5941565f-49a3-4660-8e4f-e79806b596bf",
+   "name": "Procedurevergadering commissie voor Binnenlandse Zaken",
+   "debateType": "Procedurevergadering",
+   "startsAt": "2026-11-19T11:30:00+0100",
+   "endsAt": "2026-11-19T12:30:00+0100"
+  },
+  {
+   "id": "d8c9969b-40b7-4604-afd5-f0ef0190c6cf",
+   "name": "Procedurevergadering commissie voor Buitenlandse Zaken",
+   "debateType": "Procedurevergadering",
+   "startsAt": "2026-11-19T12:30:00+0100",
+   "endsAt": "2026-11-19T13:15:00+0100"
+  },
+  {
+   "id": "13f6fde7-4131-4520-874e-c314ebe69bbc",
+   "name": "Procedurevergadering commissie voor Asiel en Migratie",
+   "debateType": "Procedurevergadering",
+   "startsAt": "2026-11-19T13:00:00+0100",
+   "endsAt": "2026-11-19T14:00:00+0100"
+  },
+  {
+   "id": "1e7725ce-08dd-46d8-8105-08c4a50e2e67",
+   "name": "Stemmingen",
+   "debateType": "Stemmingen",
+   "startsAt": "2026-11-19T13:34:34+0100",
+   "endsAt": "2026-11-19T13:37:15+0100"
+  },
+  {
+   "id": "16a4301a-699c-4605-a192-a820bf2f4f43",
+   "name": "Regeling van werkzaamheden (stemmingen)",
+   "debateType": "Regeling van werkzaamheden",
+   "startsAt": "2026-11-19T13:30:00+0100",
+   "endsAt": "2026-11-19T13:34:34+0100"
+  },
+  {
+   "id": "5b40a112-27be-493d-b8ca-741f841ed477",
+   "name": "Mededelingen",
+   "debateType": "Mededelingen",
+   "startsAt": "2026-11-19T13:37:22+0100",
+   "endsAt": "2026-11-19T13:37:35+0100"
+  },
+  {
+   "id": "c44f9a85-97f9-4231-8407-7fa23638880b",
+   "name": "Regeling van werkzaamheden",
+   "debateType": "Regeling van werkzaamheden",
+   "startsAt": "2026-11-19T13:37:35+0100",
+   "endsAt": "2026-11-19T13:38:39+0100"
+  },
+  {
+   "id": "1646d798-9f03-46c5-876d-6fa09e86b83d",
+   "name": "Begroting Justitie en Veiligheid 2027",
+   "debateType": "Plenair debat",
+   "startsAt": "2026-11-19T13:38:39+0100",
+   "endsAt": "2026-11-19T17:19:34+0100"
+  },
+  {
+   "id": "6cdc4ffe-37a0-4326-9145-7b1c45672a70",
+   "name": "Zoönosen en dierziekten",
+   "debateType": "Commissiedebat",
+   "startsAt": "2026-11-19T14:01:46+0100",
+   "endsAt": "2026-11-19T16:54:32+0100"
+  },
+  {
+   "id": "a5f4c92a-80b0-4ec3-a765-5455f90b30e6",
+   "name": "Raad Buitenlandse Zaken Handel van 30 november 2026",
+   "debateType": "Commissiedebat",
+   "startsAt": "2026-11-19T14:01:58+0100",
+   "endsAt": "2026-11-19T16:14:37+0100"
+  },
+  {
+   "id": "c225530a-9291-44f7-946b-9bf753af74ec",
+   "name": "Staat van de volkshuisvesting",
+   "debateType": "Commissiedebat",
+   "startsAt": "2026-11-19T15:00:13+0100",
+   "endsAt": "2026-11-19T20:19:37+0100"
+  },
+  {
+   "id": "0e4f4b50-f267-4090-b051-f8c2453eaeb0",
+   "name": "Begroting Asiel en Migratie 2027 2027 (voortzetting)",
+   "debateType": "Plenair debat",
+   "startsAt": "2026-11-19T17:19:34+0100",
+   "endsAt": "2026-11-19T22:29:36+0100"
+  }
+ ]
+}

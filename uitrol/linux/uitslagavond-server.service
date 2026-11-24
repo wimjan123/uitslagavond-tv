@@ -1,0 +1,16 @@
+# De server van uitslagavond-tv op de regie-pc: de enige bron van de Stand.
+# Een user unit: hij start met de gebruiker, ook zonder inlog als `loginctl enable-linger` aan staat.
+[Unit]
+Description=uitslagavond-tv: server
+Documentation=file://%h/uitslagavond/programma/INSTALLEREN.md
+
+[Service]
+Type=exec
+EnvironmentFile=%h/.config/uitslagavond/omgeving
+WorkingDirectory=%h/uitslagavond
+ExecStart=%h/uitslagavond/programma/bin/uitslagavond-server --map %h/uitslagavond/data --dashboard %h/uitslagavond/programma/dashboard $UITSLAGAVOND_SERVER_OPTIES
+Restart=on-failure
+RestartSec=2
+
+[Install]
+WantedBy=default.target

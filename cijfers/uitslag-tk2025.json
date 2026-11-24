@@ -1,0 +1,199 @@
+{
+  "verkiezing": {
+    "naam": "Tweede Kamer der Staten-Generaal 2025",
+    "datum": "2025-10-29"
+  },
+  "partijen": [
+    {
+      "sleutel": "pvv",
+      "naam": "PVV (Partij voor de Vrijheid)",
+      "kort": "PVV"
+    },
+    {
+      "sleutel": "gl-pvda",
+      "naam": "GROENLINKS / Partij van de Arbeid (PvdA)",
+      "kort": "GL-PvdA"
+    },
+    {
+      "sleutel": "vvd",
+      "naam": "VVD",
+      "kort": "VVD"
+    },
+    {
+      "sleutel": "nsc",
+      "naam": "Nieuw Sociaal Contract (NSC)",
+      "kort": "NSC"
+    },
+    {
+      "sleutel": "d66",
+      "naam": "D66",
+      "kort": "D66"
+    },
+    {
+      "sleutel": "bbb",
+      "naam": "BBB",
+      "kort": "BBB"
+    },
+    {
+      "sleutel": "cda",
+      "naam": "CDA",
+      "kort": "CDA"
+    },
+    {
+      "sleutel": "sp",
+      "naam": "SP (Socialistische Partij)",
+      "kort": "SP"
+    },
+    {
+      "sleutel": "denk",
+      "naam": "DENK",
+      "kort": "DENK"
+    },
+    {
+      "sleutel": "pvdd",
+      "naam": "Partij voor de Dieren",
+      "kort": "PvdD"
+    },
+    {
+      "sleutel": "fvd",
+      "naam": "Forum voor Democratie",
+      "kort": "FvD"
+    },
+    {
+      "sleutel": "sgp",
+      "naam": "Staatkundig Gereformeerde Partij (SGP)",
+      "kort": "SGP"
+    },
+    {
+      "sleutel": "cu",
+      "naam": "ChristenUnie",
+      "kort": "CU"
+    },
+    {
+      "sleutel": "volt",
+      "naam": "Volt",
+      "kort": "Volt"
+    },
+    {
+      "sleutel": "ja21",
+      "naam": "JA21",
+      "kort": "JA21"
+    },
+    {
+      "sleutel": "vrede-voor-dieren",
+      "naam": "Vrede voor Dieren",
+      "kort": "VvD"
+    },
+    {
+      "sleutel": "bvnl",
+      "naam": "Belang Van Nederland (BVNL)",
+      "kort": "BVNL"
+    },
+    {
+      "sleutel": "bij1",
+      "naam": "BIJ1",
+      "kort": "BIJ1"
+    },
+    {
+      "sleutel": "lp",
+      "naam": "LP (Libertaire Partij)",
+      "kort": "LP"
+    },
+    {
+      "sleutel": "50plus",
+      "naam": "50PLUS",
+      "kort": "50PLUS"
+    },
+    {
+      "sleutel": "piratenpartij",
+      "naam": "Piratenpartij",
+      "kort": "Piraten"
+    },
+    {
+      "sleutel": "fnp",
+      "naam": "FNP",
+      "kort": "FNP"
+    },
+    {
+      "sleutel": "vrij-verbond",
+      "naam": "Vrij Verbond",
+      "kort": "Vrij Verbond"
+    },
+    {
+      "sleutel": "de-linie",
+      "naam": "DE LINIE",
+      "kort": "DE LINIE"
+    },
+    {
+      "sleutel": "nl-plan",
+      "naam": "NL PLAN",
+      "kort": "NL PLAN"
+    },
+    {
+      "sleutel": "ellect",
+      "naam": "ELLECT",
+      "kort": "ELLECT"
+    },
+    {
+      "sleutel": "pvdr",
+      "naam": "Partij voor de Rechtsstaat",
+      "kort": "PvdR"
+    }
+  ],
+  "sets": [
+    {
+      "id": "tk2025",
+      "soort": "uitslag",
+      "label": "Uitslag 2025",
+      "tijd": "2025-10-29",
+      "bron": "Kiesraad, open data (CC0)",
+      "zetels": {
+        "pvv": 26,
+        "gl-pvda": 20,
+        "vvd": 22,
+        "d66": 26,
+        "bbb": 4,
+        "cda": 18,
+        "sp": 3,
+        "denk": 3,
+        "pvdd": 3,
+        "fvd": 7,
+        "sgp": 3,
+        "cu": 3,
+        "volt": 1,
+        "ja21": 9,
+        "50plus": 2
+      },
+      "stemmen": {
+        "pvv": 1760966,
+        "gl-pvda": 1352163,
+        "vvd": 1505829,
+        "nsc": 39408,
+        "d66": 1790634,
+        "bbb": 279916,
+        "cda": 1246874,
+        "sp": 199585,
+        "denk": 250368,
+        "pvdd": 219371,
+        "fvd": 480393,
+        "sgp": 238093,
+        "cu": 201361,
+        "volt": 116468,
+        "ja21": 628517,
+        "vrede-voor-dieren": 16819,
+        "bvnl": 18477,
+        "bij1": 40360,
+        "lp": 8248,
+        "50plus": 151053,
+        "piratenpartij": 10575,
+        "fnp": 9331,
+        "vrij-verbond": 1048,
+        "de-linie": 3478,
+        "nl-plan": 2299,
+        "ellect": 205,
+        "pvdr": 151
+      }
+    }
+  ],
+  "vergelijk_met": "tk2025"
+}

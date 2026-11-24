@@ -1,0 +1,654 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-22T13:06:43+00:00",
+  "title": "Design System: uitslagavond-tv Regie dashboard",
+  "extensions": {
+    "colorMeta": {
+      "graphite-field": {
+        "role": "neutral",
+        "displayName": "Graphite Field",
+        "canonical": "#0c0e10",
+        "tonalRamp": [
+          "#131416",
+          "#272e34",
+          "#424c57",
+          "#5c6b7a",
+          "#7c8c9d",
+          "#a2adb9",
+          "#c5ccd3",
+          "#ecedef"
+        ]
+      },
+      "graphite-ground": {
+        "role": "neutral",
+        "displayName": "Graphite Ground",
+        "canonical": "#121417",
+        "tonalRamp": [
+          "#131416",
+          "#282d33",
+          "#434b56",
+          "#5e6878",
+          "#7e899a",
+          "#a3abb7",
+          "#c6cbd2",
+          "#ecedee"
+        ]
+      },
+      "graphite-panel": {
+        "role": "neutral",
+        "displayName": "Graphite Panel",
+        "canonical": "#181b1f",
+        "tonalRamp": [
+          "#131416",
+          "#282d34",
+          "#434b56",
+          "#5d6979",
+          "#7e8a9b",
+          "#a3acb8",
+          "#c6cbd2",
+          "#ecedee"
+        ]
+      },
+      "graphite-raised": {
+        "role": "neutral",
+        "displayName": "Graphite Raised",
+        "canonical": "#1f2328",
+        "tonalRamp": [
+          "#131416",
+          "#282d34",
+          "#434b56",
+          "#5e6a79",
+          "#7e8b9b",
+          "#a3acb8",
+          "#c6cbd2",
+          "#ecedee"
+        ]
+      },
+      "graphite-divider": {
+        "role": "neutral",
+        "displayName": "Graphite Divider",
+        "canonical": "#20242a",
+        "tonalRamp": [
+          "#131416",
+          "#282d34",
+          "#424a57",
+          "#5d687a",
+          "#7d899c",
+          "#a2abb8",
+          "#c5cbd3",
+          "#ecedee"
+        ]
+      },
+      "selection-fill": {
+        "role": "neutral",
+        "displayName": "Selection Fill",
+        "canonical": "#26303d",
+        "tonalRamp": [
+          "#121417",
+          "#232d39",
+          "#3b4a5e",
+          "#526884",
+          "#7289a7",
+          "#9aabc0",
+          "#c0cad8",
+          "#ebedef"
+        ]
+      },
+      "graphite-line": {
+        "role": "neutral",
+        "displayName": "Graphite Line",
+        "canonical": "#2a2f36",
+        "tonalRamp": [
+          "#131416",
+          "#282d34",
+          "#434b56",
+          "#5e6978",
+          "#7e8a9b",
+          "#a3acb8",
+          "#c6cbd2",
+          "#ecedee"
+        ]
+      },
+      "paper-ink": {
+        "role": "neutral",
+        "displayName": "Paper Ink",
+        "canonical": "#e4e7eb",
+        "tonalRamp": [
+          "#131416",
+          "#272d35",
+          "#414b58",
+          "#5b697b",
+          "#7b8a9d",
+          "#a1acba",
+          "#c4cbd4",
+          "#ecedef"
+        ]
+      },
+      "slate-mute": {
+        "role": "neutral",
+        "displayName": "Slate Mute",
+        "canonical": "#8c939d",
+        "tonalRamp": [
+          "#141415",
+          "#2a2d32",
+          "#464b53",
+          "#636a74",
+          "#838b95",
+          "#a7acb4",
+          "#c8cbd0",
+          "#ecedee"
+        ]
+      },
+      "steel-blue": {
+        "role": "primary",
+        "displayName": "Steel Blue",
+        "canonical": "#6f9fe0",
+        "tonalRamp": [
+          "#0d131c",
+          "#10294c",
+          "#1b457e",
+          "#2661b0",
+          "#4281d6",
+          "#79a5e2",
+          "#abc7ed",
+          "#e7ecf3"
+        ]
+      },
+      "steel-ink": {
+        "role": "primary",
+        "displayName": "Steel Ink",
+        "canonical": "#08111e",
+        "tonalRamp": [
+          "#0e131b",
+          "#132948",
+          "#204479",
+          "#2d60a9",
+          "#4a80cf",
+          "#7ea5dd",
+          "#aec7ea",
+          "#e7ecf3"
+        ]
+      },
+      "ether-red": {
+        "role": "secondary",
+        "displayName": "Ether Red",
+        "canonical": "#d3302f",
+        "tonalRamp": [
+          "#1c0d0d",
+          "#4c1010",
+          "#7e1b1b",
+          "#b12625",
+          "#d74242",
+          "#e37978",
+          "#edabab",
+          "#f4e7e7"
+        ]
+      },
+      "ether-red-ink": {
+        "role": "secondary",
+        "displayName": "Ether Red Ink",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#141414",
+          "#2e2e2e",
+          "#4c4c4c",
+          "#6b6b6b",
+          "#8c8c8c",
+          "#adadad",
+          "#cccccc",
+          "#ededed"
+        ]
+      },
+      "ether-red-text": {
+        "role": "secondary",
+        "displayName": "Ether Red Text",
+        "canonical": "#ff7a78",
+        "tonalRamp": [
+          "#200a09",
+          "#5c0100",
+          "#990200",
+          "#d60300",
+          "#ff1d1a",
+          "#ff5e5c",
+          "#ff9b99",
+          "#f7e4e3"
+        ]
+      },
+      "klaar-green": {
+        "role": "secondary",
+        "displayName": "Klaar Green",
+        "canonical": "#22844f",
+        "tonalRamp": [
+          "#0e1b14",
+          "#13492c",
+          "#1f7a49",
+          "#2caa66",
+          "#49d087",
+          "#7ddea9",
+          "#aeeaca",
+          "#e7f3ed"
+        ]
+      },
+      "klaar-green-ink": {
+        "role": "secondary",
+        "displayName": "Klaar Green Ink",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#141414",
+          "#2e2e2e",
+          "#4c4c4c",
+          "#6b6b6b",
+          "#8c8c8c",
+          "#adadad",
+          "#cccccc",
+          "#ededed"
+        ]
+      },
+      "klaar-green-text": {
+        "role": "secondary",
+        "displayName": "Klaar Green Text",
+        "canonical": "#5fd093",
+        "tonalRamp": [
+          "#0e1b14",
+          "#15472c",
+          "#237649",
+          "#31a666",
+          "#4ecb87",
+          "#81daaa",
+          "#b0e8ca",
+          "#e8f3ed"
+        ]
+      },
+      "warn-amber": {
+        "role": "secondary",
+        "displayName": "Warn Amber",
+        "canonical": "#d89b2b",
+        "tonalRamp": [
+          "#1c170d",
+          "#4e370e",
+          "#815c18",
+          "#b58121",
+          "#dba43d",
+          "#e6be75",
+          "#efd6a9",
+          "#f4efe6"
+        ]
+      },
+      "warn-amber-ink": {
+        "role": "secondary",
+        "displayName": "Warn Amber Ink",
+        "canonical": "#1b1200",
+        "tonalRamp": [
+          "#201809",
+          "#5c3d00",
+          "#996600",
+          "#d68f00",
+          "#ffb31a",
+          "#ffc95c",
+          "#ffdd99",
+          "#f7f0e3"
+        ]
+      },
+      "logo-tile": {
+        "role": "neutral",
+        "displayName": "Logo Tile",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#141414",
+          "#2e2e2e",
+          "#4c4c4c",
+          "#6b6b6b",
+          "#8c8c8c",
+          "#adadad",
+          "#cccccc",
+          "#ededed"
+        ]
+      },
+      "monitor-black": {
+        "role": "neutral",
+        "displayName": "Monitor Black",
+        "canonical": "#000000",
+        "tonalRamp": [
+          "#141414",
+          "#2e2e2e",
+          "#4c4c4c",
+          "#6b6b6b",
+          "#8c8c8c",
+          "#adadad",
+          "#cccccc",
+          "#ededed"
+        ]
+      },
+      "preview-canvas": {
+        "role": "neutral",
+        "displayName": "Preview Canvas",
+        "canonical": "#0d1220",
+        "tonalRamp": [
+          "#101219",
+          "#1b2541",
+          "#2c3d6d",
+          "#3e5698",
+          "#5c75bd",
+          "#8b9dd0",
+          "#b6c2e2",
+          "#e9ebf1"
+        ]
+      },
+      "seat-empty": {
+        "role": "neutral",
+        "displayName": "Seat Empty",
+        "canonical": "#3a404c",
+        "tonalRamp": [
+          "#131416",
+          "#282c34",
+          "#424957",
+          "#5d6679",
+          "#7d879c",
+          "#a2aab8",
+          "#c5cad3",
+          "#ecedee"
+        ]
+      },
+      "seat-dim": {
+        "role": "neutral",
+        "displayName": "Seat Dim",
+        "canonical": "#1d2130",
+        "tonalRamp": [
+          "#121317",
+          "#232739",
+          "#3a425f",
+          "#515c86",
+          "#707ca9",
+          "#99a2c2",
+          "#bfc5d9",
+          "#ebecf0"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Coalition count in the Coalitiebouwer."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Title of the open Stemming or set."
+      },
+      "action": {
+        "displayName": "Action",
+        "purpose": "The word TOON only."
+      },
+      "outcome": {
+        "displayName": "Outcome",
+        "purpose": "Aangenomen or Verworpen in the state text colour."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default text and table cells."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Main line of a table row, Fractie names."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Tabs, filters, buttons."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Second line of a row, hints, monitor label text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Column heads, toolbar titles, VOORBEELD, ETHER, CAMERA."
+      },
+      "stamp": {
+        "displayName": "Stamp",
+        "purpose": "State stamps."
+      },
+      "keycap": {
+        "displayName": "Keycap",
+        "purpose": "Printed keys."
+      }
+    },
+    "shadows": [
+      {
+        "name": "row-marker",
+        "value": "inset 3px 0 0 <state colour>",
+        "purpose": "Left line of a selected, ready or on-air table row."
+      },
+      {
+        "name": "logo-hairline",
+        "value": "inset 0 0 0 1px #0000001a",
+        "purpose": "Edge of every white logo tile."
+      }
+    ],
+    "motion": [
+      {
+        "name": "none",
+        "value": "0ms",
+        "purpose": "No decorative motion; state changes are instant. Respect reduced motion everywhere."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "laptop",
+        "value": "1440px"
+      },
+      {
+        "name": "small-laptop",
+        "value": "1280px"
+      }
+    ],
+    "layout": {
+      "tabStripHeight": "34px",
+      "multiviewerColumns": "1fr 170px 1fr 330px",
+      "stemmingenPanes": "minmax(300px, 36%) 1fr",
+      "presetTableColumns": "44px 108px auto auto auto 60px 120px"
+    },
+    "keyboard": [
+      {
+        "key": "1-9",
+        "action": "Put the Preset with that number ready (Klaar); never shows."
+      },
+      {
+        "key": "Space",
+        "action": "TOON: show the ready Graphic in the Ether."
+      },
+      {
+        "key": "Enter",
+        "action": "Never shows; only presses the focused button."
+      },
+      {
+        "key": "A S D F G H",
+        "action": "Fixed Standpunten: Totaal vanaf voorzitter, Laag over de banken, Linkerflank, Rechterflank, Bovenaf, Katheder."
+      },
+      {
+        "key": "J K L",
+        "action": "Own Standpunten and Cameraritten."
+      },
+      {
+        "key": "Shift + letter",
+        "action": "Pick with a cut, without movement."
+      },
+      {
+        "key": "V",
+        "action": "Vrije camera on or off."
+      },
+      {
+        "key": "O",
+        "action": "Oefenen on or off: the gamepad drives only the Voorbeeld."
+      },
+      {
+        "key": "R",
+        "action": "Start or stop recording a Camerarit, only during Oefenen."
+      },
+      {
+        "key": "B",
+        "action": "Bijwerken: refresh figures on air."
+      },
+      {
+        "key": "X",
+        "action": "Uit beeld."
+      }
+    ],
+    "icons": {
+      "library": "Lucide",
+      "version": "0.460.0",
+      "stroke": 2,
+      "sizes": "14 to 16px",
+      "usedFor": [
+        "search",
+        "lock",
+        "mic",
+        "tablet",
+        "star"
+      ]
+    }
+  },
+  "components": [
+    {
+      "name": "Tab Strip",
+      "kind": "nav",
+      "refersTo": "tab-strip",
+      "description": "Text tabs along the top with a count box, status dots and the clock at the right.",
+      "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab ds-on\">Presets</button><button class=\"ds-tab\">Cijfers <span class=\"ds-n\">1</span></button><button class=\"ds-tab\">Stemmingen <span class=\"ds-n\">3</span></button><span class=\"ds-st\"><i></i>Server <i></i>Ether <i></i>Reserve <b>20.58</b></span></nav>",
+      "css": ":host{--ground:#121417;--panel:#181b1f;--raised:#1f2328;--field:#0c0e10;--line:#2a2f36;--ink:#e4e7eb;--mute:#8c939d;--sel:#26303d;--steel:#6f9fe0;--red:#d3302f;--green:#22844f;--amber:#d89b2b}.ds-tabs{display:flex;height:34px;background:#0c0e10;border-bottom:1px solid #2a2f36;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px}.ds-tab{background:none;border:0;border-bottom:2px solid transparent;color:#8c939d;padding:0 12px;font:inherit;font-weight:550;cursor:pointer}.ds-tab:hover{color:#e4e7eb}.ds-tab:focus-visible{outline:2px solid #6f9fe0;outline-offset:-2px}.ds-tab.ds-on{background:#181b1f;color:#e4e7eb;border-bottom-color:#6f9fe0}.ds-n{display:inline-grid;place-items:center;min-width:16px;height:16px;border:1px solid #2a2f36;border-radius:2px;background:#1f2328;color:#e4e7eb;font-size:10px;margin-left:4px}.ds-st{margin-left:auto;display:flex;align-items:center;gap:6px;padding:0 14px;color:#8c939d;font-size:12px}.ds-st i{width:8px;height:8px;border-radius:50%;background:#22844f;margin-left:8px}.ds-st b{color:#e4e7eb;margin-left:10px}"
+    },
+    {
+      "name": "Monitor",
+      "kind": "custom",
+      "refersTo": "monitor",
+      "description": "Voorbeeld or Ether as on a multiviewer: square picture, label strip with a state line.",
+      "html": "<div class=\"ds-mon ds-live\"><div class=\"ds-pic\">De Uitslagavond</div><div class=\"ds-lb\"><b>Ether</b><span>Titelkaart · De Uitslagavond</span><i>sinds 20.58</i></div></div>",
+      "css": ".ds-mon{width:320px;background:#000;border:1px solid #2a2f36;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";}.ds-pic{aspect-ratio:16/9;background:#0d1220;color:#fff;display:grid;place-items:center;font-weight:700;font-size:20px}.ds-lb{display:flex;align-items:center;gap:8px;height:26px;padding:0 8px;background:#0c0e10;border-top:3px solid #2a2f36;font-size:12px;white-space:nowrap}.ds-lb b{font-size:11px;letter-spacing:.08em;text-transform:uppercase}.ds-lb span{color:#8c939d;overflow:hidden;text-overflow:ellipsis}.ds-lb i{margin-left:auto;font-style:normal;color:#8c939d}.ds-live .ds-lb{border-top-color:#d3302f}.ds-live .ds-lb b{color:#ff7a78}"
+    },
+    {
+      "name": "TOON",
+      "kind": "button",
+      "refersTo": "toon-button",
+      "description": "The one large red control. Space shows the ready Graphic.",
+      "html": "<button class=\"ds-toon\">Toon <kbd>Spatie</kbd></button>",
+      "css": ".ds-toon{display:flex;align-items:center;justify-content:space-between;width:170px;height:62px;padding:0 12px;border:1px solid #d3302f;border-radius:3px;background:#d3302f;color:#fff;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}.ds-toon:hover{border-color:#ffffff88}.ds-toon:focus-visible{outline:2px solid #6f9fe0;outline-offset:2px}.ds-toon:disabled{opacity:.4}.ds-toon kbd{font:600 10px ui-monospace,monospace;letter-spacing:0;border:1px solid currentColor;border-radius:2px;padding:3px 5px;opacity:.7}"
+    },
+    {
+      "name": "Button",
+      "kind": "button",
+      "refersTo": "button",
+      "description": "Default compact button in toolbars and action bars.",
+      "html": "<button class=\"ds-btn\">Met algemene stemmen</button>",
+      "css": ".ds-btn{height:32px;padding:0 10px;border:1px solid #2a2f36;border-radius:3px;background:#1f2328;color:#e4e7eb;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px;font-weight:550;white-space:nowrap;cursor:pointer}.ds-btn:hover{border-color:#8c939d}.ds-btn:focus-visible{outline:2px solid #6f9fe0;outline-offset:2px}.ds-btn:disabled{opacity:.4}"
+    },
+    {
+      "name": "Commit Button",
+      "kind": "button",
+      "refersTo": "button-commit",
+      "description": "Vastleggen en klaarzetten, fixed in the Stemmingen action bar.",
+      "html": "<button class=\"ds-go\">Vastleggen en klaarzetten</button>",
+      "css": ".ds-go{height:36px;padding:0 16px;border:1px solid #22844f;border-radius:3px;background:#22844f;color:#fff;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px;font-weight:650;cursor:pointer}.ds-go:hover{border-color:#5fd093}.ds-go:focus-visible{outline:2px solid #6f9fe0;outline-offset:2px}.ds-go:disabled{background:#1f2328;border-color:#2a2f36;color:#8c939d}"
+    },
+    {
+      "name": "Search Field",
+      "kind": "input",
+      "refersTo": "input-field",
+      "description": "Search box in a toolbar.",
+      "html": "<label class=\"ds-zk\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg><input placeholder=\"Zoek\"></label>",
+      "css": ".ds-zk{display:flex;align-items:center;gap:6px;width:200px;height:28px;padding:0 8px;border:1px solid #2a2f36;border-radius:3px;background:#0c0e10;color:#8c939d}.ds-zk:focus-within{outline:2px solid #6f9fe0;outline-offset:2px}.ds-zk input{flex:1;border:0;background:transparent;color:#e4e7eb;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px;outline:none}"
+    },
+    {
+      "name": "Filter Toggle",
+      "kind": "chip",
+      "refersTo": "filter-toggle",
+      "description": "Text-only filter in a toolbar; the active one gets Selection Fill.",
+      "html": "<span><button class=\"ds-f ds-on\">Alle</button><button class=\"ds-f\">Uitslagavond</button><button class=\"ds-f\">Op de tablet</button></span>",
+      "css": ".ds-f{padding:4px 9px;border:0;border-radius:3px;background:none;color:#8c939d;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px;font-weight:550;cursor:pointer}.ds-f:hover{color:#e4e7eb}.ds-f:focus-visible{outline:2px solid #6f9fe0}.ds-f.ds-on{background:#26303d;color:#e4e7eb}"
+    },
+    {
+      "name": "Preset Row",
+      "kind": "card",
+      "refersTo": "table-row",
+      "description": "One Preset as a table row: key, thumbnail, Graphic, data, camera, status. Ready rows tint green, on-air rows tint red.",
+      "html": "<table class=\"ds-t\"><tr class=\"ds-klaar\"><td><span class=\"ds-k\">1</span></td><td><b>Zetelbalk</b><div>Uitslagavond</div></td><td class=\"ds-m\">A · Totaal vanaf voorzitter</td><td><span class=\"ds-s ds-g\">Klaar</span></td></tr><tr class=\"ds-live\"><td><span class=\"ds-k\">2</span></td><td><b>Titelkaart</b><div>De Uitslagavond</div></td><td class=\"ds-m\">S · Laag over de banken</td><td><span class=\"ds-s ds-r\">Live</span></td></tr><tr><td><span class=\"ds-k\">3</span></td><td><b>Winst en verlies</b><div>Uitslagavond</div></td><td class=\"ds-m\">G · Bovenaf</td><td></td></tr></table>",
+      "css": ".ds-t{border-collapse:collapse;width:520px;background:#121417;color:#e4e7eb;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px}.ds-t td{padding:5px 10px;border-bottom:1px solid #20242a}.ds-t tr{cursor:pointer}.ds-t tr:hover td{background:#ffffff08}.ds-t td div,.ds-m{color:#8c939d}.ds-t b{font-weight:600}.ds-k{display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid #2a2f36;border-radius:2px;background:#1f2328;font-weight:700}.ds-klaar td{background:#22844f22}.ds-klaar td:first-child{box-shadow:inset 3px 0 0 #22844f}.ds-live td{background:#d3302f1f}.ds-live td:first-child{box-shadow:inset 3px 0 0 #d3302f}.ds-s{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 7px;border-radius:2px;color:#fff}.ds-g{background:#22844f}.ds-r{background:#d3302f}"
+    },
+    {
+      "name": "Fractie Key",
+      "kind": "custom",
+      "refersTo": "fractie-key",
+      "description": "Input key in Stemmingen: party-colour stripe, short name, Zetels, tap order, VOOR or TEGEN.",
+      "html": "<span class=\"ds-fr\"><button class=\"ds-v\" style=\"--pc:#e3001b\"><i></i><b>SP</b><small>3</small><em>1</em><u>voor</u></button><button class=\"ds-x ds-rest\" style=\"--pc:#0a3a7a\"><i></i><b>VVD</b><small>22</small><u>tegen</u></button><button style=\"--pc:#00a651\"><i></i><b>D66</b><small>26</small></button></span>",
+      "css": ".ds-fr{display:inline-grid;grid-template-columns:repeat(3,140px);gap:4px;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";}.ds-fr button{position:relative;display:grid;grid-template-columns:4px 1fr;gap:8px;align-items:center;height:42px;padding:0;border:1px solid #2a2f36;border-radius:3px;background:#1f2328;color:#e4e7eb;text-align:left;overflow:hidden;cursor:pointer;font:inherit}.ds-fr button:hover{border-color:#8c939d}.ds-fr button:focus-visible{outline:2px solid #6f9fe0;outline-offset:2px}.ds-fr i{height:100%;background:var(--pc)}.ds-fr b{font-weight:600;font-size:13px;padding-top:10px}.ds-fr small{position:absolute;right:8px;bottom:4px;color:#8c939d;font-size:11.5px}.ds-fr em{position:absolute;left:8px;top:2px;font-style:normal;font-size:9.5px;font-weight:700}.ds-fr u{position:absolute;right:6px;top:3px;text-decoration:none;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.ds-fr .ds-v{background:#22844f24;border-color:#22844f99}.ds-fr .ds-v u{color:#5fd093}.ds-fr .ds-x{background:#d3302f24;border-color:#d3302f80}.ds-fr .ds-x u{color:#ff7a78}.ds-fr .ds-rest{border-style:dashed}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The multiviewer in the gallery",
+    "overview": "**Creative North Star: \"The multiviewer in the gallery\"**\n\nThe Regie dashboard looks like the broadcast software that already sits in a control room: a dark graphite surface, a row of monitors with labels under them, and plain lists below. Nothing on screen is playful. The only strong colours are the two that every control room already knows: red for what is on air and green for what is ready. Everything else is grey, so those two colours always mean something.\n\nThe shell never moves. A strip of text tabs runs along the top, and under it the multiviewer row holds Voorbeeld, TOON, Ether and the camera in every section. Only the work area below changes and scrolls. The work is set as tables and compact panels, not as cards: one row per Preset, one row per Stemming. Density is high, so the operator sees a whole evening of Presets at once, and every row carries its key.\n\nThe signature is the multiviewer. Voorbeeld and Ether are black-framed 16:9 pictures with a label strip under them, as on a real multiviewer: a coloured top line (green or red), the word VOORBEELD or ETHER, the name of the Graphic and the time on air. Next to them, the camera block holds the floor plan of the Zaal and a row of Standpunt keys.",
+    "keyCharacteristics": [
+      "Graphite ground, paper-white ink, slate grey for everything secondary.",
+      "Two broadcast colours only: Ether red for on air, Klaar green for ready. Amber marks attention.",
+      "Selection is a quiet blue-grey fill with a thin steel-blue line, never a bright colour block.",
+      "Text tabs on top, multiviewer row under them, one work area that scrolls.",
+      "Tables and rows, not tiles. Every Preset has a number, every Standpunt a letter, every shortcut a key cap.",
+      "Square monitors with a label strip; small 2 to 3px corners on controls; no shadows.",
+      "Party logos small on white tiles; input controls use a party-colour stripe and the short name."
+    ],
+    "rules": [
+      {
+        "name": "The Two Colours Rule",
+        "body": "Only on air and ready get a strong colour, and they always get the same one: red for Ether, green for Klaar. Selection, hover and navigation stay grey with a steel-blue line, so a coloured thing on screen is always a broadcast state.",
+        "section": "colors"
+      },
+      {
+        "name": "The Tint Not Fill Rule",
+        "body": "A ready or on-air row is a light tint of its state colour with a 3px line at its left edge, never a solid block. Solid state fills are only for TOON, stamps, the Voor/Tegen segment and the commit button.",
+        "section": "colors"
+      },
+      {
+        "name": "The Ink Pair Rule",
+        "body": "Every state fill carries its own ink: white on Ether Red and Klaar Green, near-black on amber. State colours used as text on dark ground take their Text variant.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Family Rule",
+        "body": "Inter sets every word in the dashboard. Weight and the uppercase label style make hierarchy; only key caps switch to monospace.",
+        "section": "typography"
+      },
+      {
+        "name": "The Uppercase Is A Label Rule",
+        "body": "Uppercase is only for labels, stamps, the outcome word and TOON. Running text and names stay in sentence case, as the Dutch UI writes them.",
+        "section": "typography"
+      },
+      {
+        "name": "The No Lift Rule",
+        "body": "No element casts a shadow. TOON stands out by being the only large red control, not by height.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep the tab strip and the multiviewer row (Voorbeeld, TOON, Ether, camera) on screen in every section; only the work area scrolls.",
+      "**Do** use red only for on air and green only for ready, everywhere.",
+      "**Do** show selection as Selection Fill with a steel-blue line, and keep it quiet.",
+      "**Do** show ready and on-air rows as a light tint with a 3px left line, plus a stamp.",
+      "**Do** set lists as tables with a sticky head, one row per item, and put the key in the first column.",
+      "**Do** give every Preset a fixed number and every Standpunt a fixed letter, and print every shortcut on its control as a key cap.",
+      "**Do** let a digit put a Preset ready and let only Space or the TOON button show it.",
+      "**Do** keep \"Vastleggen en klaarzetten\" in a fixed action bar, always visible.",
+      "**Do** stamp state changes (\"was live 20.58\", \"Vergrendeld\", \"Nieuwere cijfers\") instead of removing them; dim unavailable actions to 40% instead of hiding them.",
+      "**Do** put party logos on white tiles, and use a party-colour stripe with the short name on input keys.",
+      "**Do** order parties by the Uitslagindeling (SP on the left to FvD on the right) in seat bars, Cijfers rows, Fractie keys and the Coalitiebouwer arc.",
+      "**Do** set all text in Inter with tabular figures, and all icons in Lucide 0.460.0 at stroke 2.",
+      "**Do** use the GLOSSARY words in the Dutch UI: Regie, Ether, Voorbeeld, Preset, Standpunt, Fractie, Zetel, Stoel, Zaal."
+    ],
+    "donts": [
+      "**Don't** let Enter show a Graphic.",
+      "**Don't** fill large areas with colour: no coloured navigation, no red or green cards, no coloured section headers.",
+      "**Don't** use red or green for selection, hover or decoration.",
+      "**Don't** bring back tiles or cards for lists that are tables: Presets, Stemmingen, sets, Standpunten.",
+      "**Don't** use pills, fully round chips or large corner radii.",
+      "**Don't** add shadows or lift animations.",
+      "**Don't** put large logos on input controls; Fractie keys use the stripe and the short name.",
+      "**Don't** add icons to tabs, TOON or table rows.",
+      "**Don't** carry devices from the earlier designs: no pictogram rail, no Kamerblauw, no maple, no page numbers, fastext keys or split-flap text."
+    ]
+  }
+}

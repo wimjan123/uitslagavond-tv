@@ -1,0 +1,11 @@
+# Xbox-controller (Microsoft, 045e) aan de regie-pc, voor de server van uitslagavond-tv.
+#
+# Ubuntu geeft een gamepad al aan wie op dit moment aan de pc is ingelogd (uaccess). De server
+# draait ook zonder inlog (loginctl enable-linger), dus deze regel geeft de gamepad daarnaast
+# aan de groep plugdev. Zet de gebruiker van de server in die groep:
+#   sudo usermod -aG plugdev uitslagavond
+#
+# Installeren: sudo cp 71-uitslagavond-gamepad.rules /etc/udev/rules.d/
+#              sudo udevadm control --reload && sudo udevadm trigger
+# id/vendor geldt voor USB en ook voor de draadloze adapter en Bluetooth (die zijn niet geprobeerd).
+SUBSYSTEM=="input", KERNEL=="event*", ENV{ID_INPUT_JOYSTICK}=="1", ATTRS{id/vendor}=="045e", GROUP="plugdev", MODE="0660", TAG+="uaccess"

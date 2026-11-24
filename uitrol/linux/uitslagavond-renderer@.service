@@ -1,0 +1,19 @@
+# Een Renderer op een beeldmachine, randloos op volledig scherm: `uitslagavond-renderer@ether`
+# of `uitslagavond-renderer@reserve`. Hij start pas als de grafische sessie van GNOME er is
+# (automatisch inloggen) en stopt als die stopt.
+[Unit]
+Description=uitslagavond-tv: Renderer %i
+Documentation=file://%h/uitslagavond/programma/INSTALLEREN.md
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=exec
+EnvironmentFile=%h/.config/uitslagavond/omgeving
+WorkingDirectory=%h/uitslagavond
+ExecStart=%h/uitslagavond/programma/bin/uitslagavond-renderer --rol %i --volledig-scherm
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=graphical-session.target

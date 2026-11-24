@@ -1,0 +1,151 @@
+/* Vormgeving > Stijl: links de velden (scrollen), rechts de schets, onderaan een vaste actiebalk. */
+.vormgeving-stijl {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+.stijl-velden {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 12px 14px;
+  min-height: 0;
+  overflow: auto;
+}
+.stijl-deel { display: flex; flex-direction: column; gap: 6px; max-width: 860px; }
+.stijl-kleuren td, .stijl-letters td { vertical-align: middle; }
+.stijl-kleuren td:first-child, .stijl-letters td:first-child { width: 110px; }
+.stijl-kleuren input[type="color"] {
+  width: 40px;
+  height: 28px;
+  padding: 2px;
+  background: var(--graphite-field);
+  border: 1px solid var(--graphite-line);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.stijl-hex { width: 92px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; }
+.stijl-letters select { width: 220px; }
+
+.stijl-logo { display: flex; gap: 14px; align-items: flex-start; }
+.stijl-logo-vak { display: flex; flex-direction: column; gap: 5px; width: 220px; flex: none; }
+.stijl-logo-vak .zacht { overflow-wrap: anywhere; }
+/* het logo staat in beeld op de Zaal: een donker vak, zoals in de uitzending */
+.stijl-logo-beeld {
+  display: grid;
+  place-items: center;
+  height: 88px;
+  padding: 10px;
+  background: var(--monitor-black);
+  border: 1px solid var(--graphite-line);
+}
+.stijl-logo-beeld img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.stijl-logo-beeld span { color: var(--paper-ink); font-weight: 700; text-align: center; }
+.stijl-logo-keuzes { display: flex; flex-direction: column; gap: 10px; flex: 1; max-width: 360px; }
+
+.stijl-snelheid { display: flex; align-items: center; gap: 10px; max-width: 520px; }
+.stijl-snelheid input[type="range"] { flex: 1; accent-color: var(--steel-blue); }
+.stijl-procent { min-width: 48px; text-align: right; font-weight: 650; }
+
+.stijl-schets-kolom {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px 14px;
+  min-height: 0;
+  overflow: auto;
+  border-left: 1px solid var(--graphite-line);
+}
+.stijl-actiebalk { grid-column: 1 / -1; }
+
+/* De schets volgt het beeld van de Renderer (1920 bij 1080), dus geen dashboardkleuren erin. */
+.stijl-schets {
+  position: relative;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid var(--graphite-line);
+  font-family: Georgia, "Times New Roman", serif;
+}
+.stijl-schets > * { position: absolute; }
+.schets-waas { inset: 0 50% 0 0; }
+.schets-paneel { right: 6%; top: 14%; width: 40%; padding: 3%; display: flex; flex-direction: column; gap: 5px; }
+.schets-kicker { display: flex; align-items: center; gap: 4px; font: 700 8px Inter, system-ui, sans-serif; letter-spacing: 0.06em; }
+.schets-streepje { display: inline-block; width: 3px; height: 9px; transform: rotate(30deg); }
+.schets-balk { display: flex; align-items: center; gap: 4px; height: 9px; font: 700 8px Inter, system-ui, sans-serif; }
+.schets-balk span { height: 100%; }
+.schets-naambalk { left: 5%; bottom: 10%; padding: 2% 3%; }
+.schets-kop { font-size: 17px; font-weight: 700; line-height: 1.1; }
+.schets-regel { font: 600 9px Inter, system-ui, sans-serif; margin-top: 2px; }
+.schets-bug { top: 5%; right: 4%; max-width: 22%; font: 800 8px Inter, system-ui, sans-serif; text-align: right; }
+.schets-bug img { display: block; max-width: 100%; max-height: 22px; margin-left: auto; }
+
+/* Vormgeving > Sjablonen: lijst, schets met Blokken, instellingen; onderaan een vaste actiebalk
+   (zoals de Camera Werkbank in DESIGN.md). */
+.sjablonen-werk {
+  display: grid;
+  grid-template-columns: 250px minmax(0, 1fr) 370px;
+  grid-template-rows: minmax(0, 1fr) auto;
+  overflow: hidden;
+}
+.sjablonen-werk > * { min-height: 0; overflow: auto; }
+.sjablonen-lijst { border-right: 1px solid var(--graphite-line); }
+.sjablonen-lijst td { height: auto; }
+.sjablonen-nieuw { padding: 10px; }
+.stempel-let-op { color: var(--warn-amber-ink); background: var(--warn-amber); border-color: var(--warn-amber); }
+.sjablonen-midden { display: flex; flex-direction: column; gap: 8px; padding: 12px; border-right: 1px solid var(--graphite-line); }
+.sjablonen-melding {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--warn-amber);
+  border-radius: 3px;
+  box-shadow: inset 3px 0 0 var(--warn-amber);
+}
+.sjablonen-melding span { flex: 1; min-width: 240px; }
+.sjablonen-blokbalk { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.sjablonen-blokbalk .label { margin-right: auto; }
+.sjablonen-blokken td { height: 28px; padding: 3px 10px; }
+.sjablonen-inhoud { max-width: 260px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.sjablonen-paneel { display: flex; flex-direction: column; gap: 12px; padding: 12px 14px; }
+.sjablonen-velden { display: flex; flex-direction: column; gap: 12px; }
+.sjablonen-rij { display: flex; flex-wrap: wrap; align-items: flex-end; gap: 8px; }
+.sjablonen-rij select { min-width: 150px; }
+.sjablonen-rij input[type="color"] { width: 40px; height: 30px; padding: 2px; background: var(--graphite-field); border: 1px solid var(--graphite-line); border-radius: 3px; }
+.sjablonen-vier { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; }
+.sjablonen-getal input { width: 100%; min-width: 0; }
+.sjablonen-vink { display: flex; align-items: center; gap: 8px; }
+.sjablonen-actiebalk { grid-column: 1 / -1; }
+
+/* De schets volgt het beeld van de Renderer (1920 bij 1080): de kleuren komen uit de Stijl. */
+.sjabloon-schets {
+  position: relative;
+  flex: none;
+  /* zo hoog dat de lijst Blokken eronder ook nog past (1440 bij 900: 300 pixels hoog) */
+  width: min(100%, max(480px, calc((100vh - 600px) * 16 / 9)));
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  container-type: inline-size;
+  background: radial-gradient(ellipse at 50% 85%, #2a3350 0%, var(--preview-canvas) 70%);
+  border: 1px solid var(--graphite-line);
+  touch-action: none;
+  user-select: none;
+}
+.schets-donker { background: radial-gradient(ellipse at 50% 85%, #131828 0%, #05070c 70%); }
+.schets-zaal { position: absolute; left: 1.2%; bottom: 1.5%; font-size: 11px; color: rgb(255 255 255 / 0.35); }
+.schets-blok { position: absolute; box-sizing: border-box; overflow: hidden; line-height: 1.15; cursor: move; }
+.schets-groot { display: grid; place-items: center; border: 1px dashed rgb(255 255 255 / 0.35); font: 600 11px Inter, system-ui, sans-serif; }
+.schets-blok:hover { outline: 1px solid rgb(255 255 255 / 0.4); }
+.schets-gekozen, .schets-gekozen:hover { outline: 2px solid var(--steel-blue); overflow: visible; z-index: 1; }
+.schets-maat {
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 10px;
+  height: 10px;
+  background: var(--steel-blue);
+  border: 1px solid var(--graphite-field);
+  cursor: nwse-resize;
+}

@@ -1,0 +1,39 @@
+[package]
+name = "renderer"
+description = "De Renderer: tekent één beeld (Ether, Reserve of Voorbeeld) en volgt de Stand van de server"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "uitslagavond-renderer"
+path = "src/main.rs"
+
+[dependencies]
+gedeeld = { workspace = true, features = ["volger"] }
+clap.workspace = true
+# JPEG voor de kleine beelden van het Voorbeeld; dezelfde versie als in Bevy.
+image = { version = "0.25", default-features = false, features = ["jpeg"] }
+serde.workspace = true
+serde_json.workspace = true
+# Geen gamepad (die leest de server) en geen geluid.
+bevy = { workspace = true, features = [
+    "default_app",
+    "std",
+    "multi_threaded",
+    "bevy_winit",
+    "x11",
+    "wayland",
+    "3d_bevy_render",
+    "ui_bevy_render",
+    "png",
+    # texturen in de GLB van de Zaal
+    "jpeg",
+    # TonyMcMapface heeft een opzoektabel nodig
+    "tonemapping_luts",
+    "zstd_rust",
+] }
+
+[dev-dependencies]
+tempfile.workspace = true

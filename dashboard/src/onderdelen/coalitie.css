@@ -1,0 +1,67 @@
+/* De Coalitiebouwer (DESIGN.md, Coalitiebouwer Arc). */
+.werkvlak-inhoud.coalitie { display: grid; grid-template-columns: 1fr 340px; overflow: hidden; }
+.werkvlak-inhoud.coalitie > * { min-height: 0; overflow: auto; }
+.coalitie-boog { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 40px 20px 24px; }
+.boog { position: relative; flex-shrink: 0; }
+.boog-partij {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  width: 56px;
+  padding: 6px 4px 4px;
+  transform: translate(-50%, -50%);
+  color: var(--paper-ink);
+  background: var(--graphite-raised);
+  border: 1px solid var(--graphite-line);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.boog-partij .logo-tegel { width: 40px; height: 25px; opacity: 0.85; }
+.boog-partij:hover:not(:disabled) { border-color: var(--slate-mute); }
+.boog-partij[aria-pressed="true"] { background: var(--selection-fill); border-color: var(--steel-blue); }
+.boog-partij[aria-pressed="true"] .logo-tegel { opacity: 1; }
+.boog-partij:disabled { cursor: default; opacity: 0.6; }
+.boog-zetels { font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
+.boog-vink {
+  position: absolute;
+  top: -7px;
+  right: -7px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  color: var(--steel-ink);
+  font-size: 11px;
+  font-weight: 800;
+  background: var(--steel-blue);
+  border-radius: 2px;
+}
+.boog-midden {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  transform: translateX(-50%);
+}
+.boog-totaal { font-size: 56px; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.boog-totaal.meerderheid { color: var(--klaar-green-text); }
+.coalitie-zetelbalk {
+  position: relative;
+  display: flex;
+  flex-shrink: 0;
+  width: min(860px, 100%);
+  height: 14px;
+  background: var(--graphite-field);
+  border-radius: 1px;
+}
+.coalitie-zetelbalk > span:not(.zetelbalk-meerderheid) { height: 100%; }
+.coalitie-zijkant { border-left: 1px solid var(--graphite-line); }
+.coalitie-zijkant .stempel { align-self: flex-start; }
+.coalitie-lijst { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
+.coalitie-lijst li { display: flex; align-items: center; gap: 8px; }
+.coalitie-lijst li .zacht { margin-left: auto; font-variant-numeric: tabular-nums; }

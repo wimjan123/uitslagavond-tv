@@ -1,0 +1,75 @@
+/* Presets (DESIGN.md, Preset Table). Filters en stempels komen uit stemmingen.css. */
+
+.knop-werkbalk { height: 26px; padding: 0 9px; gap: 6px; }
+
+.presets-melding {
+  padding: 6px 12px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--warn-amber-ink);
+  background: var(--warn-amber);
+}
+
+.presets-tabel { table-layout: fixed; }
+.presets-tabel .kol-toets { width: 48px; padding-left: 8px; padding-right: 0; }
+.presets-tabel .kol-beeld { width: 108px; }
+.presets-tabel .kol-camera { width: 180px; }
+.presets-tabel .kol-tablet { width: 60px; }
+.presets-tabel .kol-status { width: 120px; }
+.presets-tabel tbody tr { cursor: pointer; }
+.presets-tabel td { vertical-align: middle; }
+.presets-tabel tr.rij-klaar { background: color-mix(in srgb, var(--klaar-green) 12%, transparent); box-shadow: inset 3px 0 0 var(--klaar-green); }
+.presets-tabel tr.rij-live { background: color-mix(in srgb, var(--ether-red) 12%, transparent); box-shadow: inset 3px 0 0 var(--ether-red); }
+
+.toets-kap {
+  display: inline-grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  font: 600 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace;
+  border: 1px solid color-mix(in srgb, var(--paper-ink) 70%, transparent);
+  border-radius: 2px;
+}
+
+.schets { display: block; width: 88px; aspect-ratio: 16 / 9; outline: 1px solid var(--graphite-line); }
+
+.cel-tekst { min-width: 0; }
+.een-regel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* Geen rood of groen voor de uitkomst: in deze tabel betekenen die Live en Klaar. */
+.besluit-woord { font-weight: 700; }
+
+.camera-cel { display: flex; align-items: center; gap: 7px; min-width: 0; }
+.camera-cel kbd { flex: none; }
+
+.tablet-knop {
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 24px;
+  color: var(--slate-mute);
+  background: none;
+  border: 1px solid var(--graphite-line);
+  border-radius: 3px;
+  cursor: pointer;
+}
+.tablet-knop:hover:not(:disabled) { color: var(--paper-ink); border-color: var(--slate-mute); }
+.tablet-knop[aria-pressed="true"] { color: var(--steel-blue); border-color: var(--steel-blue); background: var(--selection-fill); }
+.tablet-knop:disabled { opacity: 0.4; cursor: default; }
+
+.presets-leeg td { height: 48px; cursor: default; }
+.presets-tabel tr.presets-leeg:hover { background: none; }
+.presets-nieuw td { height: 40px; }
+.presets-tabel tr.presets-nieuw { cursor: default; }
+.nieuw-knop {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 0;
+  font: inherit;
+  font-weight: 550;
+  color: var(--slate-mute);
+  background: none;
+  border: 0;
+  cursor: pointer;
+}
+.nieuw-knop:hover { color: var(--paper-ink); }

@@ -1,0 +1,35 @@
+[package]
+name = "server"
+description = "De server: de enige bron van de Stand, met WebSocket en HTTP voor Opdrachten"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+publish.workspace = true
+
+[[bin]]
+name = "uitslagavond-server"
+path = "src/main.rs"
+
+[dependencies]
+gedeeld.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+anyhow.workspace = true
+tokio.workspace = true
+axum.workspace = true
+tower-http.workspace = true
+jiff.workspace = true
+clap.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+futures-util.workspace = true
+# De gamepad voor de Vrije camera. Op Linux nodig bij het bouwen: libudev-dev.
+gilrs = "0.11"
+# Voor de open data van de Tweede Kamer (https).
+reqwest = { workspace = true, features = ["rustls", "gzip", "query"] }
+
+[dev-dependencies]
+gedeeld = { workspace = true, features = ["volger"] }
+tokio-tungstenite.workspace = true
+reqwest.workspace = true
+tempfile.workspace = true

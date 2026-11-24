@@ -1,0 +1,93 @@
+// Toon, Bijwerken, Uit beeld en Standpunten: dezelfde handelingen voor de knoppen en de sneltoetsen.
+import { nieuwereCijfers, sjabloonId } from "../graphic";
+import { geldendSjabloon, gewijzigdSjabloon } from "../vormgeving/sjablonen";
+import type { Stand } from "../typen/Stand";
+import type { Regie } from "./regie";
+import { standpuntVoorToets } from "./toetsen";
+import type { Actie, TakeActie } from "./toetsen";
+
+export const TAKE = "take";
+/** Waar een weigering bij een Standpunt komt te staan: in het camerablok. */
+export const CAMERA = "camera";
+/** Waar een weigering bij een Preset komt te staan: in het onderdeel Presets. */
+export const PRESETS = "presets";
+
+/** Of precies wat klaarstaat ook in de Ether staat, in dezelfde Stijl en hetzelfde Sjabloon (gelijk
+ * aan `Stand::staat_klaar_in_beeld`). Beide Stijlen komen uit dezelfde serde-uitvoer, dus de JSON is gelijk
+ * als de Stijlen gelijk zijn. */
+export function klaarStaatInBeeld(s: Stand): boolean {
+  return (
+    !!s.klaar &&
+    !!s.ether &&
+    s.klaar.id === s.ether.id &&
+    s.klaar.versie === s.ether.versie &&
+    JSON.stringify(s.ether.stijl) === JSON.stringify(s.stijl) &&
+    zelfdeSjabloon(s)
+  );
+}
+
+/** Of de Graphic in de Ether het Sjabloon heeft dat nu geldt voor wat klaarstaat. */
+function zelfdeSjabloon(s: Stand): boolean {
+  const kopie = s.ether?.sjabloon;
+  const nu = s.klaar && geldendSjabloon(s.sjablonen, sjabloonId(s.klaar.graphic));
+  return !kopie || (!!nu && !gewijzigdSjabloon(kopie, nu));
+}
+
+/** Of de klaargezette Graphic een nieuwere versie is van die in de Ether, of nieuwere cijfers heeft
+ * (gelijk aan `Stand::kan_bijwerken`). */
+export function kanBijwerken(s: Stand): boolean {
+  return !!s.klaar && !!s.ether && s.klaar.id === s.ether.id && (s.klaar.versie !== s.ether.versie || nieuwereCijfers(s, s.klaar.graphic));
+}
+
+export function kan(actie: TakeActie, s: Stand | undefined): boolean {
+  if (!s) return false;
+  switch (actie) {
+    case "Toon":
+      return !!s.klaar && !klaarStaatInBeeld(s);
+    case "Bijwerken":
+      return kanBijwerken(s);
+    case "UitBeeld":
+      return !!s.ether;
+  }
+}
+
+/** Voert de handeling uit. Toon stuurt mee welke versie dit scherm liet zien. */
+export function voerUit(regie: Regie, actie: Actie): void {
+  const s = regie.stand?.stand;
+  if (typeof actie === "object") {
+    if (actie.soort === "Preset") {
+      void regie.stuur({ soort: "ZetPresetKlaar", nummer: actie.nummer }, PRESETS);
+      return;
+    }
+    const p = standpuntVoorToets([...(s?.standpunten ?? []), ...(s?.cameraritten ?? [])], actie.toets);
+    if (p) kiesStandpunt(regie, p.letter, actie.knip);
+    return;
+  }
+  switch (actie) {
+    case "VrijeCamera":
+      if (s) void regie.stuur({ soort: "ZetVrijeCamera", aan: !s.camera.vrij }, CAMERA);
+      return;
+    case "Oefenen":
+      if (s) void regie.stuur({ soort: "ZetOefenen", aan: !s.camera.oefenen }, CAMERA);
+      return;
+    case "Opnemen":
+      // stoppen: de server vult zelf in wat hij opnam
+      if (s) void regie.stuur({ soort: "ZetOpnemen", aan: !s.camera.opname }, CAMERA);
+      return;
+    case "Toon":
+      if (!s?.klaar) return;
+      void regie.stuur({ soort: "Toon", versie: s.klaar.versie }, TAKE);
+      return;
+    case "Bijwerken":
+      void regie.stuur({ soort: "Bijwerken" }, TAKE);
+      return;
+    case "UitBeeld":
+      void regie.stuur({ soort: "UitBeeld" }, TAKE);
+      return;
+  }
+}
+
+/** Stuur de camera van de Ether naar het Standpunt of de Camerarit met deze sleutel; zet de Vrije camera uit. */
+export function kiesStandpunt(regie: Regie, letter: string, knip = false): void {
+  void regie.stuur({ soort: "KiesStandpunt", letter, knip }, CAMERA);
+}

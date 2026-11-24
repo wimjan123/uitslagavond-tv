@@ -1,0 +1,17 @@
+# De Renderer met rol Voorbeeld op de regie-pc: tekent zonder venster en stuurt kleine beelden
+# naar het dashboard. Hij heeft geen scherm nodig, wel de videokaart.
+[Unit]
+Description=uitslagavond-tv: Renderer Voorbeeld
+Documentation=file://%h/uitslagavond/programma/INSTALLEREN.md
+After=uitslagavond-server.service
+
+[Service]
+Type=exec
+EnvironmentFile=%h/.config/uitslagavond/omgeving
+WorkingDirectory=%h/uitslagavond
+ExecStart=%h/uitslagavond/programma/bin/uitslagavond-renderer --rol voorbeeld
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target
