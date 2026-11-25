@@ -70,8 +70,9 @@ pub const PLAFOND: Afwerking = Afwerking {
 /// De afwerking bij een materiaal uit het model.
 pub fn afwerking(materiaal: &str) -> Option<Afwerking> {
     Some(match materiaal {
-        "perenhout" | "perenhout_blad" | "middenvak_blad" | "middenvak_paneel" | "middenvak_katheder"
-        | "desk_rand" | "desk_leer" | "balies_kastje" | "balies_kader" | "balies_kap" | "balies_bladrand" => HOUT,
+        "perenhout" | "perenhout_blad" | "middenvak_blad" | "middenvak_paneel"
+        | "middenvak_katheder" | "desk_leer" | "balies_kastje" | "balies_kader" | "balies_kap"
+        | "balies_bladrand" => HOUT,
         m if m.starts_with("balies_fineer_") => HOUT,
         "stoel_leer" | "stoel_bies" | "stoel_naad" | "balies_leer" => STOF,
         "tapijt" => TAPIJT,
@@ -163,12 +164,20 @@ fn werk_af(
 
 fn srgb_naar_lineair(b: u8) -> f32 {
     let c = f32::from(b) / 255.0;
-    if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
+    if c <= 0.04045 {
+        c / 12.92
+    } else {
+        ((c + 0.055) / 1.055).powf(2.4)
+    }
 }
 
 fn lineair_naar_srgb(c: f32) -> u8 {
     let c = c.clamp(0.0, 1.0);
-    let s = if c <= 0.003_130_8 { c * 12.92 } else { 1.055 * c.powf(1.0 / 2.4) - 0.055 };
+    let s = if c <= 0.003_130_8 {
+        c * 12.92
+    } else {
+        1.055 * c.powf(1.0 / 2.4) - 0.055
+    };
     (s * 255.0).round() as u8
 }
 
@@ -182,8 +191,20 @@ fn verlaag_contrast(beeld: &mut Image, contrast: f32) {
         warn!("textuur zonder pixels in het geheugen: contrast blijft");
         return;
     };
-    let naar = |b: u8| if srgb { srgb_naar_lineair(b) } else { f32::from(b) / 255.0 };
-    let terug = |c: f32| if srgb { lineair_naar_srgb(c) } else { (c.clamp(0.0, 1.0) * 255.0).round() as u8 };
+    let naar = |b: u8| {
+        if srgb {
+            srgb_naar_lineair(b)
+        } else {
+            f32::from(b) / 255.0
+        }
+    };
+    let terug = |c: f32| {
+        if srgb {
+            lineair_naar_srgb(c)
+        } else {
+            (c.clamp(0.0, 1.0) * 255.0).round() as u8
+        }
+    };
     let pixels = data.len() / 4;
     let mut som = [0.0f64; 3];
     for p in data.chunks_exact(4) {
@@ -224,7 +245,13 @@ pub fn maak_mipmaps(beeld: &mut Image) {
     let mut vorig: Vec<f32> = data
         .iter()
         .enumerate()
-        .map(|(i, b)| if srgb && i % 4 != 3 { srgb_naar_lineair(*b) } else { f32::from(*b) / 255.0 })
+        .map(|(i, b)| {
+            if srgb && i % 4 != 3 {
+                srgb_naar_lineair(*b)
+            } else {
+                f32::from(*b) / 255.0
+            }
+        })
         .collect();
     while w > 1 || h > 1 {
         let (nw, nh) = ((w / 2).max(1), (h / 2).max(1));
@@ -235,12 +262,17 @@ pub fn maak_mipmaps(beeld: &mut Image) {
                 let (x1, y1) = ((2 * x + 1).min(w - 1), (2 * y + 1).min(h - 1));
                 for k in 0..4 {
                     let p = |px: usize, py: usize| vorig[(py * w + px) * 4 + k];
-                    nieuw[(y * nw + x) * 4 + k] = (p(x0, y0) + p(x1, y0) + p(x0, y1) + p(x1, y1)) / 4.0;
+                    nieuw[(y * nw + x) * 4 + k] =
+                        (p(x0, y0) + p(x1, y0) + p(x0, y1) + p(x1, y1)) / 4.0;
                 }
             }
         }
         data.extend(nieuw.iter().enumerate().map(|(i, c)| {
-            if srgb && i % 4 != 3 { lineair_naar_srgb(*c) } else { (c.clamp(0.0, 1.0) * 255.0).round() as u8 }
+            if srgb && i % 4 != 3 {
+                lineair_naar_srgb(*c)
+            } else {
+                (c.clamp(0.0, 1.0) * 255.0).round() as u8
+            }
         }));
         vorig = nieuw;
         (w, h) = (nw, nh);
@@ -268,19 +300,37 @@ mod tests {
         let hout = LinearRgba::rgb(1.0, 0.503, 0.06);
         let na = HOUT.kleur(hout);
         let verzadiging = |k: LinearRgba| {
-            let (hoog, laag) = (k.red.max(k.green).max(k.blue), k.red.min(k.green).min(k.blue));
+            let (hoog, laag) = (
+                k.red.max(k.green).max(k.blue),
+                k.red.min(k.green).min(k.blue),
+            );
             (hoog - laag) / hoog
         };
         assert!(verzadiging(na) < verzadiging(hout) * 0.8, "{na:?}");
-        assert!(na.red > na.green && na.green > na.blue, "nog steeds hout: {na:?}");
+        assert!(
+            na.red > na.green && na.green > na.blue,
+            "nog steeds hout: {na:?}"
+        );
     }
 
     #[test]
     fn mipmaps_lopen_tot_een_pixel_en_middelen_in_lineair_licht() {
         // een dambord van zwart en wit, 4 bij 2: het kleinste niveau is middengrijs in licht
-        let pixels: Vec<u8> = (0..8).flat_map(|i| if (i + i / 4) % 2 == 0 { [0, 0, 0, 255] } else { [255; 4] }).collect();
+        let pixels: Vec<u8> = (0..8)
+            .flat_map(|i| {
+                if (i + i / 4) % 2 == 0 {
+                    [0, 0, 0, 255]
+                } else {
+                    [255; 4]
+                }
+            })
+            .collect();
         let mut beeld = Image::new(
-            Extent3d { width: 4, height: 2, depth_or_array_layers: 1 },
+            Extent3d {
+                width: 4,
+                height: 2,
+                depth_or_array_layers: 1,
+            },
             TextureDimension::D2,
             pixels,
             TextureFormat::Rgba8UnormSrgb,
@@ -300,13 +350,20 @@ mod tests {
     #[test]
     fn minder_contrast_houdt_het_gemiddelde() {
         let mut beeld = Image::new(
-            Extent3d { width: 2, height: 1, depth_or_array_layers: 1 },
+            Extent3d {
+                width: 2,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
             TextureDimension::D2,
             vec![0, 0, 0, 255, 200, 200, 200, 255],
             TextureFormat::Rgba8Unorm,
             RenderAssetUsages::default(),
         );
         verlaag_contrast(&mut beeld, 0.5);
-        assert_eq!(beeld.data.unwrap(), vec![50, 50, 50, 255, 150, 150, 150, 255]);
+        assert_eq!(
+            beeld.data.unwrap(),
+            vec![50, 50, 50, 255, 150, 150, 150, 255]
+        );
     }
 }

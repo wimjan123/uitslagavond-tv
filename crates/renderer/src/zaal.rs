@@ -53,7 +53,7 @@ impl Plugin for ZaalPlugin {
                     .after(Afgewerkt),
             );
         if let Some(map) = &self.map {
-            app.add_plugins((OmgevingPlugin, AfwerkingPlugin))
+            app.add_plugins((OmgevingPlugin, AfwerkingPlugin, crate::occlusie::OcclusiePlugin))
                 .insert_resource(ZaalMap(map.clone()))
                 .init_resource::<ModelGeladen>()
                 .insert_resource(GlobalAmbientLight {

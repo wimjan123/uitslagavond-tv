@@ -23,6 +23,7 @@ mod graphic;
 mod kleurgolf;
 mod lichtkaart;
 mod meting;
+mod occlusie;
 mod omgeving;
 mod opname;
 mod scherm;
