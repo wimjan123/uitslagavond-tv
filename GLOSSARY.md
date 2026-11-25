@@ -21,7 +21,7 @@ De manier waarop de Stoelen van kleur wisselen: als Golf, van links naar rechts,
 _Avoid_: fade, animatie (voor de Stoelen)
 
 **Opbouw**:
-Een Kleurovergang die één Partij tegelijk laat oplichten, de grootste eerst, terwijl een groot label op de vloer haar Zetels en naam toont. Daarna staan alle Partijen als kaartjes op één rij, in dezelfde volgorde als hun Stoelen van links naar rechts. Alleen bij Toon van een Sjabloon dat hem kiest, zoals de Zetelverdeling; Bijwerken gaat als Golf. Opbouw overslaan kleurt de rest meteen.
+Een Kleurovergang die één Partij tegelijk laat oplichten, de grootste eerst, terwijl een groot label op de vloer haar Zetels en naam toont. Partijen die al aan de beurt waren, dimmen zolang de volgende oplicht en komen na de laatste stap allemaal tegelijk terug. Daarna staan alle Partijen als kaartjes op één rij, in dezelfde volgorde als hun Stoelen van links naar rechts. Alleen bij Toon van een Sjabloon dat hem kiest, zoals de Zetelverdeling; Bijwerken gaat als Golf. Opbouw overslaan kleurt de rest meteen.
 _Avoid_: onthulling (dat is de vaste Camerarit), aftellen, Opbouwen (dat is een animatie van een Blok)
 
 **Kleur uit**:

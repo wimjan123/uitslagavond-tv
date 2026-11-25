@@ -462,13 +462,17 @@ impl Golf {
                         Stoelstand::Onderweg(van.mix(&lineair(wacht), f), van_straalt.mix(&LinearRgba::BLACK, f))
                     }
                     Opbouwdeel::Oplichten(f) => {
-                        let g = self.opbouw.gloed(i, self.tijd);
-                        if f >= 1.0 && g <= 0.0 {
+                        let (g, d) = (self.opbouw.gloed(i, self.tijd), self.opbouw.gedimd(i, self.tijd));
+                        if f >= 1.0 && g <= 0.0 && d <= 0.0 {
                             return Stoelstand::Klaar;
                         }
-                        let leer = lineair(wacht).mix(&lineair(naar), f).mix(&lineair(Some(Kleur { r: 255, g: 255, b: 255 })), GLOED_LICHT * g);
+                        // eerst de kleur, dan gedimd naar de wachtkleur, dan de gloed van de stap
+                        let leer = lineair(wacht)
+                            .mix(&lineair(naar), f)
+                            .mix(&lineair(wacht), d)
+                            .mix(&lineair(Some(Kleur { r: 255, g: 255, b: 255 })), GLOED_LICHT * g);
                         let eigen = naar.filter(|k| *k != GRIJS).map_or(LinearRgba::BLACK, als_stof);
-                        let straling = LinearRgba::BLACK.mix(&straalt(naar), f) + eigen * (GLOED_STRAALT * g);
+                        let straling = LinearRgba::BLACK.mix(&straalt(naar), f) * (1.0 - d) + eigen * (GLOED_STRAALT * g);
                         Stoelstand::Onderweg(leer, straling)
                     }
                 }
@@ -1562,11 +1566,13 @@ mod tests {
         assert_eq!(stap(&app), Some(rood));
         assert_eq!(tel(&mut app, OPBOUW_WACHTKLEUR), 40);
         assert_eq!(tel(&mut app, rood), 0, "rood gloeit nog, lichter dan zijn eigen kleur");
-        // in de volgende stap zakt rood terug naar zijn eigen kleur
+        // in de volgende stap is rood gedimd, zodat alleen groen vol oplicht
         wacht(&mut app, 1.5);
         assert_eq!(stap(&app), Some(groen));
-        assert_eq!(tel(&mut app, rood), 110);
+        assert_eq!(tel(&mut app, rood), 0, "rood gedimd");
+        // na de laatste stap komt alles tegelijk terug in zijn eigen kleur
         wacht(&mut app, 1.5);
+        assert_eq!(tel(&mut app, rood), 110);
         assert_eq!(tel(&mut app, groen), 40);
         assert!(!app.world().resource::<Opbouwstand>().bezig, "na de laatste Partij en haar nagloed klaar");
 

@@ -101,10 +101,10 @@ pub struct Opbouwkaart {
 #[derive(Component, Clone, Copy)]
 pub struct Randkleur(pub Color);
 
-/// Hoeveel kaartjes van Partijlabels op één rij passen voordat ze over twee rijen gaan.
-const KAARTJES_PER_RIJ: usize = 8;
-/// Ruimte tussen de kaartjes, naast en onder elkaar.
-const KAARTJE_TUSSEN: f32 = 8.0;
+/// Ruimte tussen de kaartjes van Partijlabels, en om de rij heen.
+const KAARTJE_TUSSEN: f32 = 6.0;
+/// De band in de partijkleur bovenaan een kaartje.
+const KAARTJE_BAND: f32 = 10.0;
 
 /// Een tekst die op één regel blijft: de letter krimpt tot hij in `breedte` past.
 #[derive(Component, Clone, Copy)]
@@ -287,6 +287,50 @@ fn labelrijen(delen: &[(f32, f32, Option<f32>)], b: f32, twee_rijen: bool) -> Ve
             let rij = (*rij)?;
             let volgende = (i + 1..delen.len()).find(|&j| rijen[j] == Some(rij)).map_or(b, |j| delen[j].0);
             Some((rij, volgende - delen[i].0))
+        })
+        .collect()
+}
+
+/// Waar het label van een deel van een losse Zetelbalk staat.
+#[derive(Clone, Copy, Debug, PartialEq)]
+enum Labelplek {
+    /// In het deel zelf, als het erin past.
+    Binnen,
+    /// Onder de balk op rij `rij`, links op `x`, met een tikje vanaf het midden van het deel.
+    Onder { rij: usize, x: f32 },
+    /// Nergens: het past nergens.
+    Geen,
+}
+
+/// De marge van een label in een deel van de Zetelbalk, links en rechts.
+const BINNEN_MARGE: f32 = 12.0;
+
+/// Waar elk label van een losse Zetelbalk staat. `delen` is per deel: waar het begint, hoe breed
+/// het is en de geschatte breedte van zijn label (geen label: `None`). Past een label in zijn
+/// deel, dan staat het erin; anders onder de balk, zo dat het tikje vanaf het midden van het
+/// deel op het label uitkomt, op de eerste of tweede rij waar plaats is. Zo hoort elk label
+/// zichtbaar bij zijn eigen deel.
+fn labelplekken(delen: &[(f32, f32, Option<f32>)], b: f32) -> Vec<Labelplek> {
+    const RUIMTE: f32 = 12.0;
+    let mut eind = [f32::NEG_INFINITY; 2];
+    delen
+        .iter()
+        .map(|&(x, breed, label)| {
+            let Some(w) = label else { return Labelplek::Geen };
+            if w + 2.0 * BINNEN_MARGE <= breed {
+                return Labelplek::Binnen;
+            }
+            let midden = x + breed / 2.0;
+            let gewenst = (midden - 8.0).clamp(0.0, (b - w).max(0.0));
+            for (rij, e) in eind.iter_mut().enumerate() {
+                let links = gewenst.max(*e);
+                // het tikje moet op het label uitkomen
+                if links <= midden - 4.0 && links + w >= midden + 4.0 {
+                    *e = links + w + RUIMTE;
+                    return Labelplek::Onder { rij, x: links };
+                }
+            }
+            Labelplek::Geen
         })
         .collect()
 }
@@ -550,8 +594,9 @@ pub fn bouw_inhoud(
                     (begin, naar * b, label.then(|| geschat_label(d, 30.0)))
                 })
                 .collect();
-            let rijen = labelrijen(&plaatsen, b, *twee_labelrijen);
-            for ((d, van, naar, was), plaats) in delen.into_iter().zip(rijen) {
+            let rijen = labelrijen(&plaatsen, b, false);
+            let plekken = if *twee_labelrijen { labelplekken(&plaatsen, b) } else { Vec::new() };
+            for (n, ((d, van, naar, was), plaats)) in delen.into_iter().zip(rijen).enumerate() {
                 let kl = kleur(d.kleur).with_alpha(f32::from(d.dekking) / 100.0);
                 let seg = commands
                     .spawn((
@@ -578,6 +623,64 @@ pub fn bouw_inhoud(
                     BackgroundColor(kl.with_alpha(kl.alpha() * dekking)),
                     Deel { kleur: kl },
                 ));
+                // De losse Zetelbalk: het label in het deel, of eronder met een tikje.
+                match plekken.get(n) {
+                    Some(Labelplek::Binnen) => {
+                        let op = leesbaar_op(d.kleur);
+                        let binnen_letters = Labelletters { tekst: op, naam_kleur: op, ..letters };
+                        let label = commands
+                            .spawn((
+                                ChildOf(seg),
+                                Node {
+                                    position_type: PositionType::Absolute,
+                                    left: Val::Px(BINNEN_MARGE),
+                                    top: Val::Px(0.0),
+                                    height: Val::Px(h),
+                                    flex_direction: FlexDirection::Column,
+                                    justify_content: JustifyContent::Center,
+                                    ..default()
+                                },
+                            ))
+                            .id();
+                        zetellabel(commands, bestanden, label, &d, was, vorig.as_ref().map(|v| v.duur), &binnen_letters, 30.0, dekking);
+                        continue;
+                    }
+                    Some(&Labelplek::Onder { rij, x: links }) => {
+                        let midden = plaatsen[n].0 + plaatsen[n].1 / 2.0;
+                        let onder = h + 14.0 + rij as f32 * LABELRIJ;
+                        let tik = letters.tekst.with_alpha(0.6);
+                        commands.spawn((
+                            ChildOf(binnen),
+                            Node {
+                                position_type: PositionType::Absolute,
+                                left: Val::Px((midden - 1.0).round()),
+                                top: Val::Px(h),
+                                width: Val::Px(2.0),
+                                height: Val::Px(onder - h + 6.0),
+                                ..default()
+                            },
+                            BackgroundColor(tik.with_alpha(tik.alpha() * dekking)),
+                            Deel { kleur: tik },
+                        ));
+                        let label = commands
+                            .spawn((
+                                ChildOf(binnen),
+                                Node {
+                                    position_type: PositionType::Absolute,
+                                    left: Val::Px(links.round()),
+                                    top: Val::Px(onder),
+                                    flex_direction: FlexDirection::Column,
+                                    align_items: AlignItems::FlexStart,
+                                    ..default()
+                                },
+                            ))
+                            .id();
+                        zetellabel(commands, bestanden, label, &d, was, vorig.as_ref().map(|v| v.duur), &letters, 30.0, dekking);
+                        continue;
+                    }
+                    Some(Labelplek::Geen) => continue,
+                    None => {}
+                }
                 // zonder korte naam geen label: Zetels zonder Partij, en in de Coalitiebalk de
                 // Partijen buiten de coalitie
                 if let Some((rij, ruimte)) = plaats {
@@ -1023,66 +1126,61 @@ pub fn bouw_inhoud(
             naamkleur,
             kaartjes: true,
         } => {
-            // Elke Partij een eigen kaartje, even breed, net als het Opbouwlabel: een streep in de
-            // partijkleur links, de Zetels, dan de naam. Meer dan KAARTJES_PER_RIJ Partijen gaan
-            // over twee rijen, de linker helft van de Zaal boven, zodat de naam groot genoeg blijft.
-            let n = labels.len().max(1);
-            let per_rij = if n > KAARTJES_PER_RIJ { n.div_ceil(2) } else { n };
-            let rijen = n.div_ceil(per_rij) as f32;
-            let breed = ((b - KAARTJE_TUSSEN * (per_rij as f32 - 1.0)) / per_rij as f32).floor();
-            let hoog = ((h - KAARTJE_TUSSEN * (rijen - 1.0)) / rijen).floor();
-            commands.entity(binnen).insert(Node {
-                flex_direction: FlexDirection::Row,
-                flex_wrap: FlexWrap::Wrap,
-                column_gap: Val::Px(KAARTJE_TUSSEN),
-                row_gap: Val::Px(KAARTJE_TUSSEN),
-                align_content: AlignContent::FlexStart,
-                ..vol
-            });
+            // Eén rij kaartjes in de volgorde van de Stoelen van links naar rechts, op één donkere
+            // balk zodat de Zaal er niet doorheen schijnt: per Partij een band in de partijkleur
+            // bovenaan, de Zetels en daaronder de naam.
+            commands.entity(binnen).insert((
+                Node {
+                    flex_direction: FlexDirection::Row,
+                    column_gap: Val::Px(KAARTJE_TUSSEN),
+                    padding: UiRect::all(Val::Px(KAARTJE_TUSSEN)),
+                    align_items: AlignItems::Stretch,
+                    ..vol
+                },
+                BackgroundColor(k.with_alpha(0.97 * dekking)),
+                Deel { kleur: k.with_alpha(0.97) },
+            ));
             let (tk, nk) = (kleur(*tekstkleur), kleur(*naamkleur));
             let g = f32::from(*grootte);
-            let vlakkleur = k.with_alpha(0.97);
-            let streep = 10.0;
+            let n = labels.len().max(1) as f32;
+            let breed = ((b - KAARTJE_TUSSEN * (n + 1.0)) / n).floor();
             for l in labels {
                 let kaartje = commands
                     .spawn((
                         ChildOf(binnen),
                         Node {
-                            width: Val::Px(breed),
-                            height: Val::Px(hoog),
-                            flex_direction: FlexDirection::Row,
+                            flex_grow: 1.0,
+                            flex_basis: Val::Px(0.0),
+                            flex_direction: FlexDirection::Column,
                             align_items: AlignItems::Center,
-                            column_gap: Val::Px(14.0),
+                            justify_content: JustifyContent::Center,
+                            padding: UiRect::top(Val::Px(KAARTJE_BAND)),
                             overflow: Overflow::clip(),
                             ..default()
                         },
-                        BackgroundColor(vlakkleur.with_alpha(vlakkleur.alpha() * dekking)),
-                        Deel { kleur: vlakkleur },
                     ))
                     .id();
                 let pk = kleur(l.kleur);
                 commands.spawn((
                     ChildOf(kaartje),
-                    Node { width: Val::Px(streep), height: Val::Percent(100.0), flex_shrink: 0.0, ..default() },
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(0.0),
+                        right: Val::Px(0.0),
+                        top: Val::Px(0.0),
+                        height: Val::Px(KAARTJE_BAND),
+                        ..default()
+                    },
                     BackgroundColor(pk.with_alpha(dekking)),
                     Deel { kleur: pk },
                 ));
-                let cijfer = (g * 1.5).round();
-                // de Zetels in een vaste kolom, zodat de namen onder elkaar beginnen
-                let vak = commands
-                    .spawn((
-                        ChildOf(kaartje),
-                        Node { width: Val::Px(cijfer * 1.25), flex_shrink: 0.0, justify_content: JustifyContent::FlexEnd, ..default() },
-                    ))
-                    .id();
-                if let Some(z) = l.zetels {
-                    let t = tekst_deel(commands, bestanden, vak, &z.to_string(), letter, cijfer, tk, Uitlijning::Rechts, dekking);
-                    commands.entity(t).insert(TextLayout::no_wrap());
-                }
-                if let Some(kort) = l.kort.as_deref() {
-                    let rest = breed - streep - cijfer * 1.25 - 2.0 * 14.0 - 10.0;
-                    let t = tekst_deel(commands, bestanden, kaartje, kort, naamletter, g, nk, Uitlijning::Links, dekking);
-                    commands.entity(t).insert((TextLayout::no_wrap(), Krimp { grootte: g, breedte: rest }));
+                let regels = [
+                    l.zetels.map(|z| (z.to_string(), letter, (g * 1.5).round(), tk)),
+                    l.kort.as_deref().map(|t| (t.to_string(), naamletter, g, nk)),
+                ];
+                for (tekst, letter, grootte, kl) in regels.into_iter().flatten() {
+                    let t = tekst_deel(commands, bestanden, kaartje, &tekst, letter, grootte, kl, Uitlijning::Midden, dekking);
+                    commands.entity(t).insert((TextLayout::no_wrap(), Krimp { grootte, breedte: breed - 8.0 }));
                 }
             }
         }
@@ -1446,6 +1544,33 @@ mod tests {
         let een = labelrijen(&delen, 1000.0, false);
         assert_eq!(een[3], Some((0, 920.0)));
         assert_eq!(een[2], None, "zonder tweede rij valt het weg");
+    }
+
+    #[test]
+    fn een_label_staat_in_zijn_deel_als_het_past_en_anders_eronder_bij_zijn_tikje() {
+        // de linkerkant van de uitslag van 2025: SP 3, PvdD 3, GL-PvdA 20, DENK 3, Volt 1 (1632 breed)
+        let z = |n: f32| n * 1632.0 / 150.0;
+        let mut x = 0.0;
+        let delen: Vec<(f32, f32, Option<f32>)> = [(3.0, 62.0), (3.0, 98.0), (20.0, 171.0), (3.0, 98.0), (1.0, 98.0)]
+            .iter()
+            .map(|&(zetels, label)| {
+                let deel = (x, z(zetels), Some(label));
+                x += z(zetels);
+                deel
+            })
+            .collect();
+        let p = labelplekken(&delen, 1632.0);
+        assert_eq!(p[2], Labelplek::Binnen, "GL-PvdA past in haar deel");
+        assert!(matches!(p[0], Labelplek::Onder { rij: 0, .. }));
+        assert!(matches!(p[1], Labelplek::Onder { rij: 1, .. }), "PvdD botst met SP en gaat een rij lager");
+        assert!(matches!(p[3], Labelplek::Onder { rij: 0, .. }));
+        assert!(matches!(p[4], Labelplek::Onder { rij: 1, .. }));
+        for (plek, (begin, breed, label)) in p.iter().zip(&delen) {
+            if let Labelplek::Onder { x, .. } = plek {
+                let midden = begin + breed / 2.0;
+                assert!(*x <= midden && x + label.unwrap() >= midden, "het tikje komt op het label uit");
+            }
+        }
     }
 
     #[test]
