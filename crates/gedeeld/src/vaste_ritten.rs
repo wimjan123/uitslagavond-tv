@@ -43,12 +43,13 @@ fn mix(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
     std::array::from_fn(|i| a[i] + (b[i] - a[i]) * t)
 }
 
-/// Van boven de banken steil omlaag kijkend, omlaag en naar voren tot een overzicht op ooghoogte.
+/// Dichtbij boven de voorste banken, dan terug en omhoog tot de hele halve cirkel in beeld is:
+/// zo eindigt de Zetelverdeling met elke Partij in beeld.
 fn onthulling(t: f32) -> ([f32; 3], [f32; 3], f32) {
     let t = zacht(t);
-    let plek = mix([0.0, 4.1, -2.5], [0.0, 2.4, 2.8], t);
-    let doel = mix([0.0, 0.3, -4.2], [0.0, 1.0, -6.0], t);
-    (plek, doel, 70.0 - 18.0 * t)
+    let plek = mix([0.0, 2.6, -1.0], [0.0, 4.0, 4.35], t);
+    let doel = mix([0.0, 0.8, -6.0], [0.0, 0.5, -5.0], t);
+    (plek, doel, 50.0 + 54.0 * t)
 }
 
 /// Van de linkerflank in een boog voor de Voorzitter langs naar de rechterflank.
