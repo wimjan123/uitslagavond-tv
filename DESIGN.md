@@ -2,23 +2,23 @@
 name: uitslagavond-tv Regie dashboard
 description: The Regie's live control surface for the Tweede Kamer graphics, laid out like broadcast software, with a multiviewer on top and lists below.
 colors:
-  graphite-field: "#0c0e10"
-  graphite-ground: "#121417"
-  graphite-panel: "#181b1f"
-  graphite-raised: "#1f2328"
-  graphite-divider: "#20242a"
-  selection-fill: "#26303d"
-  graphite-line: "#2a2f36"
-  paper-ink: "#e4e7eb"
-  slate-mute: "#9aa1ab"
-  steel-blue: "#6f9fe0"
-  steel-ink: "#08111e"
-  ether-red: "#d3302f"
+  graphite-field: "#0e0e0d"
+  graphite-ground: "#141413"
+  graphite-panel: "#1a1a18"
+  graphite-raised: "#272623"
+  graphite-divider: "#232320"
+  selection-fill: "#3a382f"
+  graphite-line: "#302f2b"
+  paper-ink: "#f1eee5"
+  slate-mute: "#a6a296"
+  steel-blue: "#e9e3cf"
+  steel-ink: "#141413"
+  ether-red: "#e2312a"
   ether-red-ink: "#ffffff"
-  ether-red-text: "#ff7a78"
-  klaar-green: "#22844f"
+  ether-red-text: "#ff7d72"
+  klaar-green: "#1c9a55"
   klaar-green-ink: "#ffffff"
-  klaar-green-text: "#5fd093"
+  klaar-green-text: "#62d895"
   warn-amber: "#d89b2b"
   warn-amber-ink: "#1b1200"
   logo-tile: "#ffffff"
@@ -28,63 +28,63 @@ colors:
   seat-dim: "#1d2130"
 typography:
   display:
-    fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, sans-serif"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "56px"
     fontWeight: 800
     lineHeight: 1
     fontFeature: "\"tnum\", \"cv11\""
   headline:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "17px"
     fontWeight: 650
     lineHeight: 1.35
   action:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "16px"
     fontWeight: 700
     lineHeight: 1
     letterSpacing: "0.08em"
   outcome:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "15px"
     fontWeight: 700
     lineHeight: 1.35
     letterSpacing: "0.06em"
   body:
-    fontFamily: "Inter, system-ui, -apple-system, Segoe UI, Roboto, Helvetica Neue, sans-serif"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "13px"
     fontWeight: 400
     lineHeight: 1.35
     fontFeature: "\"tnum\", \"cv11\""
   title:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "13px"
     fontWeight: 600
     lineHeight: 1.35
   control:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "13px"
     fontWeight: 550
     lineHeight: 1.35
   small:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "12px"
     fontWeight: 400
     lineHeight: 1.35
   label:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "10.5px"
     fontWeight: 600
     lineHeight: 1.35
     letterSpacing: "0.08em"
   stamp:
-    fontFamily: "Inter, system-ui, sans-serif"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "10.5px"
     fontWeight: 700
     lineHeight: 1
     letterSpacing: "0.08em"
   keycap:
-    fontFamily: "ui-monospace, SFMono-Regular, Menlo, monospace"
+    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
     fontSize: "10px"
     fontWeight: 600
     lineHeight: 1
@@ -242,33 +242,33 @@ components:
 
 # Design System: uitslagavond-tv Regie dashboard
 
-Chosen by the owner on 2026-11-22: design "Omroepsoftware", layout 1 (multiviewer on top). It replaces the earlier design "Plenaire Zaal", which the owner found childish for a control room.
+Chosen by the owner on 2026-11-25: design "Mengpaneel", on the layout of "Omroepsoftware" (layout 1, multiviewer on top, chosen 2026-11-22). Mengpaneel replaces the look of Omroepsoftware, which read as generic AI-made software: the Inter face, spaced uppercase labels everywhere, a border round every control, coloured stripes at the left of rows, and a sentence of explanation under every form. Earlier still, "Plenaire Zaal" was dropped as childish for a control room.
 
 ## Overview
 
-**Creative North Star: "The multiviewer in the gallery"**
+**Creative North Star: "The vision mixer's panel"**
 
-The Regie dashboard looks like the broadcast software that already sits in a control room: a dark graphite surface, a row of monitors with labels under them, and plain lists below. Nothing on screen is playful. The only strong colours are the two that every control room already knows: red for what is on air and green for what is ready. Everything else is grey, so those two colours always mean something.
+The Regie dashboard looks and behaves like the hardware in a control room: the panel of a vision mixer and the multiviewer above it. A warm black surface, a narrow DIN-like face, flat keys without borders that light up warm white when they are on, and under every picture a UMD strip in its tally colour. Nothing on screen is playful, and nothing explains itself in a sentence when the control already says it. The only strong colours are the two that every control room already knows: red for what is on air and green for what is ready. Everything else is grey, so those two colours always mean something.
 
 The shell never moves. A strip of text tabs runs along the top, and under it the multiviewer row holds Voorbeeld, TOON, Ether and the camera in every section. Only the work area below changes and scrolls. The work is set as tables and compact panels, not as cards: one row per Preset, one row per Stemming. Density is high, so the operator sees a whole evening of Presets at once, and every row carries its key.
 
 The signature is the multiviewer. Voorbeeld and Ether are black-framed 16:9 pictures with a label strip under them, as on a real multiviewer: a coloured top line (green or red), the word VOORBEELD or ETHER, the name of the Graphic and the time on air. Next to them, the camera block holds the floor plan of the Zaal and a row of Standpunt keys.
 
 **Key Characteristics:**
-- Graphite ground, paper-white ink, slate grey for everything secondary.
-- Two broadcast colours only: Ether red for on air, Klaar green for ready. Amber marks attention.
-- Selection is a quiet blue-grey fill with a thin steel-blue line, never a bright colour block.
+- Warm black ground (no blue tint), warm paper-white ink, warm grey for everything secondary.
+- Two broadcast colours only: Ether red for on air, Klaar green for ready. Amber means you must act.
+- A key that is on lights up: warm white fill with black ink, like a lit button on a mixer. No blue anywhere.
 - Text tabs on top, multiviewer row under them, one work area that scrolls.
-- Tables and rows, not tiles. Every Preset has a number, every Standpunt a letter, every shortcut a key cap.
-- Square monitors with a label strip; small 2 to 3px corners on controls; no shadows.
-- Party logos small on white tiles; input controls use a party-colour stripe and the short name.
+- Tables and rows, not tiles. Every Preset has a number, every Standpunt a letter; shortcuts are printed where they are used.
+- Keys are flat, borderless, 2px corners, with a faint lit top edge. No glow, no drop shadows, no coloured stripes at the left of rows.
+- Labels in sentence case. Uppercase only for TOON and the tally stamps LIVE and KLAAR.
 
 ## Colors
 
-A graphite palette of six steps, one steel-blue line for selection, and the two broadcast state colours with lighter text variants for use on dark ground.
+A warm black palette of six steps, warm white for a key that is on (the token keeps its old name steel-blue), and the two broadcast state colours with lighter text variants for use on dark ground.
 
 ### Primary
-- **Steel Blue** (steel-blue): the operator's selection. The 2px line under the active tab, the 3px line at the left of a selected row, the border of a selected Standpunt key, the focus outline and the tablet toggle when on. It is a line, never a fill. Text in steel blue on the ground reaches 6.8:1.
+- **Lit Key** (steel-blue, #e9e3cf, with steel-ink on top): a key that is on. A chosen filter, Standpunt, segment, Coalitie party or tablet toggle fills warm white with black ink, the way a button on a mixer lights up. The active tab gets a paper-white line at its foot; focus is a 2px paper-white outline.
 
 ### Secondary (broadcast states)
 - **Ether Red** (ether-red): on air. The TOON button, the top line of the Ether label strip, the Live stamp, the left line and tint of the on-air row, Tegen in Stemmingen. White ink (ether-red-ink) on top (5.0:1). On dark ground, red text uses Ether Red Text (ether-red-text, 7.6:1).
@@ -282,7 +282,7 @@ A graphite palette of six steps, one steel-blue line for selection, and the two 
 - **Graphite Raised** (graphite-raised): buttons, segments, Standpunt keys and Fractie keys.
 - **Graphite Divider** (graphite-divider): the line between table rows.
 - **Graphite Line** (graphite-line): every other 1px border.
-- **Selection Fill** (selection-fill): the fill of a selected row, filter or Standpunt key (paper ink on it: 10.8:1).
+- **Selection Fill** (selection-fill): the fill of a selected table row and the typing notice (paper ink on it).
 - **Paper Ink** (paper-ink): all primary text and icons (14.9:1 on the ground).
 - **Slate** (slate-mute): secondary text, column heads, labels, idle tabs and filters (6.0:1 on the ground, 5.1:1 on raised).
 - **Logo White** (logo-tile): the tile under every party logo.
@@ -290,42 +290,43 @@ A graphite palette of six steps, one steel-blue line for selection, and the two 
 - **Preview Canvas** (preview-canvas), **Empty Seat** (seat-empty), **Dimmed Seat** (seat-dim): only inside thumbnails and the floor plan, which imitate the Renderer. Seats take party colours from the party data and the programme style supplies the accent, so neither is a dashboard token.
 
 ### Named Rules
-**The Two Colours Rule.** Only on air and ready get a strong colour, and they always get the same one: red for Ether, green for Klaar. Selection, hover and navigation stay grey with a steel-blue line, so a coloured thing on screen is always a broadcast state.
+**The Two Colours Rule.** Only on air and ready get a strong colour, and they always get the same one: red for Ether, green for Klaar. Selection is warm white, navigation grey, so a coloured thing on screen is always a broadcast state.
 
-**The Tint Not Fill Rule.** A ready or on-air row is a light tint of its state colour with a 3px line at its left edge, never a solid block. Solid state fills are only for TOON, stamps, the Voor/Tegen segment and the commit button.
+**The Tint Not Fill Rule.** A ready or on-air row is a light tint of its state colour, never a solid block and never a stripe at its edge. Solid state fills are only for TOON, stamps, the UMD strips under the monitors, the Voor/Tegen segment and the commit button.
 
 **The Ink Pair Rule.** Every state fill carries its own ink: white on Ether Red and Klaar Green, near-black on amber. State colours used as text on dark ground take their Text variant.
 
 ## Typography
 
-**Body Font:** Inter (self-hosted variable woff2, weights 100 to 900, `font-display: block`), with system-ui, -apple-system, Segoe UI, Roboto and Helvetica Neue as fallback. Features `tnum` (tabular figures) and `cv11` (single-storey a) are on for the whole page.
-**Label/Mono Font:** system monospace (ui-monospace, SFMono-Regular, Menlo) for key caps only.
+**Body Font:** Barlow Semi Condensed (self-hosted from @fontsource, weights 400, 500, 600 and 700), with Arial Narrow as fallback. `tnum` is on for the whole page.
 
-**Character:** A neutral, dense interface face, like the software around it. Tabular figures make Zetels, times and counts line up in columns.
+**Character:** A narrow DIN-like grotesque, the kind printed on broadcast hardware and in tv graphics. It fits more on a laptop than a wide face, and reads well at a distance in a dim room. Base size 14.5px, because a semi-condensed face needs a step more than a regular one.
 
 ### Hierarchy
 - **Display** (800, 56px, line-height 1): the coalition count in the Coalitiebouwer.
-- **Headline** (650, 17px): the title of the open Stemming or set.
+- **Headline** (600, 20px): the title of the open Stemming, set or form.
 - **Action** (700, 16px, uppercase, 0.08em): the word TOON. Nothing else uses it.
 - **Outcome** (700, 15px, uppercase, 0.06em): Aangenomen or Verworpen, in the state text colour.
-- **Body** (400, 13px, line-height 1.35): default text and table cells.
-- **Title** (600, 13px): the main line of a table row (Graphic name, motie title), Fractie names.
-- **Control** (550, 13px): tabs, filters, buttons.
-- **Small** (400, 12px, Slate): the second line of a row, hints, monitor label text.
-- **Label** (600, 10.5 to 11px, uppercase, 0.08em, Slate): column heads, toolbar titles, VOORBEELD and ETHER in the label strip, CAMERA.
-- **Stamp** (700, 10.5px, uppercase, 0.08em): state stamps.
-- **Keycap** (600, 10px, monospace, 1px border in currentColor at 70% opacity): printed keys.
+- **Body** (400, 14.5px, line-height 1.3): default text and table cells.
+- **Title** (600, 14.5px): the main line of a table row (Graphic name, motie title), Fractie names.
+- **Control** (600, 14.5 to 15px): tabs, filters, buttons.
+- **Small** (400, 13px, warm grey): the second line of a row, hints, monitor detail text.
+- **Label** (600, 13px, sentence case, warm grey): column heads, field labels, Voorbeeld and Ether in the UMD strip.
+- **Stamp** (700, 12px, uppercase, 0.05em): LIVE, KLAAR and similar.
+- **Keycap** (700, 11.5px, same face): the letter in a light 10% white plate, no border.
 
 ### Named Rules
-**The One Family Rule.** Inter sets every word in the dashboard. Weight and the uppercase label style make hierarchy; only key caps switch to monospace.
+**The One Family Rule.** Barlow Semi Condensed sets every word in the dashboard, key caps included. Weight and size make hierarchy.
 
-**The Uppercase Is A Label Rule.** Uppercase is only for labels, stamps, the outcome word and TOON. Running text and names stay in sentence case, as the Dutch UI writes them.
+**The Uppercase Is A Tally Rule.** Uppercase is only for TOON, the stamps LIVE and KLAAR and the outcome word. Labels, column heads and names stay in sentence case, as the Dutch UI writes them.
+
+**The No Explaining Rule.** A control says what it does. A sentence of explanation appears only where the picture is not enough (the reason a key is off, what an undo brings back); everything else lives in a tooltip.
 
 ## Layout
 
 The shell is a CSS grid of three rows (tab strip, multiviewer, work area) over the full viewport. The page targets a laptop at 1440x900 and is checked at 1280x800; there are no breakpoints. The shell never scrolls; only the work area does.
 
-**Tab strip (34px, Graphite Field).** Text tabs from the left: Presets, Maken, Cijfers, Stemmingen, Coalitie, Camera, Vormgeving, Systeem. The active tab has Graphite Panel fill, paper ink and a 2px steel-blue line at its foot. A tab with open work shows a small box with a count and a word after its name, such as "2 open" and, in amber, "2 verschil" on Stemmingen. At the right: a status dot with label for Server, Ether and Reserve (green fine, amber needs a look); when one is not fine, its status follows in words. Then the clock in 600. There is no Wand dot: the Videowand is out of scope for now.
+**Tab strip (34px, Graphite Field).** Text tabs from the left: Presets, Maken, Cijfers, Stemmingen, Coalitie, Camera, Vormgeving, Systeem. The active tab has Graphite Raised fill, paper ink and a 2px paper-white line at its foot. The toolbar under the multiviewer has no title of its own (the tab already names the section). A tab with open work shows a small box with a count and a word after its name, such as "2 open" and, in amber, "2 verschil" on Stemmingen. At the right: a status dot with label for Server, Ether and Reserve (green fine, amber needs a look); when one is not fine, its status follows in words. Then the clock in 600. There is no Wand dot: the Videowand is out of scope for now.
 
 **Multiviewer row (Graphite Panel, 10px 12px padding, 10px gaps, 1px line below).** Four columns, `1fr 156px 1fr minmax(340px, 25%)`, always visible in every section and never collapsible (what is on air and what is ready must always show). On a 1440x900 laptop all nine Presets fit under it.
 1. **Voorbeeld:** a monitor (see Components) with label "VOORBEELD", the Graphic name, a green top line when something is ready. When the ready Graphic has older figures than the current ones (a Preset keeps the figures from when it was saved), the right side is an amber button "oude cijfers · Ververs (N)" that puts the current figures in. During Oefenen the top line and label turn amber, the label reads OEFENEN (or a red dot with the recording time), and the label text says the gamepad only drives this picture. While the Regie tries a Standpunt or plays a Camerarit here, the top line is dashed.
@@ -403,8 +404,8 @@ Voorbeeld and Ether, as on a multiviewer.
 - **Label strip (two lines, Graphite Field):** a 3px top line in the state colour (green Voorbeeld with something ready, red Ether with something on air, Graphite Line when empty). Line 1: the label word in 700 11px uppercase in the state text colour, the Sjabloon name in paper ink 600, and at the right the state (time on air, who put it ready, old figures). Line 2: what the Graphic shows, in full, in Slate.
 
 ### Filters and Segments
-- **Filter toggle:** text only, Slate, 4px 9px, 3px corners. Hover: paper ink. On: Selection Fill with paper ink. Used in toolbars for Preset groups, "Op de tablet", and the Stemming lists.
-- **Segment:** one bordered group of 13px Slate buttons divided by Graphite Line. A chosen option gets Selection Fill and a 2px steel-blue line at its foot. In Stemmingen the Voor option fills Klaar Green and Tegen fills Ether Red, both with white ink.
+- **Filter toggle:** text only, Slate, 4px 9px, 3px corners. Hover: paper ink. On: lit, warm white with black ink. Used in toolbars for Preset groups, "Op de tablet", and the Stemming lists.
+- **Segment:** one group of buttons on Graphite Raised without borders. A chosen option lights up warm white with black ink. In Stemmingen the Voor option fills Klaar Green and Tegen fills Ether Red, both with white ink.
 
 ### Stamps
 States stamp; nothing silently disappears. 10.5px 700 uppercase, 2px corners, 4px 7px padding.
@@ -412,7 +413,7 @@ States stamp; nothing silently disappears. 10.5px 700 uppercase, 2px corners, 4p
 - **Klaar** (Klaar Green, white): on the ready Preset row.
 - **Was live hh.mm:** plain Slate text, no box.
 - **Warn** (amber, near-black): "Andere versie, geweigerd" and similar.
-- **Op slot** (steel blue on Selection Fill): a locked set or Stemming.
+- **Op slot**: a lock icon and the words Op slot, no box and no alarm colour; next to it a key with the verb (Ontgrendel).
 
 ### Preset Table
 The default work area. Columns: Toets (48px), Status (96px), Beeld (86px), Graphic, Gegevens, Camera (250px), Tablet (84px).
@@ -438,7 +439,7 @@ Party logos sit on a white tile, 30px wide by default, height 62% of the width, 
 A bar of the 150 Zetels in party colours, in Uitslagindeling order from left to right, 1px corners, with a 2px paper-ink marker at 75.5 of 150 for the majority line. 8px in Stemmingen, up to 14px in Cijfers and the Coalitiebouwer. In the Coalitiebouwer the coalition parties come first and the rest stay empty.
 
 ### Coalitiebouwer Arc
-Parties on a semicircle, each a 40px logo tile over its Zetel count. A chosen party gets Selection Fill, a 1px steel-blue border and a small check; the others show their logo at 85%. The centre shows the total in the display style, green text from 76, with "meerderheid" or "nog N nodig voor 76" below in Slate.
+Parties on a semicircle, each a 40px logo tile over its Zetel count. A chosen party lights up warm white with a 5px bar in its party colour at the foot and a small drawn check; the others stay dark with their logo at 85%. The centre shows the total in the display style, green text from 76, with "meerderheid" or "nog N Zetels tot een meerderheid" below. Live in the Ether, a red frame and "Live: elke tik werkt meteen bij in de Ether" sit round the arc. Below 560px (the Presentator's phone) the arc becomes a grid, one tap area per party.
 
 ### Floor Plan
 The floor plan of the Zaal is part of the camera block in the multiviewer row and large in the Camera section.
@@ -446,7 +447,7 @@ The floor plan of the Zaal is part of the camera block in the multiviewer row an
 - **Pins:** each Standpunt is a round pin with its letter. Idle: Graphite Raised fill, 1px Slate stroke, paper-ink letter. Hover: paper-ink stroke. Active: paper-ink fill, graphite letter and a view cone in white at 13%. Bovenaf shows a round cone. Pins are focusable buttons.
 - **Camerarit:** a square pin at its start with its letter, and a line along its route ending in a small dot. Idle routes are dashed at 35%; the active or selected route is solid.
 - **Camera markers:** a red marker with a short cone shows where the Ether camera is and where it looks. During Oefenen or a try-out a green marker shows the Voorbeeld camera. While recording, a green trail draws the route.
-- **Vrije camera:** the Vrij key gets Selection Fill. During Vrij or Oefenen a dashed amber line shows the invisible space the camera may fly in. "Bewaar als Standpunt" then adds a pin and a key with the next free letter.
+- **Vrije camera:** the Vrij key lights up. During Vrij or Oefenen a dashed amber line shows the invisible space the camera may fly in. "Bewaar als Standpunt" then adds a pin and a key with the next free letter.
 
 ### Standpunt Keys
 Under the floor plan, the Standpunten in three columns and the Cameraritten in two, 3px gaps. Each key is 30 to 32px, Graphite Raised, 3px corners: a key cap with the letter, then the name over up to two lines. A Camerarit has a lighter dashed border and its duration ("16 s") at the right, so it never reads as a Standpunt. The current one has Selection Fill and a steel-blue border. Vrij, Oefenen and Opnemen sit as small keys at the right of the floor plan; Oefenen turns amber when on, Opnemen shows a red dot while recording.
@@ -473,7 +474,7 @@ Lucide 0.460.0, stroke 2, round caps and joins, inlined as SVG in currentColor. 
 ### Do:
 - **Do** keep the tab strip and the multiviewer row (Voorbeeld, TOON, Ether, camera) on screen in every section; only the work area scrolls.
 - **Do** use red only for on air and green only for ready, everywhere.
-- **Do** show selection as Selection Fill with a steel-blue line, and keep it quiet.
+- **Do** show a key that is on as lit: warm white with black ink, like a mixer button.
 - **Do** show ready and on-air rows as a light tint with a 3px left line, plus a stamp.
 - **Do** set lists as tables with a sticky head, one row per item, and put the key in the first column.
 - **Do** give every Preset a fixed number and every Standpunt a fixed letter, and print every shortcut on its control as a key cap.
@@ -483,7 +484,7 @@ Lucide 0.460.0, stroke 2, round caps and joins, inlined as SVG in currentColor. 
 - **Do** offer undo after an action that takes something away, instead of asking first; only a wipe straight in the Ether asks a second click.
 - **Do** put party logos on white tiles, and use a party-colour stripe with the short name on input keys.
 - **Do** order parties by the Uitslagindeling (SP on the left to FvD on the right) in seat bars, Cijfers rows, Fractie keys and the Coalitiebouwer arc.
-- **Do** set all text in Inter with tabular figures, and all icons in Lucide 0.460.0 at stroke 2.
+- **Do** set all text in Barlow Semi Condensed with tabular figures, and all icons in Lucide 0.460.0 at stroke 2; never a unicode glyph or emoji as an icon.
 - **Do** use the GLOSSARY words in the Dutch UI: Regie, Ether, Voorbeeld, Preset, Standpunt, Fractie, Zetel, Stoel, Zaal.
 
 ### Don't:
