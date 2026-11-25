@@ -14,6 +14,7 @@ use bevy::prelude::*;
 use bevy::world_serialization::WorldInstanceReady;
 use bevy::color::Mix;
 use gedeeld::uitslagindeling::stoelen_van_links_naar_rechts;
+use gedeeld::sjabloon::{Kleurovergang, Overgangsvorm};
 use gedeeld::{AANTAL_STOELEN, Kleur, Stoel};
 use serde::Deserialize;
 
@@ -42,10 +43,11 @@ impl Plugin for ZaalPlugin {
         app.insert_resource(ZaalKlaar(self.map.is_none()))
             .init_resource::<StoelMaterialen>()
             .init_resource::<Golf>()
+            .init_resource::<Zaaldimmer>()
             .init_resource::<Uitlichting>()
             .add_systems(
                 Update,
-                ((herken_stoelen, kleur_stoelen, licht_stoel_op).chain(), geef_stoelen_licht),
+                ((herken_stoelen, kleur_stoelen, licht_stoel_op).chain(), dim_zaal, geef_stoelen_licht),
             );
         if let Some(map) = &self.map {
             app.add_plugins(OmgevingPlugin)
@@ -388,23 +390,50 @@ struct Golf {
     begonnen: bool,
     /// Wat elke Stoel toonde toen de golf begon (lineair), in de volgorde van [`Stoel::alle`].
     van: Vec<LinearRgba>,
+    /// Hoe fel elke Stoel toen straalde.
+    van_straalt: Vec<LinearRgba>,
     /// De kleur uit de Stand per Stoel; `None`: het eigen leer.
     naar: Vec<Option<Kleur>>,
     /// Plaats van elke Stoel van links naar rechts in beeld.
     rang: Vec<usize>,
+    vorm: Overgangsvorm,
     tijd: f32,
     duur: f32,
     bezig: bool,
+    /// De Kleurkracht (0 tot 1) waarmee de materialen per kleur gemaakt zijn.
+    kracht: f32,
 }
 
 impl Golf {
     fn voortgang(&self, i: usize) -> f32 {
         if self.bezig {
-            kleurgolf::voortgang(self.rang[i], AANTAL_STOELEN - 1, self.tijd, self.duur)
+            kleurgolf::voortgang(self.vorm, self.rang[i], AANTAL_STOELEN - 1, self.tijd, self.duur)
         } else {
             1.0
         }
     }
+}
+
+/// Hoe fel het leer bij Kleurkracht 100 straalt in zijn eigen kleur, bovenop het licht uit de bak:
+/// zo blijft de kleur vol, ook waar de bak donker is.
+const KLEUR_STRAALT: f32 = 0.25;
+/// Hoeveel de rest van de Zaal bij Kleurkracht 100 donkerder wordt, zolang er Stoelen gekleurd
+/// zijn: 0,6 laat 40 procent van het licht over.
+const DIMMEN: f32 = 0.6;
+
+/// De Kleurkracht van de Ether, van 0 tot 1.
+fn kleurkracht(standen: &Standen) -> f32 {
+    let k = standen.huidig.as_ref().map_or(gedeeld::sjabloon::KLEURKRACHT, |s| s.stand.stijl_van_ether().kleurkracht);
+    f32::from(k.min(100)) / 100.0
+}
+
+/// De Kleurovergang van de Stand en hoe lang die duurt, in seconden.
+fn kleurovergang(standen: &Standen) -> (Overgangsvorm, f32) {
+    let (overgang, snelheid) = standen
+        .huidig
+        .as_ref()
+        .map_or((Kleurovergang::default(), 100), |s| (s.stand.kleurovergang, s.stand.stijl_van_ether().snelheid));
+    (overgang.vorm, kleurgolf::duur(overgang, snelheid))
 }
 
 /// Geeft elke Stoel de kleur uit de Stand. Na de eerste Stand gaat dat als een golf van links
@@ -441,6 +470,20 @@ fn kleur_stoelen(
     let lineair = |k: Option<Kleur>| {
         k.map_or(eigen_leer, |k| LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * 0.5)
     };
+    // Het leer straalt zacht in zijn eigen kleur, naar de Kleurkracht; het eigen leer niet.
+    let kracht = kleurkracht(&standen);
+    let straalt = |k: Option<Kleur>| {
+        k.map_or(LinearRgba::BLACK, |k| LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * (kracht * KLEUR_STRAALT))
+    };
+    if kracht != golf.kracht {
+        // een andere Kleurkracht: de materialen per kleur stralen anders
+        for (kleur, h) in &pm.per_kleur {
+            if let Some(mut m) = materialen.get_mut(h) {
+                m.emissive = straalt(Some(*kleur));
+            }
+        }
+        golf.kracht = kracht;
+    }
     if golf.rang.is_empty() {
         let mut rang = vec![0; AANTAL_STOELEN];
         for (r, i) in stoelen_van_links_naar_rechts().into_iter().enumerate() {
@@ -462,6 +505,7 @@ fn kleur_stoelen(
         let doel: Vec<Option<Kleur>> = (0..AANTAL_STOELEN).map(|i| kleuren.get(i).copied()).collect();
         if !golf.begonnen || !nieuw_leer.is_empty() {
             golf.van = doel.iter().map(|k| lineair(*k)).collect();
+            golf.van_straalt = doel.iter().map(|k| straalt(*k)).collect();
             golf.naar = doel;
             golf.bezig = false;
             golf.begonnen = standen.huidig.is_some();
@@ -470,12 +514,14 @@ fn kleur_stoelen(
             let nu: Vec<LinearRgba> = (0..AANTAL_STOELEN)
                 .map(|i| golf.van[i].mix(&lineair(golf.naar[i]), golf.voortgang(i)))
                 .collect();
+            let nu_straalt: Vec<LinearRgba> = (0..AANTAL_STOELEN)
+                .map(|i| golf.van_straalt[i].mix(&straalt(golf.naar[i]), golf.voortgang(i)))
+                .collect();
             golf.van = nu;
+            golf.van_straalt = nu_straalt;
             golf.naar = doel;
             golf.tijd = 0.0;
-            golf.duur = kleurgolf::duur(
-                standen.huidig.as_ref().map_or(100, |s| s.stand.stijl_van_ether().snelheid),
-            );
+            (golf.vorm, golf.duur) = kleurovergang(&standen);
             golf.bezig = true;
         }
     }
@@ -496,6 +542,7 @@ fn kleur_stoelen(
                             continue;
                         };
                         m.base_color = lineair(Some(kleur)).into();
+                        m.emissive = straalt(Some(kleur));
                         let h = materialen.add(m);
                         pm.per_kleur.insert(kleur, h.clone());
                         h
@@ -520,6 +567,8 @@ fn kleur_stoelen(
             };
             if let Some(mut m) = materialen.get_mut(&h) {
                 m.base_color = van.mix(&lineair(naar), f).into();
+                // van is de kleur van het leer; zijn straling volgt die verhouding
+                m.emissive = golf.van_straalt[i].mix(&straalt(naar), f);
             }
             h
         };
@@ -530,6 +579,98 @@ fn kleur_stoelen(
     if golf.bezig && golf.tijd >= golf.duur {
         golf.bezig = false;
         golf.van = golf.naar.iter().map(|k| lineair(*k)).collect();
+        golf.van_straalt = golf.naar.iter().map(|k| straalt(*k)).collect();
+    }
+}
+
+/// Hoe licht de rest van de Zaal is (alles behalve het leer van de Stoelen): 1 zoals gebakken,
+/// lager zolang er Stoelen gekleurd zijn, naar de Kleurkracht. Het licht verandert mee met de
+/// Kleurovergang.
+#[derive(Resource)]
+struct Zaaldimmer {
+    /// De kleur van elk materiaal van de Zaal zoals het model hem gaf.
+    origineel: HashMap<AssetId<StandardMaterial>, LinearRgba>,
+    van: f32,
+    naar: f32,
+    nu: f32,
+    tijd: f32,
+    duur: f32,
+    begonnen: bool,
+}
+
+impl Default for Zaaldimmer {
+    fn default() -> Self {
+        Zaaldimmer { origineel: HashMap::new(), van: 1.0, naar: 1.0, nu: 1.0, tijd: 0.0, duur: 1.0, begonnen: false }
+    }
+}
+
+/// Hoe licht de rest van de Zaal moet zijn bij deze Stand.
+fn zaallicht(gekleurd: bool, kracht: f32) -> f32 {
+    if gekleurd { 1.0 - DIMMEN * kracht } else { 1.0 }
+}
+
+/// Dimt de rest van de Zaal zolang er Stoelen gekleurd zijn, zodat hun kleuren opvallen: het
+/// gebakken licht en het live licht samen, door de kleur van elk materiaal te verlagen. De
+/// eerste Stand na het opstarten komt meteen, zonder overgang.
+fn dim_zaal(
+    standen: Res<Standen>,
+    tijd: Res<Time>,
+    delen: Query<(&GltfMaterialName, &MeshMaterial3d<StandardMaterial>), Without<StoelLeer>>,
+    nieuw: Query<(), Added<GltfMaterialName>>,
+    pm: Res<StoelMaterialen>,
+    mut materialen: ResMut<Assets<StandardMaterial>>,
+    mut d: ResMut<Zaaldimmer>,
+) {
+    if standen.is_changed() {
+        let gekleurd = standen.huidig.as_ref().is_some_and(|s| !s.stand.stoelkleuren.is_empty());
+        let doel = zaallicht(gekleurd, kleurkracht(&standen));
+        if !d.begonnen {
+            (d.van, d.naar, d.nu) = (doel, doel, doel);
+            d.begonnen = standen.huidig.is_some();
+        } else if doel != d.naar {
+            d.van = d.nu;
+            d.naar = doel;
+            d.tijd = 0.0;
+            d.duur = kleurovergang(&standen).1;
+        }
+    }
+    let vorig = d.nu;
+    if d.nu != d.naar {
+        d.tijd += tijd.delta_secs();
+        let f = kleurgolf::zacht((d.tijd / d.duur.max(1e-3)).clamp(0.0, 1.0));
+        d.nu = if f >= 1.0 { d.naar } else { d.van + (d.naar - d.van) * f };
+    }
+    if d.nu == vorig && nieuw.is_empty() {
+        return;
+    }
+    let nu = d.nu;
+    for (naam, materiaal) in &delen {
+        // het leer voordat herken_stoelen het merkte, telt ook niet mee
+        if naam.0 == STOEL_LEER {
+            continue;
+        }
+        let id = materiaal.0.id();
+        if pm.origineel.as_ref().is_some_and(|o| o.id() == id) {
+            // een deel dat het materiaal van het leer deelt
+            continue;
+        }
+        let origineel = match d.origineel.get(&id) {
+            Some(k) => *k,
+            None => {
+                let Some(m) = materialen.get(id) else { continue };
+                let k = LinearRgba::from(m.base_color);
+                d.origineel.insert(id, k);
+                k
+            }
+        };
+        if let Some(mut m) = materialen.get_mut(id) {
+            // de doorzichtigheid laat stel_materialen_bij staan (glas)
+            let alpha = m.base_color.alpha();
+            let k = LinearRgba::new(origineel.red * nu, origineel.green * nu, origineel.blue * nu, alpha);
+            if LinearRgba::from(m.base_color) != k {
+                m.base_color = k.into();
+            }
+        }
     }
 }
 
@@ -996,6 +1137,53 @@ mod tests {
     }
 
     #[test]
+    fn vervagen_laat_alle_stoelen_tegelijk_van_kleur_wisselen() {
+        let (mut app, _) = zaal_zonder_gpu();
+        app.update();
+        // VOORBEELDGEGEVENS: alle Stoelen rood, daarna groen met Vervagen van anderhalve seconde
+        let vervagen = Kleurovergang::standaard(Overgangsvorm::Vervagen);
+        let mut stand = Stand { stoelkleuren: vec!["#d4202c".parse().unwrap(); 150], kleurovergang: vervagen, ..default() };
+        app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 1, stand: stand.clone() });
+        app.update();
+        stand.stoelkleuren = vec!["#00ae41".parse().unwrap(); 150];
+        app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 2, stand });
+        app.update();
+        wacht(&mut app, 0.75);
+        let leer = leerkleuren(&mut app);
+        let groen = Srgba::from(LinearRgba::from(Color::srgb_u8(0x00, 0xae, 0x41)) * 0.5);
+        assert!(!ongeveer(leer[0], groen), "halverwege nog niet groen");
+        assert!(leer.iter().all(|k| ongeveer(*k, leer[0])), "halverwege links en rechts gelijk");
+        wacht(&mut app, 0.8);
+        assert!(leerkleuren(&mut app).iter().all(|k| ongeveer(*k, groen)), "na anderhalve seconde alles groen");
+    }
+
+    #[test]
+    fn de_zaal_dimt_naar_de_kleurkracht_zolang_er_stoelen_gekleurd_zijn() {
+        let (mut app, _) = zaal_zonder_gpu();
+        let grijs = Color::srgb(0.6, 0.6, 0.6);
+        let vloer = app.world_mut().resource_mut::<Assets<StandardMaterial>>().add(StandardMaterial::from(grijs));
+        app.world_mut().spawn((GltfMaterialName("vloer".into()), MeshMaterial3d(vloer.clone()), Mesh3d::default()));
+        let licht = |app: &mut App| LinearRgba::from(app.world().resource::<Assets<StandardMaterial>>().get(&vloer).unwrap().base_color).red;
+        let origineel = LinearRgba::from(grijs).red;
+        zet_stand(&mut app, 1, vec![]);
+        app.update();
+        assert_eq!(licht(&mut app), origineel, "zonder kleur zoals gebakken");
+
+        // VOORBEELDGEGEVENS: alle Stoelen rood, standaard-Kleurkracht 50: 70 procent licht
+        zet_stand(&mut app, 2, vec!["#d4202c".parse().unwrap(); 150]);
+        wacht(&mut app, 0.5);
+        let halverwege = licht(&mut app);
+        assert!(halverwege < origineel && halverwege > origineel * 0.7, "het licht gaat mee met de overgang");
+        wacht(&mut app, 0.6);
+        assert!((licht(&mut app) - origineel * 0.7).abs() < 1e-4);
+
+        // Kleur uit: weer zoals gebakken
+        zet_stand(&mut app, 3, vec![]);
+        wacht(&mut app, 1.1);
+        assert!((licht(&mut app) - origineel).abs() < 1e-4);
+    }
+
+    #[test]
     fn de_snelheid_van_de_stijl_maakt_de_golf_sneller() {
         let (mut app, _) = zaal_zonder_gpu();
         app.update();
@@ -1150,12 +1338,15 @@ mod tests {
         wacht(&mut app, 2.0);
         let rood_half = Srgba::from(LinearRgba::from(Color::srgb_u8(0xd4, 0x20, 0x2c)) * 0.5);
         assert!(ongeveer(leerkleuren(&mut app)[i], rood_half));
-        assert!(straling(&mut app)[i] > 0.0);
+        // gekleurd leer straalt zacht in zijn kleur (de Kleurkracht); de uitgelichte Stoel feller
+        let s = straling(&mut app);
+        assert!(s[i] > s[(i + 1) % 150] + 0.1, "de Stoel straalt boven de rest uit");
 
-        // zonder Persoonskaart straalt niets meer
+        // zonder Persoonskaart straalt hij weer als de rest
         zet_persoonskaart(&mut app, 3, None, vec!["#d4202c".parse().unwrap(); 150]);
         wacht(&mut app, 1.0);
-        assert!(straling(&mut app).iter().all(|e| *e == 0.0));
+        let s = straling(&mut app);
+        assert!(s.iter().all(|e| (*e - s[0]).abs() < 1e-4));
         assert!(ongeveer(leerkleuren(&mut app)[i], rood_half));
     }
 }
