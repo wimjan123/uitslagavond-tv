@@ -66,7 +66,7 @@ test("de lijst toont de duur en wat de rit aan het eind doet", () => {
   assert.equal(opnameTijd(1234), "12,3 s");
 });
 
-test("waar je een Standpunt kiest, kies je ook een Camerarit, met toets en naam", () => {
+test("waar je een Standpunt kiest, kies je ook Camera blijft staan of een Camerarit, met toets en naam", () => {
   const vast: Standpunt = {
     letter: "A",
     naam: "Totaal vanaf voorzitter",
@@ -81,6 +81,7 @@ test("waar je een Standpunt kiest, kies je ook een Camerarit, met toets en naam"
   assert.deepEqual(
     keuzes.map((k) => [k.letter, k.toets, k.tekst, k.soort]),
     [
+      ["blijf", null, "Camera blijft staan", "Standpunt"],
       ["A", "A", "A · Totaal vanaf voorzitter", "Standpunt"],
       ["E1", "J", "J · Close-up", "Standpunt"],
       ["E2", null, "Achter", "Standpunt"],

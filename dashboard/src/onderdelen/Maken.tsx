@@ -4,7 +4,7 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { sjabloonId, standaardStandpunt } from "../graphic";
-import { cameraKeuzes } from "../regie/camerarit";
+import { BLIJF, BLIJF_NAAM, cameraKeuzes } from "../regie/camerarit";
 import { useRegie } from "../regie/regie";
 import type { Graphic } from "../typen/Graphic";
 import type { Indeling } from "../typen/Indeling";
@@ -180,7 +180,7 @@ function Titelkaart() {
       <label className="veld">
         <span className="veld-kop">
           <span className="label">Standpunt</span>
-          <span className="zacht">Toon beweegt de camera hierheen</span>
+          <span className="zacht">Waar Toon de camera heen stuurt</span>
         </span>
         <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
           <option value="">Van het Sjabloon{standaard ? ` (${standaard.tekst})` : ""}</option>
@@ -325,10 +325,11 @@ function Zetelverdeling() {
       <label className="veld">
         <span className="veld-kop">
           <span className="label">Standpunt</span>
-          <span className="zacht">Toon beweegt de camera hierheen</span>
+          <span className="zacht">Waar Toon de camera heen stuurt</span>
         </span>
         <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
           <option value="">Van het Sjabloon{standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}</option>
+          <option value={BLIJF}>{BLIJF_NAAM}</option>
           {standpunten.map((p) => (
             <option key={p.letter} value={p.letter}>
               {p.letter} {p.naam}
@@ -464,10 +465,11 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
       <label className="veld">
         <span className="veld-kop">
           <span className="label">Standpunt</span>
-          <span className="zacht">Toon beweegt de camera hierheen</span>
+          <span className="zacht">Waar Toon de camera heen stuurt</span>
         </span>
         <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
           <option value="">Van het Sjabloon{standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}</option>
+          <option value={BLIJF}>{BLIJF_NAAM}</option>
           {standpunten.map((p) => (
             <option key={p.letter} value={p.letter}>
               {p.letter} {p.naam}
@@ -557,11 +559,12 @@ function useCijferformulier() {
       <>
         <Keuze
           label="Standpunt"
-          uitleg="Toon beweegt de camera hierheen"
+          uitleg="Waar Toon de camera heen stuurt"
           waarde={standpunt}
           zet={setStandpunt}
           opties={[
             { waarde: "", tekst: `Van het Sjabloon${standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}` },
+            { waarde: BLIJF, tekst: BLIJF_NAAM },
             ...standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} ${p.naam}` })),
           ]}
         />

@@ -31,6 +31,11 @@ export function toetsVan(p: { letter: string; toets?: string; vast?: boolean }):
 /** Aanschuiven: langzaam naar het blok van de gekozen Partij (gelijk aan `camera::AANSCHUIVEN`). */
 export const AANSCHUIVEN = "aanschuiven";
 
+/** Camera blijft staan: Toon verandert alleen de Graphic en de Stoelen, de camera van de Ether blijft
+ * waar hij is, ook als hij vrij rijdt of een rit speelt (gelijk aan `camera::BLIJF`). */
+export const BLIJF = "blijf";
+export const BLIJF_NAAM = "Camera blijft staan";
+
 /** Alle Standpunten en Cameraritten; met `aanschuiven` ook Aanschuiven, voor een Graphic met een Partij. */
 export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[], aanschuiven = false): Camerakeus[] {
   const keus = (letter: string, toets: string | null, naam: string, soort: Camerakeus["soort"]): Camerakeus => ({
@@ -41,6 +46,7 @@ export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[], aans
     soort,
   });
   return [
+    keus(BLIJF, null, BLIJF_NAAM, "Standpunt"),
     ...standpunten.map((p) => keus(p.letter, toetsVan(p), p.naam, "Standpunt")),
     ...ritten.map((r) => keus(r.letter, toetsVan(r), r.naam, "Camerarit")),
     ...(aanschuiven ? [keus(AANSCHUIVEN, null, "Aanschuiven naar de gekozen Partij", "Standpunt")] : []),

@@ -4,7 +4,7 @@
 // Met Vrij of Oefenen aan komt er "Bewaar als Standpunt" bij.
 import { plaatsVan } from "../persoonskaart/persoonskaart";
 import { useStoelkiezer } from "../persoonskaart/stoelkeuze";
-import { AANSCHUIVEN, opnameTijd } from "../regie/camerarit";
+import { AANSCHUIVEN, BLIJF, BLIJF_NAAM, opnameTijd } from "../regie/camerarit";
 import { useCamera, useRegie } from "../regie/regie";
 import { CAMERA, kiesStandpunt, voerUit } from "../regie/take";
 import { toetsVan } from "../regie/toetsen";
@@ -24,6 +24,7 @@ export function naamVan(s: Stand | undefined, letter: string | null): string {
   const stoel = /^stoel-(\d+-\d+-\d+)$/.exec(letter);
   if (stoel) return `Stoel ${stoel[1]}`;
   if (letter === AANSCHUIVEN || letter.startsWith(`${AANSCHUIVEN}-`)) return "Aanschuiven";
+  if (letter === BLIJF) return BLIJF_NAAM;
   return s.standpunten.find((p) => p.letter === letter)?.naam ?? s.cameraritten.find((r) => r.letter === letter)?.naam ?? "";
 }
 
