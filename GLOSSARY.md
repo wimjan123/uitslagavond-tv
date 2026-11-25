@@ -21,7 +21,7 @@ De manier waarop de Stoelen van kleur wisselen: als Golf, van links naar rechts,
 _Avoid_: fade, animatie (voor de Stoelen)
 
 **Opbouw**:
-Een Kleurovergang die één Partij tegelijk laat oplichten, de grootste eerst, terwijl een groot label op de vloer haar Zetels en naam toont. Partijen die al aan de beurt waren, dimmen zolang de volgende oplicht en komen na de laatste stap allemaal tegelijk terug. Daarna staan alle Partijen als kaartjes op één rij, in dezelfde volgorde als hun Stoelen van links naar rechts. Alleen bij Toon van een Sjabloon dat hem kiest, zoals de Zetelverdeling; Bijwerken gaat als Golf. Opbouw overslaan kleurt de rest meteen.
+Een Kleurovergang die één Partij tegelijk laat oplichten, de grootste eerst, terwijl een groot label op de vloer haar Zetels en naam toont. Partijen die al aan de beurt waren, dimmen naar grijs zolang de volgende oplicht en komen na de laatste stap allemaal tegelijk terug. Daarna staan alle Partijen als kaartjes op één rij, in dezelfde volgorde als hun Stoelen van links naar rechts. Alleen bij Toon van een Sjabloon dat hem kiest, zoals de Zetelverdeling; Bijwerken gaat als Golf. Opbouw overslaan kleurt de rest meteen.
 _Avoid_: onthulling (dat is de vaste Camerarit), aftellen, Opbouwen (dat is een animatie van een Blok)
 
 **Kleur uit**:
@@ -145,6 +145,10 @@ _Avoid_: knop, favoriet (en nooit voor een camerapositie: dat is een Standpunt)
 **Standpunt**:
 Een vooraf vastgelegde camerapositie in de Zaal, waar de camera vloeiend naartoe beweegt.
 _Avoid_: preset, shot
+
+**Totaal boven het paneel**:
+Een vast shot van alle 150 Stoelen van hoog achter de Voorzitter, zoals Standpunt A maar steiler, zodat de Stoelen boven een paneel onderin staan. Sjablonen met zo'n paneel kiezen het; je kiest het overal waar je een Standpunt kiest.
+_Avoid_: paneelstandpunt
 
 **Camerarit**:
 Een opgenomen camerabeweging door de Zaal met een begin en een eind, die je overal kiest waar je ook een Standpunt kiest. Een vaste Camerarit komt mee met het systeem, net als de vaste Standpunten, en kan terug naar zijn standaard; een eigen Camerarit neemt de Regie zelf op.
