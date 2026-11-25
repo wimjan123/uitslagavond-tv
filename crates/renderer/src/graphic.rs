@@ -420,15 +420,18 @@ fn maak_onscherp(
         }
         let Ok(mut camera) = commands.get_entity(camera.entity()) else { continue };
         if nu.0 > 0.0 {
-            camera.insert(DepthOfField {
-                mode: DepthOfFieldMode::Gaussian,
-                focal_distance: 0.2,
-                aperture_f_stops: 0.5,
-                max_circle_of_confusion_diameter: ONSCHERP_PX * zacht_uit(nu.0),
-                ..default()
-            });
+            camera.insert((
+                DepthOfField {
+                    mode: DepthOfFieldMode::Gaussian,
+                    focal_distance: 0.2,
+                    aperture_f_stops: 0.5,
+                    max_circle_of_confusion_diameter: ONSCHERP_PX * zacht_uit(nu.0),
+                    ..default()
+                },
+                crate::lens::ZaalOnscherp,
+            ));
         } else {
-            camera.remove::<DepthOfField>();
+            camera.remove::<(DepthOfField, crate::lens::ZaalOnscherp)>();
         }
     }
 }
