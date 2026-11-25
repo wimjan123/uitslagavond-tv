@@ -320,29 +320,46 @@ pub fn bouw(
         } => {
             let g = f32::from(*grootte);
             commands.entity(binnen).insert(Node { overflow: Overflow::clip(), ..op(0.0, 0.0, Val::Px(b), Val::Px(h)) });
-            // De lijst zelf is zo hoog als wat erin staat: past dat niet, dan krimpt alles.
+            // Twee kolommen, voor links en tegen rechts, als een tabel: elke Fractie op een eigen
+            // regel met haar label (en aantal) en daarachter de namen van wie anders stemde. Past
+            // het niet, dan krimpt alles.
             let lijst = commands
                 .spawn((
                     ChildOf(binnen),
                     Node {
-                        flex_direction: FlexDirection::Column,
-                        row_gap: Val::Px(18.0),
+                        flex_direction: FlexDirection::Row,
+                        column_gap: Val::Px(48.0),
+                        align_items: AlignItems::FlexStart,
                         ..op(0.0, 0.0, Val::Px(b), Val::Auto)
                     },
                     Passend { basis: 0.0, ruimte: Vec2::new(b, h), schaal: 1.0 },
                 ))
                 .id();
+            let kolombreed = ((b - 48.0) / 2.0).floor();
             let tk = blokkleur;
             for (groepen, aantal, woord, achter) in [(voor, aantal_voor, "voor", STEM_VOOR), (tegen, aantal_tegen, "tegen", STEM_TEGEN)] {
+                let kolom = commands
+                    .spawn((
+                        ChildOf(lijst),
+                        Node {
+                            flex_direction: FlexDirection::Column,
+                            row_gap: Val::Px(6.0),
+                            width: Val::Px(kolombreed),
+                            flex_shrink: 0.0,
+                            ..default()
+                        },
+                    ))
+                    .id();
                 if groepen.is_empty() {
                     continue;
                 }
                 let kop = commands
                     .spawn((
-                        ChildOf(lijst),
+                        ChildOf(kolom),
                         Node {
                             padding: UiRect::new(Val::Px(18.0), Val::Px(22.0), Val::Px(4.0), Val::Px(4.0)),
-                            align_self: AlignSelf::FlexStart,
+                            margin: UiRect::bottom(Val::Px(8.0)),
+                            align_self: AlignSelf::Stretch,
                             ..default()
                         },
                         gekleurd(kleur(achter), dekking),
@@ -353,30 +370,44 @@ pub fn bouw(
                     let e = tekst_deel(commands, bestanden, r, &t, l, s.round(), Color::WHITE, Uitlijning::Links, dekking);
                     commands.entity(e).insert((TextLayout::no_wrap(), Passend::basis(s.round())));
                 }
-                let stroom = commands
-                    .spawn((
-                        ChildOf(lijst),
-                        Node {
-                            flex_direction: FlexDirection::Row,
-                            flex_wrap: FlexWrap::Wrap,
-                            align_items: AlignItems::Center,
-                            column_gap: Val::Px(10.0),
-                            row_gap: Val::Px(6.0),
-                            ..default()
-                        },
-                    ))
-                    .id();
                 for Naamgroep { fractie, namen } in groepen.iter() {
-                    let chip = label(commands, bestanden, stroom, fractie, letter, g, (10.0, 3.0), dekking);
-                    commands.entity(chip).insert(Node {
-                        margin: UiRect::left(Val::Px(8.0)),
-                        padding: UiRect::axes(Val::Px(10.0), Val::Px(3.0)),
-                        ..default()
-                    });
-                    for (n, naam) in namen.iter().enumerate() {
-                        let t = if n + 1 < namen.len() { format!("{naam},") } else { naam.clone() };
-                        let e = tekst_deel(commands, bestanden, stroom, &t, naamletter, g, tk, Uitlijning::Links, dekking);
+                    let regel = commands
+                        .spawn((
+                            ChildOf(kolom),
+                            Node {
+                                flex_direction: FlexDirection::Row,
+                                flex_wrap: FlexWrap::Wrap,
+                                align_items: AlignItems::Center,
+                                column_gap: Val::Px(12.0),
+                                row_gap: Val::Px(4.0),
+                                ..default()
+                            },
+                        ))
+                        .id();
+                    // het label even breed als de andere, met de naam links en het aantal rechts
+                    let vak = commands
+                        .spawn((
+                            ChildOf(regel),
+                            Node {
+                                min_width: Val::Px((kolombreed * 0.4).round()),
+                                padding: UiRect::axes(Val::Px(12.0), Val::Px(2.0)),
+                                justify_content: JustifyContent::SpaceBetween,
+                                column_gap: Val::Px(12.0),
+                                flex_shrink: 0.0,
+                                ..default()
+                            },
+                            gekleurd(kleur(fractie.kleur), dekking),
+                        ))
+                        .id();
+                    let aantal = fractie.aantal.map(|a| a.to_string()).unwrap_or_default();
+                    for t in [fractie.kort.as_str(), aantal.as_str()] {
+                        let e = tekst_deel(commands, bestanden, vak, t, letter, g, kleur(fractie.tekstkleur), Uitlijning::Links, dekking);
                         commands.entity(e).insert((TextLayout::no_wrap(), Passend::basis(g)));
+                    }
+                    let namen = namen.join(", ");
+                    if !namen.is_empty() {
+                        let e = tekst_deel(commands, bestanden, regel, &namen, naamletter, g, tk, Uitlijning::Links, dekking);
+                        commands.entity(e).insert(Passend::basis(g));
                     }
                 }
             }

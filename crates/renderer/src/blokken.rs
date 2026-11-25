@@ -260,23 +260,26 @@ fn met_vorige<'a>(
 const LABELRIJ: f32 = 46.0;
 
 /// Op welke rij het label van elk deel staat en hoeveel ruimte het heeft, in pixels. `delen` is
-/// per deel: waar het begint, en de geschatte breedte van zijn label (geen label: `None`). Een
-/// label staat op de eerste rij als het vorige label daar al ophoudt; anders, met `twee_rijen`,
-/// op de tweede rij; anders nergens. Zijn ruimte loopt tot het volgende label op dezelfde rij,
-/// zodat "9 JA21" onder de Coalitiebalk ook past als het deel van JA21 smaller is (mockup
-/// `3-zetelbalk.jpg`).
-fn labelrijen(delen: &[(f32, Option<f32>)], b: f32, twee_rijen: bool) -> Vec<Option<(usize, f32)>> {
+/// per deel: waar het begint, hoe breed het is en de geschatte breedte van zijn label (geen label:
+/// `None`). De breedste delen kiezen eerst: een label komt op de eerste rij als het daar niemand
+/// raakt, anders (met `twee_rijen`) op de tweede, anders nergens. Zijn ruimte loopt tot het
+/// volgende label op dezelfde rij, zodat "9 JA21" onder de Coalitiebalk ook past als het deel van
+/// JA21 smaller is (mockup `3-zetelbalk.jpg`).
+fn labelrijen(delen: &[(f32, f32, Option<f32>)], b: f32, twee_rijen: bool) -> Vec<Option<(usize, f32)>> {
     const RUIMTE: f32 = 10.0;
-    let mut eind = [f32::NEG_INFINITY; 2];
-    let rijen: Vec<Option<usize>> = delen
-        .iter()
-        .map(|&(x, breed)| {
-            let breed = breed?;
-            let rij = (0..if twee_rijen { 2 } else { 1 }).find(|&r| x >= eind[r])?;
-            eind[rij] = x + breed + RUIMTE;
-            Some(rij)
-        })
-        .collect();
+    let mut volgorde: Vec<usize> = (0..delen.len()).filter(|&i| delen[i].2.is_some()).collect();
+    volgorde.sort_by(|&a, &b| delen[b].1.total_cmp(&delen[a].1).then(a.cmp(&b)));
+    let mut rijen: Vec<Option<usize>> = vec![None; delen.len()];
+    let mut bezet: [Vec<(f32, f32)>; 2] = [Vec::new(), Vec::new()];
+    for i in volgorde {
+        let (x, _, Some(breed)) = delen[i] else { continue };
+        let stuk = (x, x + breed + RUIMTE);
+        let vrij = |r: &Vec<(f32, f32)>| r.iter().all(|&(a, z)| stuk.1 <= a || stuk.0 >= z);
+        if let Some(r) = (0..if twee_rijen { 2 } else { 1 }).find(|&r| vrij(&bezet[r])) {
+            bezet[r].push(stuk);
+            rijen[i] = Some(r);
+        }
+    }
     rijen
         .iter()
         .enumerate()
@@ -538,13 +541,13 @@ pub fn bouw_inhoud(
             };
             let delen = met_vorige(delen, vorig.as_ref(), breed);
             let mut x = 0.0;
-            let plaatsen: Vec<(f32, Option<f32>)> = delen
+            let plaatsen: Vec<(f32, f32, Option<f32>)> = delen
                 .iter()
                 .map(|(d, _, naar, _)| {
                     let begin = x;
                     x += naar * b;
                     let label = *labels && *naar > 0.0 && d.partij.is_some() && !d.kort.is_empty();
-                    (begin, label.then(|| geschat_label(d, 30.0)))
+                    (begin, naar * b, label.then(|| geschat_label(d, 30.0)))
                 })
                 .collect();
             let rijen = labelrijen(&plaatsen, b, *twee_labelrijen);
@@ -1417,8 +1420,14 @@ mod tests {
 
     #[test]
     fn een_label_mag_doorlopen_over_de_delen_erna_zonder_label() {
-        // (begin, label): D66, CDA, JA21, dan de rest van de Coalitiebalk zonder label; 1000 breed
-        let delen = [(0.0, Some(150.0)), (200.0, Some(90.0)), (300.0, Some(120.0)), (350.0, None), (650.0, None)];
+        // (begin, breedte, label): D66, CDA, JA21, dan de rest van de Coalitiebalk zonder label
+        let delen = [
+            (0.0, 200.0, Some(150.0)),
+            (200.0, 100.0, Some(90.0)),
+            (300.0, 50.0, Some(120.0)),
+            (350.0, 300.0, None),
+            (650.0, 350.0, None),
+        ];
         let r = labelrijen(&delen, 1000.0, false);
         assert_eq!(r[0], Some((0, 200.0)), "tot het volgende label");
         assert_eq!(r[2], Some((0, 700.0)), "de laatste in de coalitie loopt door tot het eind");
@@ -1427,16 +1436,16 @@ mod tests {
     }
 
     #[test]
-    fn een_label_dat_niet_naast_het_vorige_past_gaat_naar_de_tweede_rij_of_valt_weg() {
-        // drie smalle delen na elkaar: het tweede botst met het eerste label
-        let delen = [(0.0, Some(100.0)), (40.0, Some(100.0)), (80.0, Some(100.0)), (300.0, Some(100.0))];
+    fn de_grootste_partijen_krijgen_eerst_een_plek_en_de_rest_gaat_naar_de_tweede_rij_of_valt_weg() {
+        // twee smalle delen vooraan, dan een groot deel dat ze anders zou verliezen
+        let delen = [(0.0, 20.0, Some(80.0)), (20.0, 20.0, Some(80.0)), (40.0, 40.0, Some(80.0)), (80.0, 400.0, Some(120.0))];
         let twee = labelrijen(&delen, 1000.0, true);
-        assert_eq!(twee[0], Some((0, 300.0)), "het eerste loopt door tot het volgende op zijn rij");
-        assert_eq!(twee[1], Some((1, 960.0)), "het tweede op de tweede rij");
-        assert_eq!(twee[2], None, "beide rijen bezet");
-        assert_eq!(twee[3], Some((0, 700.0)));
+        assert_eq!(twee[3], Some((0, 920.0)), "het grote deel staat op de eerste rij");
+        assert_eq!(twee[2], Some((1, 960.0)), "het op een na grootste op de tweede rij");
+        assert_eq!(twee[0], None, "botst op beide rijen");
         let een = labelrijen(&delen, 1000.0, false);
-        assert_eq!(een[1], None, "zonder tweede rij valt het weg");
+        assert_eq!(een[3], Some((0, 920.0)));
+        assert_eq!(een[2], None, "zonder tweede rij valt het weg");
     }
 
     #[test]
