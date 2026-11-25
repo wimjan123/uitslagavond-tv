@@ -85,6 +85,7 @@ test("waar je een Standpunt kiest, kies je ook een Camerarit, met toets en naam"
       ["E1", "J", "J · Close-up", "Standpunt"],
       ["E2", null, "Achter", "Standpunt"],
       ["R1", "K", "K · Camerarit 1", "Camerarit"],
+      ["boven-het-paneel", null, "Totaal boven het paneel", "Standpunt"],
     ],
   );
 });
