@@ -898,8 +898,8 @@ const OPBOUWLICHT_HOOGTE: f32 = 3.2;
 /// Zo ver buiten de buitenste Stoel van het blok reikt de kring, in meter.
 const OPBOUWLICHT_RAND: f32 = 0.9;
 /// De sterkte op de top van de flits en daarna, in lumen.
-const OPBOUWLICHT_TOP: f32 = 1200.0;
-const OPBOUWLICHT_BLIJFT: f32 = 0.45;
+const OPBOUWLICHT_TOP: f32 = 4500.0;
+const OPBOUWLICHT_BLIJFT: f32 = 0.5;
 /// Hoeveel van de partijkleur in het licht zit; de rest is warm wit.
 const OPBOUWLICHT_KLEUR: f32 = 0.35;
 
@@ -1051,7 +1051,10 @@ const TITELLICHT_PLEK: Vec3 = Vec3::new(-5.5, 4.6, 1.2);
 const TITELLICHT_DOEL: Vec3 = Vec3::new(0.0, 0.9, -4.6);
 /// De sterkte in lumen, de halve kegel in radialen en hoe lang hij erover doet om aan of uit te
 /// gaan, in seconden.
-const TITELLICHT_LUMEN: f32 = 2500.0;
+const TITELLICHT_LUMEN: f32 = 6000.0;
+/// Bij de Titelkaart houdt de rest van de Zaal (niet het leer van de Stoelen) dit deel van zijn
+/// licht, zodat de Stoelen in het zijlicht het lichtst zijn en de tribune zachter.
+const TITEL_ZAALLICHT: f32 = 0.6;
 const TITELLICHT_KEGEL: f32 = 0.42;
 const TITELLICHT_S: f32 = 0.8;
 
@@ -1172,7 +1175,12 @@ fn dim_zaal(
 ) {
     if standen.is_changed() {
         let gekleurd = standen.huidig.as_ref().is_some_and(|s| !s.stand.stoelkleuren.is_empty());
-        let doel = zaallicht(gekleurd, kleurkracht(&standen));
+        let titel = standen
+            .huidig
+            .as_ref()
+            .and_then(|s| s.stand.ether.as_ref())
+            .is_some_and(|e| matches!(e.graphic, gedeeld::Graphic::Titelkaart { .. }));
+        let doel = zaallicht(gekleurd, kleurkracht(&standen)) * if titel { TITEL_ZAALLICHT } else { 1.0 };
         let neutraal = if gekleurd { 1.0 } else { 0.0 };
         if !d.begonnen {
             (d.van, d.naar, d.nu) = (doel, doel, doel);

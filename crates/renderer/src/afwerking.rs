@@ -111,7 +111,7 @@ pub fn afwerking(materiaal: &str) -> Option<Afwerking> {
         "tapijt" => TAPIJT,
         "plafond" | "daklicht_plafond" => PLAFOND,
         "tribune_band" | "tribune_stof" | "tribune_stof_zij" | "tribune_achter" | "tribune_kop"
-        | "tribune_trede" | "tribune_tapijt" => TRIBUNE,
+        | "tribune_trede" | "tribune_tapijt" | "tribune_frame" | "tribune_lamel" | "tribune_rooster" => TRIBUNE,
         "wand" => WAND,
         _ => return None,
     })
