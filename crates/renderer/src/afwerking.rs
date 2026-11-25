@@ -28,6 +28,8 @@ pub struct Afwerking {
     pub contrast: f32,
     /// Hoe vaak de texturen herhalen (1 is zoals het model): hoger is een fijner patroon.
     pub fijner: f32,
+    /// Hoe sterk de normal map het oppervlak laat golven (1 is zoals het model).
+    pub relief: f32,
 }
 
 const GEWOON: Afwerking = Afwerking {
@@ -37,6 +39,7 @@ const GEWOON: Afwerking = Afwerking {
     glans: None,
     contrast: 1.0,
     fijner: 1.0,
+    relief: 1.0,
 };
 
 /// Fineer en perenhout: een kwart minder oranje, iets donkerder, zijdeglans gelakt (een smalle
@@ -62,11 +65,21 @@ pub const BLADLEER: Afwerking = Afwerking {
     ..GEWOON
 };
 
-/// De stof van de Stoelen: mat, zonder witte glimlichten in een close-up.
+/// De stof van de balies: mat, zonder witte glimlichten in een close-up.
 pub const STOF: Afwerking = Afwerking {
     ruwheid: Some(0.82),
     glans: Some(0.22),
     ..GEWOON
+};
+
+/// Het leer van de Stoelen: mat zoals [`STOF`], maar met meer nerf en meer verschil in kleur. De
+/// textuur uit het model is bijna vlak (de normal map wijkt gemiddeld minder dan 1 procent af),
+/// dus in een close-up waren alle rugleuningen even glad en glansden ze gelijk, als in een
+/// game-render (council-ronde 5).
+pub const STOELLEER: Afwerking = Afwerking {
+    contrast: 2.6,
+    relief: 4.0,
+    ..STOF
 };
 
 /// Het tapijt: het vlekkenpatroon met wat minder contrast, en donkerder. Met minder dan de helft
@@ -107,7 +120,8 @@ pub fn afwerking(materiaal: &str) -> Option<Afwerking> {
         | "balies_bladrand" => HOUT,
         "desk_leer" => BLADLEER,
         m if m.starts_with("balies_fineer_") => HOUT,
-        "stoel_leer" | "stoel_bies" | "stoel_naad" | "balies_leer" => STOF,
+        "stoel_leer" | "stoel_bies" | "stoel_naad" => STOELLEER,
+        "balies_leer" => STOF,
         "tapijt" => TAPIJT,
         "plafond" | "daklicht_plafond" => PLAFOND,
         "tribune_band" | "tribune_stof" | "tribune_stof_zij" | "tribune_achter" | "tribune_kop"
@@ -182,11 +196,11 @@ fn werk_af(
         a.stel_bij(&mut m);
         let texturen = [
             (m.base_color_texture.clone(), a.contrast),
-            (m.normal_map_texture.clone(), 1.0),
             (m.metallic_roughness_texture.clone(), 1.0),
             (m.emissive_texture.clone(), 1.0),
             (m.occlusion_texture.clone(), 1.0),
         ];
+        let normaal = m.normal_map_texture.clone().map(|h| (h, a.relief));
         for (h, contrast) in texturen.into_iter().filter_map(|(h, c)| Some((h?, c))) {
             if !klare_beelden.insert(h.id()) {
                 continue;
@@ -196,6 +210,15 @@ fn werk_af(
             };
             if contrast != 1.0 {
                 verlaag_contrast(&mut beeld, contrast);
+            }
+            maak_mipmaps(&mut beeld);
+        }
+        if let Some((h, relief)) = normaal.filter(|(h, _)| klare_beelden.insert(h.id())) {
+            let Some(mut beeld) = beelden.get_mut(&h) else {
+                continue;
+            };
+            if relief != 1.0 {
+                versterk_relief(&mut beeld, relief);
             }
             maak_mipmaps(&mut beeld);
         }
@@ -256,6 +279,25 @@ fn verlaag_contrast(beeld: &mut Image, contrast: f32) {
     for p in data.chunks_exact_mut(4) {
         for k in 0..3 {
             p[k] = terug(gem[k] + (naar(p[k]) - gem[k]) * contrast);
+        }
+    }
+}
+
+/// Laat een normal map (RGBA8, lineair) `factor` keer zo sterk golven: de schuinte van elke
+/// normaal keer de factor, daarna weer lengte 1.
+fn versterk_relief(beeld: &mut Image, factor: f32) {
+    if beeld.texture_descriptor.format != TextureFormat::Rgba8Unorm {
+        return;
+    }
+    let Some(data) = beeld.data.as_mut() else {
+        warn!("normal map zonder pixels in het geheugen: reliëf blijft");
+        return;
+    };
+    for p in data.chunks_exact_mut(4) {
+        let n = Vec3::new(f32::from(p[0]), f32::from(p[1]), f32::from(p[2])) / 127.5 - Vec3::ONE;
+        let n = Vec3::new(n.x * factor, n.y * factor, n.z.max(0.0)).normalize_or(Vec3::Z);
+        for (k, c) in n.to_array().into_iter().enumerate() {
+            p[k] = ((c + 1.0) * 127.5).round().clamp(0.0, 255.0) as u8;
         }
     }
 }
@@ -406,4 +448,27 @@ mod tests {
             vec![50, 50, 50, 255, 150, 150, 150, 255]
         );
     }
+
+    #[test]
+    fn meer_relief_maakt_een_schuine_normaal_schuiner_en_laat_een_vlakke_staan() {
+        // een vlakke normaal (128, 128, 255) en een iets schuine (140, 128, 254)
+        let mut beeld = Image::new(
+            Extent3d {
+                width: 2,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            vec![128, 128, 255, 255, 140, 128, 254, 255],
+            TextureFormat::Rgba8Unorm,
+            RenderAssetUsages::default(),
+        );
+        versterk_relief(&mut beeld, 4.0);
+        let d = beeld.data.unwrap();
+        assert!((i32::from(d[0]) - 128).abs() <= 1 && d[2] >= 254, "vlak blijft vlak: {:?}", &d[..4]);
+        assert!(d[4] > 160, "schuiner: {:?}", &d[4..8]);
+        let n = Vec3::new(f32::from(d[4]), f32::from(d[5]), f32::from(d[6])) / 127.5 - Vec3::ONE;
+        assert!((n.length() - 1.0).abs() < 0.02, "lengte 1: {n}");
+    }
 }
+
