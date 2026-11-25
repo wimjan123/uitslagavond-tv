@@ -3,6 +3,7 @@
 //! roept ze aan met de lege inhoudsknoop `binnen`.
 
 use bevy::prelude::*;
+use gedeeld::Kleur;
 use gedeeld::sjabloon::{Fractielabel, Inhoud, Naamgroep, STEM_TEGEN, STEM_VOOR, Uitlijning};
 
 use crate::bestanden::Bestanden;
@@ -37,6 +38,12 @@ fn kop_breedte(kolom: f32, deel: f32) -> f32 {
 
 /// De smalste ruimte voor de labels van één kant onder de balk.
 const MINSTE_KANT: f32 = 260.0;
+
+/// De tekst op een vlak in een stemkleur: `licht` (wit of de kleur van het Blok) op tegen, donker
+/// op het lichte voor.
+fn op_stem(stem: Kleur, licht: Color) -> Color {
+    if crate::blokken::is_licht(stem) { crate::blokken::leesbaar_op(stem) } else { licht }
+}
 
 /// Een vlak in een kleur dat meedoet met de animatie.
 fn gekleurd(kl: Color, dekking: f32) -> (BackgroundColor, Deel) {
@@ -137,12 +144,12 @@ pub fn bouw(
                 let l = label(commands, false);
                 let r = commands.spawn((ChildOf(l), rij(12.0))).id();
                 let woord = if *algemene_stemmen { "voor, met algemene stemmen" } else { "voor" };
-                getal_en_woord(commands, bestanden, r, &voor.to_string(), woord, letters, maten, tk, dekking);
+                getal_en_woord(commands, bestanden, r, &voor.to_string(), woord, letters, maten, op_stem(STEM_VOOR, tk), dekking);
             }
             if *tegen > 0 {
                 let l = label(commands, true);
                 let r = commands.spawn((ChildOf(l), rij(12.0))).id();
-                getal_en_woord(commands, bestanden, r, &tegen.to_string(), "tegen", letters, maten, tk, dekking);
+                getal_en_woord(commands, bestanden, r, &tegen.to_string(), "tegen", letters, maten, op_stem(STEM_TEGEN, tk), dekking);
             }
             // de lijn bij 76, 8 breed, 14 pixels boven en onder de balk uit
             let x = b * 76.0 / gedeeld::cijfers::ZETELS as f32;
@@ -172,7 +179,7 @@ pub fn bouw(
                     gekleurd(kleur(*achter), dekking),
                 ))
                 .id();
-            let t = tekst_deel(commands, bestanden, vlak, tekst, letter, f32::from(*grootte), blokkleur, Uitlijning::Links, dekking);
+            let t = tekst_deel(commands, bestanden, vlak, tekst, letter, f32::from(*grootte), op_stem(*achter, blokkleur), Uitlijning::Links, dekking);
             commands.entity(t).insert(TextLayout::no_wrap());
         }
         Inhoud::Fractielijst {
@@ -250,7 +257,7 @@ pub fn bouw(
                     ))
                     .id();
                 let r = commands.spawn((ChildOf(kop), rij(12.0))).id();
-                getal_en_woord(commands, bestanden, r, &aantal.to_string(), woord, (letter, tekstletter), (50.0, 34.0), tk, dekking);
+                getal_en_woord(commands, bestanden, r, &aantal.to_string(), woord, (letter, tekstletter), (50.0, 34.0), op_stem(achter, tk), dekking);
                 let raster = commands
                     .spawn((
                         ChildOf(kolom),
@@ -355,6 +362,9 @@ pub fn bouw(
                 .id();
             let kolombreed = ((b - 48.0) / 2.0).floor();
             let tk = blokkleur;
+            // Elk label even breed, naar de langste naam met zijn aantal in beide kolommen: zo
+            // staan de aantallen in één kolom en beginnen de namen van afwijkers op één lijn.
+            let labelbreed = labelbreedte(voor.iter().chain(tegen.iter()).map(|n| &n.fractie), g, kolombreed);
             for (groepen, aantal, woord, achter) in [(voor, aantal_voor, "voor", STEM_VOOR), (tegen, aantal_tegen, "tegen", STEM_TEGEN)] {
                 let kolom = commands
                     .spawn((
@@ -385,7 +395,7 @@ pub fn bouw(
                     .id();
                 let r = commands.spawn((ChildOf(kop), rij(10.0))).id();
                 for (t, l, s) in [(aantal.to_string(), letter.as_str(), g * 1.4), (woord.to_string(), naamletter.as_str(), g)] {
-                    let e = tekst_deel(commands, bestanden, r, &t, l, s.round(), Color::WHITE, Uitlijning::Links, dekking);
+                    let e = tekst_deel(commands, bestanden, r, &t, l, s.round(), op_stem(achter, Color::WHITE), Uitlijning::Links, dekking);
                     commands.entity(e).insert((TextLayout::no_wrap(), Passend::basis(s.round())));
                 }
                 for Naamgroep { fractie, namen } in groepen.iter() {
@@ -394,10 +404,8 @@ pub fn bouw(
                             ChildOf(kolom),
                             Node {
                                 flex_direction: FlexDirection::Row,
-                                flex_wrap: FlexWrap::Wrap,
-                                align_items: AlignItems::Center,
-                                column_gap: Val::Px(12.0),
-                                row_gap: Val::Px(4.0),
+                                align_items: AlignItems::FlexStart,
+                                column_gap: Val::Px(NAAM_TUSSEN),
                                 ..default()
                             },
                         ))
@@ -407,7 +415,7 @@ pub fn bouw(
                         .spawn((
                             ChildOf(regel),
                             Node {
-                                min_width: Val::Px((kolombreed * 0.4).round()),
+                                width: Val::Px(labelbreed),
                                 padding: UiRect::new(Val::Px(12.0 + STREEP), Val::Px(12.0), Val::Px(0.0), Val::Px(0.0)),
                                 justify_content: JustifyContent::SpaceBetween,
                                 column_gap: Val::Px(12.0),
@@ -425,7 +433,12 @@ pub fn bouw(
                     }
                     let namen = namen.join(", ");
                     if !namen.is_empty() {
-                        let e = tekst_deel(commands, bestanden, regel, &namen, naamletter, g, tk, Uitlijning::Links, dekking);
+                        // de namen in hun eigen kolom naast de labels; een lange rij loopt daarin
+                        // door naar een tweede regel, nooit onder het label
+                        let kol = commands
+                            .spawn((ChildOf(regel), Node { width: Val::Px((kolombreed - labelbreed - NAAM_TUSSEN).max(0.0)), ..default() }))
+                            .id();
+                        let e = tekst_deel(commands, bestanden, kol, &namen, naamletter, g, tk, Uitlijning::Links, dekking);
                         commands.entity(e).insert(Passend::basis(g));
                     }
                 }
@@ -466,11 +479,25 @@ fn label(
     vak
 }
 
+/// Ruimte tussen het label van een Fractie en de namen erachter in de Namenlijst.
+const NAAM_TUSSEN: f32 = 16.0;
+
+/// De breedte van elk label in de Namenlijst bij letter `g`: de langste korte naam met zijn aantal,
+/// de streep en de marges, en nooit smaller dan 40 of breder dan 60 procent van de kolom. Geschat
+/// zoals de labels onder een Zetelbalk: de cijfers 0,62 en de letters 0,6 van de lettergrootte.
+fn labelbreedte<'a>(fracties: impl Iterator<Item = &'a Fractielabel>, g: f32, kolom: f32) -> f32 {
+    let langste = fracties
+        .map(|f| f.kort.chars().count() as f32 * 0.6 * g + f.stemmen.to_string().len() as f32 * 0.62 * g)
+        .fold(0.0, f32::max);
+    (langste + 12.0 + STREEP + 12.0 + 12.0 + 12.0).clamp((kolom * 0.4).round(), (kolom * 0.6).round()).round()
+}
+
 /// De hoogte van de uitleg onder de Namenlijst.
 const UITLEG_HOOG: f32 = 54.0;
 
-/// De ondergrond van een label of tegel van een Fractie: wit op 10 procent over het paneel.
-const NEUTRAAL: Color = Color::srgba(1.0, 1.0, 1.0, 0.10);
+/// De ondergrond van een label of tegel van een Fractie: wit op 7 procent over het paneel, zodat
+/// de tegels niet het lichtste vlak in beeld zijn.
+const NEUTRAAL: Color = Color::srgba(1.0, 1.0, 1.0, 0.07);
 /// De streep in de partijkleur links in een label of tegel.
 const STREEP: f32 = 10.0;
 

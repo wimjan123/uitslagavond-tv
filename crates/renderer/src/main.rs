@@ -33,6 +33,7 @@ mod stemmingsblokken;
 mod studio;
 mod volging;
 mod voorbeeld;
+mod vrijstaand;
 mod zaal;
 
 #[cfg(test)]
