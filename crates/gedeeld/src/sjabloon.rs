@@ -2318,10 +2318,11 @@ fn stemmingskop(x: i32, y: i32, kicker_tekst: &str) -> Vec<Blok> {
 /// met kicker, titel, uitkomst, de voor-tegenbalk en de Fracties eronder. De Zaal kleurt de
 /// Stoelen in hun stem.
 fn uitslag_stemming() -> Sjabloon {
-    let (x, y) = (96, 608);
+    // onder de balk is ruimte voor drie rijen labels van 30 px
+    let (x, y) = (96, 532);
     let erin = animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0);
     let mut blokken = vec![
-        paneel(plek(x, y, 1728, 398)),
+        paneel(plek(x, y, 1728, 474)),
     ];
     blokken.extend(stemmingskop(x, y, "STEMMING"));
     blokken.extend([
@@ -2335,7 +2336,7 @@ fn uitslag_stemming() -> Sjabloon {
             animatie: erin,
         },
         Blok {
-            plek: plek(x + 48, y + 282, 1632, 112),
+            plek: plek(x + 48, y + 282, 1632, 170),
             soort: Bloksoort::Fractielijst {
                 letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                 tekstletter: Letterkeuze::Stijl(Stijlletter::Tekst),

@@ -22,8 +22,11 @@ fn grens_onder_balk(b: f32, wissel: f32) -> f32 {
     (b * wissel).clamp(MINSTE_KANT, (b - MINSTE_KANT).max(MINSTE_KANT))
 }
 
-/// De hoogte van een tegel in de Fractielijst met twee kolommen.
+/// De hoogte van een tegel in de Fractielijst met twee kolommen, en hoeveel er naast elkaar staan.
 const TEGEL_HOOG: f32 = 112.0;
+const TEGELS_PER_RIJ: f32 = 3.0;
+/// De grootste letter van een naam over twee regels in een tegel, zodat het aantal eronder past.
+const TWEE_REGELS: f32 = 30.0;
 
 /// De breedte van de kop "101 voor" in een kolom van `kolom` breed: naar rato van zijn deel van
 /// de grootste kant, zodat twee keer zoveel stemmen ook twee keer zo breed is, maar nooit smaller
@@ -255,12 +258,12 @@ pub fn bouw(
                             flex_direction: FlexDirection::Row,
                             flex_wrap: FlexWrap::Wrap,
                             column_gap: Val::Px(24.0),
-                            row_gap: Val::Px(20.0),
+                            row_gap: Val::Px(12.0),
                             ..default()
                         },
                     ))
                     .id();
-                let tegel = ((kolombreed - 48.0) / 3.0).floor();
+                let tegel = ((kolombreed - 24.0 * (TEGELS_PER_RIJ - 1.0)) / TEGELS_PER_RIJ).floor();
                 for f in labels.iter() {
                     let vak = commands
                         .spawn((
@@ -285,8 +288,16 @@ pub fn bouw(
                             commands.entity(vak).insert(gekleurd(kleur(f.kleur), dekking));
                             // een lange naam met een spatie loopt over twee regels in dezelfde
                             // letter; een lang woord krimpt
-                            let t = tekst_deel(commands, bestanden, vak, &f.kort, letter, g, kleur(f.tekstkleur), Uitlijning::Midden, dekking);
-                            if f.kort.contains(' ') {
+                            let twee_regels = f.kort.contains(' ');
+                            let grootte = if twee_regels {
+                                // het langste woord moet op een regel passen
+                                let woord = f.kort.split(' ').map(|w| w.chars().count()).max().unwrap_or(1) as f32;
+                                g.min(TWEE_REGELS).min(((tegel - 24.0) / (woord * 0.62)).floor())
+                            } else {
+                                g
+                            };
+                            let t = tekst_deel(commands, bestanden, vak, &f.kort, letter, grootte, kleur(f.tekstkleur), Uitlijning::Midden, dekking);
+                            if twee_regels {
                                 commands.entity(t).insert(Node { max_width: Val::Px(tegel - 24.0), ..default() });
                             } else {
                                 commands.entity(t).insert((
@@ -299,7 +310,7 @@ pub fn bouw(
                         }
                     };
                     if f.stemmen > 0 {
-                        let t = tekst_deel(commands, bestanden, vak, &f.stemmen.to_string(), letter, (g * 0.75).round(), tekstkleur, Uitlijning::Midden, dekking);
+                        let t = tekst_deel(commands, bestanden, vak, &f.stemmen.to_string(), letter, (g * 0.75).round().max(30.0), tekstkleur, Uitlijning::Midden, dekking);
                         commands.entity(t).insert(TextLayout::no_wrap());
                     }
                 }
