@@ -4,7 +4,7 @@ naar wat de meting zegt. Schrijft per ronde <uit>/factoren.json; pas.py legt er 
 gebruik: W=<repo> itereer.py <rondes> [factoren.json om mee te beginnen]   (ALLEEN_METEN=1: één meting)"""
 import json, os, subprocess, math, sys
 G = os.path.dirname(os.path.abspath(__file__)); W = os.environ['W']; PY = sys.executable
-basis = os.environ.get('KAL', '0.87,0.88,0.2,3.1,-1.5,0.6,0.15'); bl, bc = 1.4, 1.6
+basis = os.environ.get('KAL', '0.87,0.88,0.2,3.1,-1.5,0.6,0.15,0.88,0.25,0.35'); bl, bc = 1.4, 1.6
 partij = ['#0a8a74','#1e9be6','#22b5c2','#2b63d9','#2dbe4f','#3a4fb8','#5a2d91','#5e8f23','#9b2d8f','#a3243a','#a8c81e','#d0213a','#e6a11b','#f0412a','#ff7a1a']
 extra = ['#e84a8a','#f5d300','#7ac143','#00b7eb','#1d2d6b','#8b5a2b','#9ac8eb','#00594f','#f6a5c0']
 alle = partij + extra

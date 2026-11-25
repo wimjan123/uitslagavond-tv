@@ -16,14 +16,21 @@ pub struct LensPlugin;
 
 impl Plugin for LensPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(PostUpdate, stel_scherpte_bij.before(TransformSystems::Propagate));
+        app.init_resource::<Nabijheid>()
+            .add_systems(PostUpdate, stel_scherpte_bij.before(TransformSystems::Propagate));
     }
 }
 
+/// Hoe dichtbij de camera is (0 tot 1): 0 bij een wijd shot, 1 bij een close-up in de Zaal. Ook
+/// de kleur van het leer hangt ervan af (zie `zaal.rs`): de kalibratie geldt voor het
+/// totaalbeeld, en van dichtbij staat een Stoel recht in het licht.
+#[derive(Resource, Default, Clone, Copy, PartialEq, Debug)]
+pub struct Nabijheid(pub f32);
+
 /// Vanaf deze beeldhoek (graden) begint de onscherpte, en bij deze is hij er helemaal: Aanschuiven
-/// heeft 40, de Persoonskaart 34, Standpunt A 48.
-const VANAF_GRADEN: f32 = 44.0;
-const HELEMAAL_GRADEN: f32 = 38.0;
+/// (Partij uitgelicht) heeft 40, de Persoonskaart 34, Standpunt A 48.
+const VANAF_GRADEN: f32 = 46.0;
+const HELEMAAL_GRADEN: f32 = 40.0;
 /// Het diafragma bij een volle close-up: een groot diafragma geeft weinig scherptediepte. Met de
 /// sensor van Bevy (Super 35) en de lens van de Persoonskaart is een Stoel twee rijen verder zo'n
 /// 10 pixels onscherp, en het bureau ervoor zo'n 8.
@@ -78,11 +85,13 @@ fn stel_scherpte_bij(
     mut commands: Commands,
     mut camera: Query<(Entity, &Transform, &Projection, Option<&DepthOfField>, Option<&mut crate::occlusie::Occlusie>), With<HoofdCamera>>,
     uitlichting: Res<crate::zaal::Uitlichting>,
+    mut nabijheid: ResMut<Nabijheid>,
 ) {
     let b = &crate::beeld::BEELD;
     for (e, plek, projectie, nu, occlusie) in &mut camera {
         let Projection::Perspective(p) = projectie else { continue };
         let s = sterkte(p.fov, plek.translation.y);
+        nabijheid.set_if_neq(Nabijheid(s));
         if let Some(mut o) = occlusie {
             let (sterk, straal) = (b.occlusie + OCCLUSIE_EXTRA * s, b.occlusie_straal + (OCCLUSIE_STRAAL_DICHTBIJ - b.occlusie_straal) * s);
             if o.sterkte != sterk || o.straal != straal {
@@ -129,7 +138,7 @@ mod tests {
         let stoel = gedeeld::Stoel { vak: 3, rij: 2, nummer: 1 };
         let shot = gedeeld::camera::shot_op_stoel(stoel).unwrap();
         assert_eq!(sterkte(shot.beeldhoek, shot.positie[1]), 1.0, "de Persoonskaart helemaal");
-        let half = sterkte(41.0_f32.to_radians(), 2.0);
+        let half = sterkte(43.0_f32.to_radians(), 2.0);
         assert!(half > 0.3 && half < 0.7, "tijdens de rit komt hij vloeiend op: {half}");
     }
 

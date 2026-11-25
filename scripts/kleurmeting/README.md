@@ -14,6 +14,6 @@ W=$PWD ZAAL=/pad/naar/zaal /tmp/km/bin/python scripts/kleurmeting/itereer.py 5
 /tmp/km/bin/python scripts/kleurmeting/pas.py /tmp/kleurmeting/ronde4/factoren.json
 ```
 
-`render.sh` start een eigen server op `POORT` (standaard 7432) met een kopie van de Stand. Een andere kalibratie probeer je zonder te bouwen met `UITSLAGAVOND_KAL` (de zeven getallen van `Kalibratie`) en per kleur met `UITSLAGAVOND_KAL_PER`.
+`render.sh` start een eigen server op `POORT` (standaard 7432) met een kopie van de Stand. Een andere kalibratie probeer je zonder te bouwen met `UITSLAGAVOND_KAL` (de tien getallen van `Kalibratie`) en per kleur met `UITSLAGAVOND_KAL_PER`.
 
 Gemeten in council-ronde 4 (Standpunt A, Kleurkracht 50, 15 Partijen van 2025): zonder kalibratie gemiddeld ΔE 21,8 en hoogstens 31,8; met de rechte lijn van nu gemiddeld 5,8 en hoogstens 9,3. Het verschil dat overblijft zit vooral in fel oranje en geel, die de toonweergave niet helemaal haalt.

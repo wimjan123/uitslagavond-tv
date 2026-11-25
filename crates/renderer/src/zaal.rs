@@ -430,6 +430,8 @@ struct Golf {
     bezig: bool,
     /// De Kleurkracht (0 tot 1) waarmee de materialen per kleur gemaakt zijn.
     kracht: f32,
+    /// En de nabijheid van de camera ([`crate::lens::Nabijheid`]).
+    nabij: f32,
 }
 
 /// Waar een Stoel in de Kleurovergang is.
@@ -490,7 +492,7 @@ impl Golf {
                             .mix(&lineair(naar), f)
                             .mix(&gedimd, d)
                             .mix(&lineair(Some(Kleur { r: 255, g: 255, b: 255 })), GLOED_LICHT * g);
-                        let eigen = naar.filter(|k| *k != GRIJS).map_or(LinearRgba::BLACK, gekalibreerd);
+                        let eigen = naar.filter(|k| *k != GRIJS).map_or(LinearRgba::BLACK, |k| gekalibreerd(k, 0.0));
                         let straling = LinearRgba::BLACK.mix(&straalt(naar), f) * (1.0 - d) + eigen * (GLOED_STRAALT * g);
                         Stoelstand::Onderweg(leer, straling)
                     }
@@ -535,6 +537,11 @@ const STOEL_UIT: Kleur = Kleur { r: 0x4c, g: 0x4f, b: 0x55 };
 /// ook de achterste rij; per kleur een paar keer bijgesteld tot het beeld klopte, en daar deze
 /// rechte lijn door gelegd (`scripts/kleurmeting/`, council-ronde 4). Gemeten bij Kleurkracht 50,
 /// de standaard; hoger straalt het leer iets meer ([`KLEUR_STRAALT`]).
+///
+/// Van dichtbij ([`crate::lens::Nabijheid`] 1, Partij uitgelicht en de Persoonskaart) staat een
+/// Stoel recht in het licht en is er minder nodig: zonder dat werd D66-groen neonlimoen. Daar is
+/// het licht keer `nabij_licht`, de extra kleurigheid keer `nabij_kleur` en de straling keer
+/// `nabij_straalt`, gemeten bij D66, CDA en PVV; daartussen vloeiend.
 #[derive(Clone, Copy, Debug)]
 struct Kalibratie {
     licht: f32,
@@ -547,23 +554,38 @@ struct Kalibratie {
     /// Hoe fel het leer altijd in zijn eigen kleur straalt, bovenop het licht uit de bak: zo houdt
     /// het zijn kleur ook waar de bak donker is.
     straalt: f32,
+    nabij_licht: f32,
+    nabij_kleur: f32,
+    nabij_straalt: f32,
 }
 
-const KALIBRATIE: Kalibratie =
-    Kalibratie { licht: 0.87, licht_l: 0.88, kleur: 0.2, kleur_l: 3.1, kleur_c: -1.5, albedo: 0.6, straalt: 0.15 };
+const KALIBRATIE: Kalibratie = Kalibratie {
+    licht: 0.87,
+    licht_l: 0.88,
+    kleur: 0.2,
+    kleur_l: 3.1,
+    kleur_c: -1.5,
+    albedo: 0.6,
+    straalt: 0.15,
+    nabij_licht: 0.88,
+    nabij_kleur: 0.25,
+    nabij_straalt: 0.35,
+};
 
 /// De kalibratie, of voor het meten (`scripts/kleurmeting/`) een andere uit
-/// `UITSLAGAVOND_KAL`: de zeven getallen van [`Kalibratie`] met komma's ertussen.
+/// `UITSLAGAVOND_KAL`: de tien getallen van [`Kalibratie`] met komma's ertussen.
 fn kalibratie() -> Kalibratie {
     static K: std::sync::OnceLock<Kalibratie> = std::sync::OnceLock::new();
     *K.get_or_init(|| {
         let Ok(t) = std::env::var("UITSLAGAVOND_KAL") else { return KALIBRATIE };
         let v: Vec<f32> = t.split(',').filter_map(|x| x.trim().parse().ok()).collect();
-        if v.len() != 7 {
-            warn!("UITSLAGAVOND_KAL heeft geen zeven getallen: de gewone kalibratie");
+        let [licht, licht_l, kleur, kleur_l, kleur_c, albedo, straalt, nabij_licht, nabij_kleur, nabij_straalt] =
+            v[..]
+        else {
+            warn!("UITSLAGAVOND_KAL heeft geen tien getallen: de gewone kalibratie");
             return KALIBRATIE;
-        }
-        Kalibratie { licht: v[0], licht_l: v[1], kleur: v[2], kleur_l: v[3], kleur_c: v[4], albedo: v[5], straalt: v[6] }
+        };
+        Kalibratie { licht, licht_l, kleur, kleur_l, kleur_c, albedo, straalt, nabij_licht, nabij_kleur, nabij_straalt }
     })
 }
 
@@ -600,27 +622,38 @@ fn factoren(k: Kleur) -> (f32, f32) {
     (kal.licht + kal.licht_l * c.lightness, (kal.kleur + kal.kleur_l * c.lightness + kal.kleur_c * c.chroma).max(1.0))
 }
 
-/// Een partijkleur zoals het leer hem meekrijgt (lineair), zie [`Kalibratie`].
-fn gekalibreerd(k: Kleur) -> LinearRgba {
+/// Een partijkleur zoals het leer hem meekrijgt (lineair) bij deze nabijheid van de camera (0 tot
+/// 1), zie [`Kalibratie`].
+fn gekalibreerd(k: Kleur, nabij: f32) -> LinearRgba {
+    let kal = kalibratie();
     let (licht, kleur) = kalibratie_per_kleur().get(&k).copied().unwrap_or_else(|| factoren(k));
+    let licht = licht * (1.0 - (1.0 - kal.nabij_licht) * nabij);
+    let kleur = 1.0 + (kleur - 1.0) * (1.0 - (1.0 - kal.nabij_kleur) * nabij);
     in_oklab(k, licht, kleur)
 }
 
-/// De kleur van het leer bij een kleur uit de Stand (lineair).
+/// De kleur van het leer bij een kleur uit de Stand (lineair), in het totaalbeeld.
+#[cfg(test)]
 fn leer_in_de_zaal(k: Kleur) -> LinearRgba {
+    leer_bij(k, 0.0)
+}
+
+/// De kleur van het leer bij een kleur uit de Stand en deze nabijheid van de camera (lineair).
+fn leer_bij(k: Kleur, nabij: f32) -> LinearRgba {
     if k == GRIJS {
         return in_oklab(STOEL_UIT, 1.0, 1.0) * kalibratie().albedo;
     }
-    gekalibreerd(k) * kalibratie().albedo
+    gekalibreerd(k, nabij) * kalibratie().albedo
 }
 
-/// Hoe het leer straalt bij een kleur uit de Stand en deze Kleurkracht (0 tot 1). Een Stoel die
-/// niet meedoet straalt niet.
-fn straling_van(k: Kleur, kracht: f32) -> LinearRgba {
+/// Hoe het leer straalt bij een kleur uit de Stand, deze Kleurkracht (0 tot 1) en deze nabijheid
+/// van de camera. Een Stoel die niet meedoet straalt niet.
+fn straling_bij(k: Kleur, kracht: f32, nabij: f32) -> LinearRgba {
     if k == GRIJS {
         return LinearRgba::BLACK;
     }
-    gekalibreerd(k) * (kalibratie().straalt + kracht * KLEUR_STRAALT)
+    let kal = kalibratie();
+    gekalibreerd(k, nabij) * ((kal.straalt + kracht * KLEUR_STRAALT) * (1.0 - (1.0 - kal.nabij_straalt) * nabij))
 }
 
 /// Bij de Opbouw: een Partij na haar stap wordt grijs en donker, met nog een kwart van haar kleur
@@ -675,9 +708,11 @@ fn kleur_stoelen(
     mut pm: ResMut<StoelMaterialen>,
     mut golf: ResMut<Golf>,
     mut opbouwstand: ResMut<Opbouwstand>,
+    nabijheid: Option<Res<crate::lens::Nabijheid>>,
 ) {
     let veranderd = standen.is_changed() || !nieuw_leer.is_empty();
-    if !veranderd && !golf.bezig {
+    let nabij = nabijheid.map_or(0.0, |n| n.0);
+    if !veranderd && !golf.bezig && nabij == golf.nabij {
         return;
     }
     let Some(origineel) = pm
@@ -692,19 +727,21 @@ fn kleur_stoelen(
     else {
         return;
     };
-    let lineair = |k: Option<Kleur>| k.map_or(eigen_leer, leer_in_de_zaal);
+    // van dichtbij anders (zie Kalibratie)
+    let lineair = |k: Option<Kleur>| k.map_or(eigen_leer, |k| leer_bij(k, nabij));
     // Het leer straalt zacht in zijn eigen kleur, naar de Kleurkracht; het eigen leer en een
     // Stoel die niet meedoet niet.
     let kracht = kleurkracht(&standen);
-    let straalt = |k: Option<Kleur>| k.map_or(LinearRgba::BLACK, |k| straling_van(k, kracht));
-    if kracht != golf.kracht {
-        // een andere Kleurkracht: de materialen per kleur stralen anders
+    let straalt = |k: Option<Kleur>| k.map_or(LinearRgba::BLACK, |k| straling_bij(k, kracht, nabij));
+    if kracht != golf.kracht || nabij != golf.nabij {
+        // een andere Kleurkracht of camera: de materialen per kleur zijn anders
         for (kleur, h) in &pm.per_kleur {
             if let Some(mut m) = materialen.get_mut(h) {
+                m.base_color = lineair(Some(*kleur)).into();
                 m.emissive = straalt(Some(*kleur));
             }
         }
-        golf.kracht = kracht;
+        (golf.kracht, golf.nabij) = (kracht, nabij);
     }
     if golf.rang.is_empty() {
         let mut rang = vec![0; AANTAL_STOELEN];
@@ -1269,13 +1306,10 @@ fn toon_lijn_bij_76(
     }
 }
 
-/// Hoe fel de Stoel van de Persoonskaart straalt in de kleur van zijn Partij (of, zonder Partij,
-/// in zijn eigen kleur), en welk deel van het gekalibreerde leer hij krijgt. De kalibratie geldt
-/// voor het totaalbeeld; in de close-up staat de Stoel recht van voren in het licht, dus minder,
-/// zodat hij daar de kleur van de Partij heeft en geen lichtere tint ervan (gemeten bij
-/// Bontenbal, CDA). De markering is dat alleen hij kleur heeft.
-const UITGELICHT_STRAALT: f32 = 0.08;
-const UITGELICHT_LEER: f32 = 0.6;
+/// De Stoel van de Persoonskaart tussen gekleurde Stoelen: hoeveel feller hij straalt dan een
+/// gekleurde Stoel, zodat hij boven zijn buren uit licht. Tussen grijze Stoelen (het gewone geval)
+/// is hij gewoon een gekleurde Stoel: de markering is dat alleen hij kleur heeft.
+const UITGELICHT_EXTRA: f32 = 0.25;
 /// Zo lang duurt het oplichten en uitgaan, in seconden bij snelheid 100.
 const UITLICHTEN_S: f32 = 0.5;
 
@@ -1302,13 +1336,16 @@ fn partijkleur(stand: &gedeeld::Stand, graphic: &gedeeld::Graphic) -> Option<Kle
 }
 
 /// Het leer en de straling van de uitgelichte Stoel bij `sterkte` (0 tot 1): het leer gaat naar
-/// de kleur van de Partij en straalt zacht in die kleur. Zonder Partij houdt het zijn eigen kleur
-/// en straalt daarin.
-fn uitgelicht(leer: LinearRgba, partij: Option<Kleur>, sterkte: f32) -> (LinearRgba, LinearRgba) {
-    let naar = partij.map_or(leer, |k| leer_in_de_zaal(k) * UITGELICHT_LEER);
-    let kleur = leer.mix(&naar, sterkte);
-    let eigen = partij.map_or(leer * (1.0 / kalibratie().albedo), gekalibreerd);
-    (kleur, eigen.with_alpha(1.0) * (UITGELICHT_STRAALT * sterkte))
+/// de kleur van de Partij en straalt zacht in die kleur, zoals een gekleurde Stoel. Zonder Partij
+/// houdt het zijn eigen kleur en straalt daarin. `straalt` is hoe de Stoel uit zichzelf straalt
+/// (zwart als hij grijs is); `kracht` de Kleurkracht en `nabij` de nabijheid van de camera.
+/// Tussen gekleurde Stoelen licht hij boven zijn buren uit.
+fn uitgelicht(leer: LinearRgba, straalt: LinearRgba, partij: Option<Kleur>, kracht: f32, nabij: f32, sterkte: f32) -> (LinearRgba, LinearRgba) {
+    let eigen = partij.map_or(leer * (1.0 / kalibratie().albedo), |k| gekalibreerd(k, nabij)).with_alpha(1.0);
+    let gewoon = partij.map_or(eigen * (kalibratie().straalt * kalibratie().nabij_straalt), |k| straling_bij(k, kracht, nabij));
+    let naar = partij.map_or(leer, |k| leer_bij(k, nabij));
+    let straling = if straalt == LinearRgba::BLACK { gewoon } else { gewoon + eigen * UITGELICHT_EXTRA };
+    (leer.mix(&naar, sterkte), straalt.mix(&straling, sterkte))
 }
 
 /// Laat de Stoel van de Graphic oplichten: in de Ether en de Reserve die in de Ether, in het
@@ -1322,6 +1359,7 @@ fn licht_stoel_op(
     mut leer: Query<(&StoelLeer, &mut MeshMaterial3d<StandardMaterial>)>,
     mut materialen: ResMut<Assets<StandardMaterial>>,
     mut u: ResMut<Uitlichting>,
+    nabijheid: Option<Res<crate::lens::Nabijheid>>,
 ) {
     let stand = standen.huidig.as_ref().map(|s| &s.stand);
     let voorbeeld = rolinfo.is_some_and(|r| r.rol == gedeeld::Rol::Voorbeeld);
@@ -1355,7 +1393,8 @@ fn licht_stoel_op(
     if u.stoel.is_none() && u.gewoon.is_empty() {
         return;
     }
-    let (sterkte, partij) = (u.sterkte, u.kleur);
+    let (sterkte, partij, kracht) = (u.sterkte, u.kleur, kleurkracht(&standen));
+    let nabij = nabijheid.map_or(0.0, |n| n.0);
     for (stoel, mut materiaal) in &mut leer {
         let gewoon = u.gewoon.get(&materiaal.0.id()).cloned().unwrap_or_else(|| materiaal.0.clone());
         let doel = if Some(stoel.index) == u.stoel {
@@ -1373,7 +1412,8 @@ fn licht_stoel_op(
             };
             if let Some(mut m) = materialen.get_mut(&h) {
                 // de kleur van het leer, ook als die midden in een golf verandert
-                let (leer, straling) = uitgelicht(LinearRgba::from(basis.base_color), partij, sterkte);
+                let (leer, straling) =
+                    uitgelicht(LinearRgba::from(basis.base_color), basis.emissive, partij, kracht, nabij, sterkte);
                 m.base_color = leer.into();
                 m.emissive = straling;
             }
@@ -1841,17 +1881,27 @@ mod tests {
         wacht(&mut app, 0.74);
         assert!(app.world().resource::<Opbouwstand>().bezig);
         assert_eq!(stap(&app), None, "eerst worden de Stoelen donker");
-        assert_eq!(tel(&mut app, OPBOUW_WACHTKLEUR), 150);
+        let wachtkleur = lin(OPBOUW_WACHTKLEUR);
+        let bijna = |l: &Srgba| (l.red - wachtkleur.red).abs().max((l.green - wachtkleur.green).abs()) < 0.01;
+        assert!(leerkleuren(&mut app).iter().all(bijna), "alle 150 (bijna) in de wachtkleur");
 
-        // de grootste Partij (nu rood, 110) eerst en gloeit; de rest wacht donker
-        wacht(&mut app, 0.7);
+        // de grootste Partij (nu rood, 110) eerst en flitst kort op; de rest wacht donker
+        wacht(&mut app, 0.36);
         assert_eq!(stap(&app), Some(rood));
         assert_eq!(tel(&mut app, OPBOUW_WACHTKLEUR), 40);
-        assert_eq!(tel(&mut app, rood), 0, "rood gloeit nog, lichter dan zijn eigen kleur");
-        // in de volgende stap is rood gedimd, zodat alleen groen vol oplicht
-        wacht(&mut app, 1.5);
+        assert_eq!(tel(&mut app, rood), 0, "rood flitst, lichter dan zijn eigen kleur");
+        // midden in de stap staat rood in zijn eigen kleur
+        wacht(&mut app, 0.4);
+        assert_eq!(tel(&mut app, rood), 110, "midden in de stap de eigen kleur");
+        // in de volgende stap is rood gedimd naar grijs, zodat alleen groen in kleur staat
+        wacht(&mut app, 1.44);
         assert_eq!(stap(&app), Some(groen));
         assert_eq!(tel(&mut app, rood), 0, "rood gedimd");
+        let gedimd = Srgba::from(gedimd_leer(rood));
+        let grijs = (gedimd.red - gedimd.green).abs().max((gedimd.red - gedimd.blue).abs());
+        let vol = Srgba::from(leer_in_de_zaal(rood));
+        assert!(grijs < 0.3 * (vol.red - vol.green).abs(), "gedimd is bijna grijs: {gedimd:?} tegen {vol:?}");
+        assert!(gedimd.red + gedimd.green + gedimd.blue < vol.red + vol.green + vol.blue, "en donkerder");
         // na de laatste stap komt alles tegelijk terug in zijn eigen kleur
         wacht(&mut app, 1.5);
         assert_eq!(tel(&mut app, rood), 110);
