@@ -376,6 +376,20 @@ fn voer_overgang(
 const ONSCHERP_PX: f32 = 40.0;
 /// Hoe lang de Zaal erover doet om onscherp of weer scherp te worden, in seconden.
 const ONSCHERP_S: f32 = 0.5;
+/// Achter Zaal donker verliest de Zaal ook zijn kleur en wordt hij donkerder: zoveel van de
+/// verzadiging blijft over, en zoveel stops gaat de belichting omlaag. Met alleen onscherpte
+/// stonden achter de stemmingstabellen grote groene en rode vlekken (gemiddeld RGB 23, 40, 32
+/// tegen 5, 4, 4 achter Uitslag per partij, council-ronde 5).
+const ONSCHERP_VERZADIGING: f32 = 0.12;
+const ONSCHERP_STOPS: f32 = 1.5;
+
+/// De kleurcorrectie van de Zaal achter Zaal donker, bij onscherpte `f` (0 tot 1).
+fn kleurcorrectie_achter_donker(f: f32) -> bevy::render::view::ColorGrading {
+    let mut k = crate::beeld::BEELD.kleurcorrectie();
+    k.global.post_saturation = 1.0 - (1.0 - ONSCHERP_VERZADIGING) * f;
+    k.global.exposure = -ONSCHERP_STOPS * f;
+    k
+}
 
 /// Hoe onscherp de Zaal achter een laag nu is, van 0 (scherp) tot 1.
 #[derive(Component, Default)]
@@ -391,6 +405,7 @@ fn maak_onscherp(
     tijd: Res<Time>,
     mut lagen: Query<(Entity, &Laag, &UiTargetCamera, Option<&Children>, Option<&mut Onscherp>)>,
     kaarten: Query<&Kaart>,
+    mut kleur: Query<&mut bevy::render::view::ColorGrading>,
 ) {
     for (id, laag, camera, kinderen, onscherp) in &mut lagen {
         let donker: Vec<Fase> = kinderen
@@ -417,6 +432,9 @@ fn maak_onscherp(
         };
         if nu.0 == vorig {
             continue;
+        }
+        if let Ok(mut k) = kleur.get_mut(camera.entity()) {
+            *k = kleurcorrectie_achter_donker(zacht_uit(nu.0));
         }
         let Ok(mut camera) = commands.get_entity(camera.entity()) else { continue };
         if nu.0 > 0.0 {

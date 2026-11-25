@@ -14,7 +14,7 @@ use bevy::prelude::*;
 use bevy::world_serialization::WorldInstanceReady;
 use bevy::color::Mix;
 use gedeeld::uitslagindeling::stoelen_van_links_naar_rechts;
-use gedeeld::sjabloon::{GRIJS, Kleurovergang, OPBOUW_WACHTKLEUR, Overgangsvorm};
+use gedeeld::sjabloon::{GRIJS, Kleurovergang, Overgangsvorm};
 use gedeeld::{AANTAL_STOELEN, Kleur, Stoel};
 use serde::Deserialize;
 
@@ -570,7 +570,7 @@ const KALIBRATIE: Kalibratie = Kalibratie {
     kleur_c: -1.5,
     albedo: 0.6,
     straalt: 0.11,
-    nabij_licht: 0.78,
+    nabij_licht: 0.7,
     nabij_kleur: 0.25,
     nabij_straalt: 0.0,
 };
@@ -636,11 +636,12 @@ fn gekalibreerd(k: Kleur, nabij: f32) -> LinearRgba {
     in_oklab(k, licht, kleur * vol)
 }
 
-/// In een wijd shot is de kleur van het leer iets minder vol dan de kalibratie zegt: met de volle
-/// kleur lazen de Stoelen als snoepkleurig (council-ronde 4). Van dichtbij geldt dit niet.
-const BREED_VERZADIGING: f32 = 0.88;
+/// In een wijd shot is de kleur van het leer minder vol dan de kalibratie zegt: met de volle kleur
+/// lazen de Stoelen als snoepkleurig (council-ronde 4), en met 0,88 nog steeds tegen de donkere
+/// Zaal (ronde 5). Van dichtbij geldt dit niet.
+const BREED_VERZADIGING: f32 = 0.72;
 /// Van dichtbij: zoveel van de kleurigheid van het leer.
-const NABIJ_VERZADIGING: f32 = 0.8;
+const NABIJ_VERZADIGING: f32 = 0.74;
 
 /// De kleur van het leer bij een kleur uit de Stand (lineair), in het totaalbeeld.
 #[cfg(test)]
@@ -667,17 +668,19 @@ fn straling_bij(k: Kleur, kracht: f32, nabij: f32) -> LinearRgba {
 }
 
 /// Bij de Opbouw staan de Stoelen op drie lichtheden: leeg (nog niet aan de beurt) donker, "al
-/// geweest" middengrijs met een zweem van de partijkleur, en de Partij die aan de beurt is vol in
-/// haar kleur. Met "al geweest" donker leken gedimde donkere Partijen (PVV, JA21) op lege Stoelen
-/// en was de actieve Partij niet meteen te vinden (council-ronde 4). Het grijs is voor elke Partij
-/// even licht (Oklab-lichtheid [`GEDIMD_L`]), met [`GEDIMD_ZWEEM`] van haar kleurigheid, nooit
-/// meer dan [`GEDIMD_HOOGSTE_C`].
+/// geweest" middengrijs, en de Partij die aan de beurt is vol in haar kleur. Met "al geweest"
+/// donker leken gedimde donkere Partijen (PVV, JA21) op lege Stoelen en was de actieve Partij niet
+/// meteen te vinden (council-ronde 4). Het grijs is voor elke Partij even licht (Oklab-lichtheid
+/// [`GEDIMD_L`]), met [`GEDIMD_ZWEEM`] van haar kleurigheid, nooit meer dan [`GEDIMD_HOOGSTE_C`].
+/// Met een zweem tot 0,03 lazen de gedimde Partijen als nieuwe pastelkleuren (GL-PvdA
+/// roze-beige, CDA mint, council-ronde 5): nu is het grijs in beeld hoogstens 15 procent verzadigd.
 const GEDIMD_L: f32 = 0.56;
-const GEDIMD_ZWEEM: f32 = 0.22;
-const GEDIMD_HOOGSTE_C: f32 = 0.03;
-/// De lege Stoelen in de Opbouw: de wachtkleur uit de Stand, met de lichtheid keer dit (Oklab),
-/// zodat leeg duidelijk donkerder is dan "al geweest".
-const LEEG_LICHT: f32 = 0.72;
+const GEDIMD_ZWEEM: f32 = 0.1;
+const GEDIMD_HOOGSTE_C: f32 = 0.006;
+/// De lege Stoelen in de Opbouw: donker blauwgrijs leer, duidelijk donkerder dan "al geweest".
+/// Met de wachtkleur uit de Stand (#303030, nog donkerder gemaakt) stonden ze als zwarte gaten in
+/// de banken (council-ronde 5). De wachtkleur zelf blijft voor de Graphics.
+const OPBOUW_LEEG: Kleur = Kleur { r: 0x3a, g: 0x43, b: 0x52 };
 
 /// Het leer van een gedimde Partij in de Opbouw (lineair).
 fn gedimd_leer(k: Kleur) -> LinearRgba {
@@ -689,7 +692,7 @@ fn gedimd_leer(k: Kleur) -> LinearRgba {
 
 /// Het leer van een lege Stoel in de Opbouw (lineair).
 fn leeg_leer() -> LinearRgba {
-    in_oklab(OPBOUW_WACHTKLEUR, LEEG_LICHT, 1.0) * kalibratie().albedo
+    in_oklab(OPBOUW_LEEG, 1.0, 1.0) * kalibratie().albedo
 }
 
 /// Hoe fel het leer bij Kleurkracht 100 extra straalt in zijn eigen kleur. Laag, anders leest
@@ -896,10 +899,12 @@ struct Opbouwlicht;
 /// Zo hoog boven de rugleuningen hangt de spot, in meter.
 const OPBOUWLICHT_HOOGTE: f32 = 3.2;
 /// Zo ver buiten de buitenste Stoel van het blok reikt de kring, in meter.
-const OPBOUWLICHT_RAND: f32 = 0.9;
-/// De sterkte op de top van de flits en daarna, in lumen.
-const OPBOUWLICHT_TOP: f32 = 4500.0;
-const OPBOUWLICHT_BLIJFT: f32 = 0.5;
+const OPBOUWLICHT_RAND: f32 = 1.5;
+/// De sterkte op de top van de flits en daarna, in lumen. Met 4500 en daarna de helft was de
+/// kring op het tapijt niet te meten (council-ronde 5): nu is het tapijt onder het blok minstens
+/// een kwart lichter dan ernaast.
+const OPBOUWLICHT_TOP: f32 = 20000.0;
+const OPBOUWLICHT_BLIJFT: f32 = 0.65;
 /// Hoeveel van de partijkleur in het licht zit; de rest is warm wit.
 const OPBOUWLICHT_KLEUR: f32 = 0.35;
 
@@ -964,21 +969,44 @@ fn verlicht_de_opbouw(
     zicht.set_if_neq(Visibility::Inherited);
 }
 
-/// Het sleutellicht van een close-up: schuin van boven en opzij van de camera, zoals een lamp in
-/// een studio. Het gebakken licht in de Zaal komt van alle kanten tegelijk, dus van dichtbij was
-/// een Stoel één egale kleur en leek hij zelf licht te geven (council-ronde 4). Met dit licht en
-/// minder gebakken licht op het leer loopt een Stoel van licht naar schaduw. Het komt op met de nabijheid van de camera ([`crate::lens::Nabijheid`]);
-/// in een wijd shot is het uit.
+/// Het sleutellicht van een close-up: een zachte spot schuin van boven en opzij van de camera,
+/// gericht op de Stoelen waar de lens op scherp staat, zoals een lamp in een studio. Het gebakken
+/// licht in de Zaal komt van alle kanten tegelijk, dus van dichtbij was een Stoel één egale kleur
+/// en leek hij zelf licht te geven (council-ronde 4). Een licht uit één richting (ronde 5) maakte
+/// ook de muur achter de banken egaal lichtgrijs, en dat las als een game-render. Deze spot valt
+/// af met de afstand en de rand van zijn kegel, en het gebakken licht van de rest van de Zaal
+/// zakt in een close-up naar [`ZAAL_GEBAKKEN_NABIJ`]: alleen het onderwerp staat in het licht, de
+/// muur erachter loopt naar donker. Hij werpt schaduw, zodat er schaduw in de hoeken van de
+/// bureaus en onder de rugleuningen valt. Het komt op met de nabijheid van de camera
+/// ([`crate::lens::Nabijheid`]); in een wijd shot is het uit.
 #[derive(Component)]
 struct Sleutellicht;
 
-/// De verlichtingssterkte van het sleutellicht bij een volle close-up.
-const SLEUTEL_LUX: f32 = 5.0;
-/// Waar het vandaan komt, gezien vanaf de camera: zoveel graden naar links en omhoog.
-const SLEUTEL_OPZIJ: f32 = 40.0;
-const SLEUTEL_OMHOOG: f32 = 45.0;
+/// De lichtstroom van de spot bij een volle close-up, in lumen.
+const SLEUTEL_LUMEN: f32 = 7000.0;
+/// Zo ver van het punt van scherpte hangt de spot, in meter, en nooit hoger dan
+/// [`SLEUTEL_HOOGSTE_Y`] (het plafond hangt op 5,15 m).
+const SLEUTEL_AFSTAND: f32 = 4.0;
+const SLEUTEL_HOOGSTE_Y: f32 = 4.7;
+/// Waar het vandaan komt, gezien vanaf de camera: zoveel graden naar links en omhoog. Meer opzij
+/// dan van voren, zodat een rugleuning van licht naar schaduw loopt.
+const SLEUTEL_OPZIJ: f32 = 72.0;
+const SLEUTEL_OMHOOG: f32 = 42.0;
+/// De halve kegel in radialen; het licht valt vanaf het midden geleidelijk af tot de rand.
+const SLEUTEL_KEGEL: f32 = 0.75;
+/// Bij de Persoonskaart is de spot zoveel zwakker: de Zaal is daar achtergrond, en een fel
+/// verlichte Stoel trok eerder het oog dan het gezicht op de kaart (council-ronde 5).
+const PERSOON_SLEUTEL: f32 = 0.4;
+/// Op deze afstand van de camera stelt hij scherp als er geen Stoel in het midden staat.
+const SLEUTEL_STANDAARD_AFSTAND: f32 = 5.0;
 /// Hoeveel van het gebakken licht het leer van de Stoelen bij een volle close-up houdt.
-const SLEUTEL_GEBAKKEN: f32 = 0.5;
+const SLEUTEL_GEBAKKEN: f32 = 0.4;
+/// Hoeveel van het gebakken licht de rest van de Zaal bij een volle close-up houdt.
+const ZAAL_GEBAKKEN_NABIJ: f32 = 0.3;
+/// Het wapen op de rugleuning in een close-up: zoveel donkerder dan het leer eronder, zonder eigen
+/// licht. Zo leest het als reliëf in de kleur van het leer, niet als een opgeplakt wit plaatje
+/// (council-ronde 5). In een wijd shot blijft het wit, anders is het te klein om te zien.
+const WAPEN_NABIJ_DEKKING: f32 = 0.38;
 
 /// De richting van het sleutellicht (waar het heen schijnt) bij een camera met deze stand.
 fn sleutelrichting(camera: &Transform) -> Vec3 {
@@ -989,53 +1017,108 @@ fn sleutelrichting(camera: &Transform) -> Vec3 {
     (vlak * c - Vec3::Y * s).normalize()
 }
 
-#[allow(clippy::type_complexity)]
+/// Waar de spot hangt bij een camera met deze stand die op `afstand` meter scherp staat, en het
+/// punt waar hij op richt.
+fn sleutelplek(camera: &Transform, afstand: f32) -> (Vec3, Vec3) {
+    let doel = camera.translation + camera.forward().as_vec3() * afstand;
+    let mut plek = doel - sleutelrichting(camera) * SLEUTEL_AFSTAND;
+    plek.y = plek.y.min(SLEUTEL_HOOGSTE_Y);
+    (plek, doel)
+}
+
+/// Het wapen bij deze nabijheid: van wit en zacht stralend (`wit`) naar een donkere laag over het
+/// leer, en de straling.
+fn wapen_bij(wit: Color, nabij: f32) -> (Color, LinearRgba) {
+    let wit = LinearRgba::from(wit);
+    let donker = LinearRgba::new(0.0, 0.0, 0.0, WAPEN_NABIJ_DEKKING);
+    (wit.mix(&donker, nabij).into(), WAPEN_STRAALT * (1.0 - nabij))
+}
+
+#[allow(clippy::type_complexity, clippy::too_many_arguments)]
 fn zet_sleutellicht(
     mut commands: Commands,
     nabijheid: Option<Res<crate::lens::Nabijheid>>,
-    camera: Query<&Transform, (With<crate::beeld::HoofdCamera>, Without<Sleutellicht>)>,
-    mut licht: Query<(&mut DirectionalLight, &mut Transform), With<Sleutellicht>>,
+    uitlichting: Res<Uitlichting>,
+    camera: Query<(&Transform, &Projection), (With<crate::beeld::HoofdCamera>, Without<Sleutellicht>)>,
+    mut licht: Query<(&mut SpotLight, &mut Transform, &mut Visibility), With<Sleutellicht>>,
     leer: Query<&MeshMaterial3d<StandardMaterial>, With<StoelLeer>>,
+    gebakken_zaal: Query<&MeshMaterial3d<StandardMaterial>, (With<Lightmap>, Without<StoelLeer>)>,
+    wapens: Query<(&GltfMaterialName, &MeshMaterial3d<StandardMaterial>)>,
     mut materialen: ResMut<Assets<StandardMaterial>>,
     mut vorig: Local<Option<f32>>,
+    mut wapen_wit: Local<HashMap<AssetId<StandardMaterial>, Color>>,
 ) {
     let nabij = nabijheid.map_or(0.0, |n| n.0);
-    let Ok((mut l, mut plek)) = licht.single_mut() else {
+    let Ok((mut l, mut plek, mut zicht)) = licht.single_mut() else {
         commands.spawn((
             Sleutellicht,
-            DirectionalLight {
-                illuminance: 0.0,
+            SpotLight {
+                intensity: 0.0,
                 color: Color::linear_rgb(1.0, 0.95, 0.88),
-                // zonder schaduw: het plafond en het dak liggen tussen de Stoelen en elke
-                // richting van boven, en zouden alles in de schaduw zetten
-                shadow_maps_enabled: false,
+                range: 14.0,
+                radius: 0.4,
+                outer_angle: SLEUTEL_KEGEL,
+                inner_angle: 0.0,
+                shadow_maps_enabled: true,
                 affects_lightmapped_mesh_diffuse: true,
                 ..default()
             },
             Transform::IDENTITY,
+            Visibility::Hidden,
         ));
         return;
     };
-    if let Some(c) = camera.iter().next() {
-        let doel = Transform::IDENTITY.looking_to(sleutelrichting(c), Vec3::Y);
-        if plek.rotation != doel.rotation {
-            plek.rotation = doel.rotation;
+    if let Some((c, projectie)) = camera.iter().next()
+        && nabij > 0.0
+    {
+        let fov = match projectie {
+            Projection::Perspective(p) => p.fov,
+            _ => 0.5,
+        };
+        let afstand = crate::lens::scherp_op(c, fov, uitlichting.stoel).unwrap_or(SLEUTEL_STANDAARD_AFSTAND);
+        let (positie, doel) = sleutelplek(c, afstand);
+        let nieuw = Transform::from_translation(positie).looking_at(doel, Vec3::Y);
+        if *plek != nieuw {
+            *plek = nieuw;
         }
     }
-    let lux = SLEUTEL_LUX * nabij;
-    if l.illuminance != lux {
-        l.illuminance = lux;
+    let lumen = SLEUTEL_LUMEN * nabij * (1.0 - (1.0 - PERSOON_SLEUTEL) * uitlichting.sterkte);
+    if l.intensity != lumen {
+        l.intensity = lumen;
     }
-    // het gebakken licht op het leer, ook van materialen die er later bij komen (een nieuwe
-    // kleur, een Stoel midden in de golf)
-    let gebakken = 1.0 - (1.0 - SLEUTEL_GEBAKKEN) * nabij;
-    let nieuw = *vorig != Some(gebakken);
-    *vorig = Some(gebakken);
-    for m in &leer {
-        if materialen.get(&m.0).is_some_and(|m| m.lightmap_exposure != gebakken || nieuw)
-            && let Some(mut m) = materialen.get_mut(&m.0)
+    zicht.set_if_neq(if nabij > 0.0 { Visibility::Inherited } else { Visibility::Hidden });
+    // het gebakken licht op het leer en op de rest van de Zaal, ook van materialen die er later
+    // bij komen (een nieuwe kleur, een Stoel midden in de golf)
+    let leer_gebakken = 1.0 - (1.0 - SLEUTEL_GEBAKKEN) * nabij;
+    let zaal_gebakken = 1.0 - (1.0 - ZAAL_GEBAKKEN_NABIJ) * nabij;
+    let nieuw = *vorig != Some(nabij);
+    *vorig = Some(nabij);
+    let mut zet = |h: &Handle<StandardMaterial>, waarde: f32| {
+        if materialen.get(h).is_some_and(|m| m.lightmap_exposure != waarde)
+            && let Some(mut m) = materialen.get_mut(h)
         {
-            m.lightmap_exposure = gebakken;
+            m.lightmap_exposure = waarde;
+        }
+    };
+    for m in &leer {
+        zet(&m.0, leer_gebakken);
+    }
+    if !nieuw {
+        return;
+    }
+    for m in &gebakken_zaal {
+        zet(&m.0, zaal_gebakken);
+    }
+    for (naam, m) in &wapens {
+        if naam.0 != STOEL_WAPEN {
+            continue;
+        }
+        let Some(wit) = materialen.get(&m.0).map(|w| w.base_color) else { continue };
+        let wit = *wapen_wit.entry(m.0.id()).or_insert(wit);
+        let (kleur, straling) = wapen_bij(wit, nabij);
+        if let Some(mut w) = materialen.get_mut(&m.0) {
+            w.base_color = kleur;
+            w.emissive = straling;
         }
     }
 }
@@ -1123,6 +1206,13 @@ struct Zaaldimmer {
     ander_leer: Option<Handle<StandardMaterial>>,
 }
 
+impl Uitlichting {
+    /// Hoe ver de Stoel van de Persoonskaart opgelicht is: 0 uit, 1 helemaal.
+    pub fn sterkte(&self) -> f32 {
+        self.sterkte
+    }
+}
+
 impl Default for Zaaldimmer {
     fn default() -> Self {
         Zaaldimmer {
@@ -1164,8 +1254,8 @@ fn dim_zaal(
     nieuw: Query<(), Added<GltfMaterialName>>,
     mut licht: ParamSet<(
         Query<(Entity, &mut PointLight)>,
-        Query<(Entity, &mut SpotLight), (Without<Opbouwlicht>, Without<Titellicht>)>,
-        Query<(Entity, &mut DirectionalLight), Without<Sleutellicht>>,
+        Query<(Entity, &mut SpotLight), (Without<Opbouwlicht>, Without<Titellicht>, Without<Sleutellicht>)>,
+        Query<(Entity, &mut DirectionalLight)>,
         Query<(Entity, &mut EnvironmentMapLight)>,
         Query<(), Or<(Added<PointLight>, Added<SpotLight>, Added<DirectionalLight>, Added<EnvironmentMapLight>)>>,
     )>,
@@ -1321,17 +1411,31 @@ const STIL_M_PER_S: f32 = 0.15;
 const STIL_RAD_PER_S: f32 = 0.05;
 /// Hoe fel de lijn straalt in Accent: iets boven de drempel van de gloed, zodat hij leest als licht.
 const LIJN_76_LICHT: f32 = 1.6;
+/// Zoveel van de kleur van lijn en getal is wit: Accent zelf stond met 1,36:1 tegen het tapijt
+/// (council-ronde 5), lichter haalt hij 3:1 en houdt hij zijn tint.
+const LIJN_76_WIT: f32 = 0.5;
+/// De donkere rand onder de lijn en om het getal: zo breed (meter) en zo dicht, zodat ze ook
+/// tegen een lichte plek in het tapijt los staan.
+const LIJN_76_RAND_BREEDTE: f32 = 0.26;
+const LIJN_76_RAND_DEKKING: f32 = 0.7;
+/// De rand om de letters van het getal, in pixels van [`getal_76_beeld`] (letters van 192 px).
+const GETAL_76_RAND_PX: i64 = 12;
 
 /// De strook over de vloer van de lijn bij 76, tot `deel` (0 tot 1) van zijn lengte van voor
 /// naar achter.
 fn lijnstrook(lijn: &[Vec3], deel: f32) -> Mesh {
+    strook(lijn, deel, LIJN_76_BREEDTE)
+}
+
+/// Een strook van `breedte` meter over de vloer langs de lijn, tot `deel` van zijn lengte.
+fn strook(lijn: &[Vec3], deel: f32, breedte: f32) -> Mesh {
     use bevy::asset::RenderAssetUsages;
     use bevy::mesh::{Indices, PrimitiveTopology};
     let lengte: f32 = lijn.windows(2).map(|p| p[0].distance(p[1])).sum();
     let mut over = lengte * deel.clamp(0.0, 1.0);
     // opzij: horizontaal, loodrecht op de lijn
     let langs = (lijn[lijn.len() - 1] - lijn[0]).with_y(0.0).normalize_or(Vec3::NEG_Z);
-    let opzij = Vec3::Y.cross(langs) * (LIJN_76_BREEDTE / 2.0);
+    let opzij = Vec3::Y.cross(langs) * (breedte / 2.0);
     let (mut punten, mut normalen, mut driehoeken) = (Vec::new(), Vec::new(), Vec::new());
     for paar in lijn.windows(2) {
         let (a, mut b) = (paar[0], paar[1]);
@@ -1360,7 +1464,8 @@ fn lijn_76_punten() -> Vec<Vec3> {
     gedeeld::uitslagindeling::lijn_bij_76().into_iter().map(Vec3::from).collect()
 }
 
-/// Het getal 76 als beeld: wit, met de dekking van de letters in de alfa.
+/// Het getal 76 als beeld: witte letters met een donkere rand van [`GETAL_76_RAND_PX`], met de
+/// dekking in de alfa.
 fn getal_76_beeld() -> Image {
     use ab_glyph::{Font, FontRef, PxScale, ScaleFont, point};
     use bevy::asset::RenderAssetUsages;
@@ -1369,7 +1474,7 @@ fn getal_76_beeld() -> Image {
         .expect("NunitoSans ExtraBold");
     let schaal = PxScale::from(192.0);
     let geschaald = letter.as_scaled(schaal);
-    let rand = 8.0;
+    let rand = 8.0 + GETAL_76_RAND_PX as f32;
     let mut x = rand;
     let mut tekens = Vec::new();
     for c in "76".chars() {
@@ -1391,7 +1496,32 @@ fn getal_76_beeld() -> Image {
             });
         }
     }
-    let data = alfa.iter().flat_map(|a| [255, 255, 255, (a.clamp(0.0, 1.0) * 255.0).round() as u8]).collect();
+    // de rand: de letters dikker gemaakt met een schijf van GETAL_76_RAND_PX
+    let r = GETAL_76_RAND_PX;
+    let schijf: Vec<(i64, i64)> = (-r..=r).flat_map(|dy| (-r..=r).map(move |dx| (dx, dy))).filter(|(dx, dy)| dx * dx + dy * dy <= r * r).collect();
+    let mut dik = vec![0.0_f32; b * h];
+    for (i, a) in alfa.iter().enumerate().filter(|(_, a)| **a > 0.0) {
+        let (x, y) = ((i % b) as i64, (i / b) as i64);
+        for (dx, dy) in &schijf {
+            let (px, py) = (x + dx, y + dy);
+            if (0..b as i64).contains(&px) && (0..h as i64).contains(&py) {
+                let d = &mut dik[py as usize * b + px as usize];
+                *d = d.max(*a);
+            }
+        }
+    }
+    let data = alfa
+        .iter()
+        .zip(&dik)
+        .flat_map(|(a, d)| {
+            let a = a.clamp(0.0, 1.0);
+            // wit waar de letter is, zwart in de rand; de dekking van beide samen
+            let dekking = a + (1.0 - a) * d * LIJN_76_RAND_DEKKING;
+            let wit = if dekking > 0.0 { a / dekking } else { 0.0 };
+            let c = (wit.powf(1.0 / 2.2) * 255.0).round() as u8;
+            [c, c, c, (dekking.clamp(0.0, 1.0) * 255.0).round() as u8]
+        })
+        .collect();
     Image::new(
         Extent3d { width: b as u32, height: h as u32, depth_or_array_layers: 1 },
         TextureDimension::D2,
@@ -1422,6 +1552,10 @@ fn getal_76_vlak(lijn: &[Vec3], verhouding: f32) -> Mesh {
 #[derive(Component)]
 struct Getal76;
 
+/// De donkere rand onder de lijn bij 76.
+#[derive(Component)]
+struct Rand76;
+
 fn zet_lijn_bij_76(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
@@ -1447,6 +1581,22 @@ fn zet_lijn_bij_76(
         bevy::light::NotShadowCaster,
     ));
     commands.spawn((
+        Rand76,
+        Mesh3d(meshes.add(strook(&lijn_76_punten(), 0.0, LIJN_76_RAND_BREEDTE))),
+        MeshMaterial3d(materialen.add(StandardMaterial {
+            base_color: Color::BLACK.with_alpha(LIJN_76_RAND_DEKKING),
+            unlit: true,
+            alpha_mode: AlphaMode::Blend,
+            double_sided: true,
+            cull_mode: None,
+            depth_bias: 1.0,
+            ..default()
+        })),
+        Transform::IDENTITY,
+        Visibility::Hidden,
+        bevy::light::NotShadowCaster,
+    ));
+    commands.spawn((
         LijnBij76 { zicht: 0.0, stil: 0.0, camera: None },
         Mesh3d(meshes.add(lijnstrook(&lijn_76_punten(), 0.0))),
         MeshMaterial3d(materialen.add(StandardMaterial {
@@ -1454,12 +1604,18 @@ fn zet_lijn_bij_76(
             unlit: true,
             double_sided: true,
             cull_mode: None,
+            depth_bias: 2.0,
             ..default()
         })),
         Transform::IDENTITY,
         Visibility::Hidden,
         bevy::light::NotShadowCaster,
     ));
+}
+
+/// De kleur van lijn en getal (lineair, boven 1 voor de gloed) bij deze kleur Accent.
+fn lijn_76_kleur(accent: Kleur) -> LinearRgba {
+    LinearRgba::from(Color::srgb_u8(accent.r, accent.g, accent.b)).mix(&LinearRgba::WHITE, LIJN_76_WIT) * LIJN_76_LICHT
 }
 
 /// Of de camera tussen twee beelden stilstond (of heel langzaam schoof).
@@ -1486,8 +1642,10 @@ fn stap_lijn_76(zicht: f32, stil: f32, coalitie: bool, camera_stil: bool, dt: f3
     (zicht, stil)
 }
 
-/// De lijn bij 76 staat er zolang de Graphic in de Ether een Coalitie of Coalitiebalk is, in de
-/// kleur Accent van de Stijl. Hij verschijnt pas als de camera stilstaat, groeit dan van voor naar
+/// De lijn bij 76 staat er zolang de Graphic in de Ether een Coalitie is, in de kleur Accent van
+/// de Stijl, lichter gemaakt en met een donkere rand. Niet bij de Coalitiebalk: daar staat 76 al
+/// in de balk, en vanaf Totaal boven het paneel viel het getal half achter de voorzittersbank
+/// (council-ronde 5). Hij verschijnt pas als de camera stilstaat, groeit dan van voor naar
 /// achter, en krimpt terug als hij weggaat. Wat er al staat, blijft staan als de camera weer gaat
 /// rijden.
 #[allow(clippy::too_many_arguments)]
@@ -1499,15 +1657,13 @@ fn toon_lijn_bij_76(
     mut materialen: ResMut<Assets<StandardMaterial>>,
     mut lijn: Query<(&mut LijnBij76, &Mesh3d, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
     mut getal: Query<(&mut Visibility, &MeshMaterial3d<StandardMaterial>), (With<Getal76>, Without<LijnBij76>)>,
+    mut rand: Query<(&Mesh3d, &mut Visibility), (With<Rand76>, Without<LijnBij76>, Without<Getal76>)>,
     mut punten: Local<Vec<Vec3>>,
 ) {
     let Some(stand) = standen.huidig.as_ref().map(|s| &s.stand) else {
         return;
     };
-    let coalitie = matches!(
-        stand.ether.as_ref().map(|e| &e.graphic),
-        Some(gedeeld::Graphic::Coalitie { .. } | gedeeld::Graphic::Coalitiebalk { .. })
-    );
+    let coalitie = matches!(stand.ether.as_ref().map(|e| &e.graphic), Some(gedeeld::Graphic::Coalitie { .. }));
     if punten.is_empty() {
         *punten = lijn_76_punten();
     }
@@ -1522,14 +1678,24 @@ fn toon_lijn_bij_76(
         l.camera = nu;
         let vorig = l.zicht;
         (l.zicht, l.stil) = stap_lijn_76(l.zicht, l.stil, coalitie, stil, dt, dt * snelheid / LIJN_76_GROEIT);
-        if l.zicht != vorig
-            && let Some(mut m) = meshes.get_mut(&mesh.0)
-        {
-            *m = lijnstrook(&punten, crate::animatie::zacht_uit(l.zicht));
+        let deel = crate::animatie::zacht_uit(l.zicht);
+        if l.zicht != vorig {
+            if let Some(mut m) = meshes.get_mut(&mesh.0) {
+                *m = lijnstrook(&punten, deel);
+            }
+            for (r, _) in &rand {
+                if let Some(mut m) = meshes.get_mut(&r.0) {
+                    *m = strook(&punten, deel, LIJN_76_RAND_BREEDTE);
+                }
+            }
         }
-        zicht.set_if_neq(if l.zicht > 0.0 { Visibility::Inherited } else { Visibility::Hidden });
+        let te_zien = if l.zicht > 0.0 { Visibility::Inherited } else { Visibility::Hidden };
+        zicht.set_if_neq(te_zien);
+        for (_, mut z) in &mut rand {
+            z.set_if_neq(te_zien);
+        }
         let accent = stand.stijl.kleur(gedeeld::sjabloon::Stijlkleur::Accent);
-        let kleur = LinearRgba::from(Color::srgb_u8(accent.r, accent.g, accent.b)) * LIJN_76_LICHT;
+        let kleur = lijn_76_kleur(accent);
         let kleur = Color::from(kleur.with_alpha(1.0));
         if let Some(m) = materialen.get(&materiaal.0)
             && m.base_color != kleur

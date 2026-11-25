@@ -358,18 +358,22 @@ pub fn aanschuif_stand(van: usize, tot: usize) -> Option<Camerastand> {
         .map(|p| (p[0] - midden[0]).hypot(p[2] - midden[2]))
         .fold(0.0_f32, f32::max)
         .max(0.8);
-    // van het blok naar de Voorzitter, en zo ver dat het blok de helft van de breedte vult
-    let naar = [AANSCHUIF_VANAF[0] - midden[0], AANSCHUIF_VANAF[1] - midden[2]];
+    // van het blok naar de Voorzitter, schuin naar de middenlijn gedraaid, en zo ver dat het blok
+    // de helft van de breedte vult
+    let recht = [AANSCHUIF_VANAF[0] - midden[0], AANSCHUIF_VANAF[1] - midden[2]];
+    let kant = if midden[0] >= 0.0 { -1.0 } else { 1.0 };
+    let (s, c) = (kant * AANSCHUIF_OPZIJ).to_radians().sin_cos();
+    let naar = [recht[0] * c - recht[1] * s, recht[0] * s + recht[1] * c];
     let lengte = naar[0].hypot(naar[1]).max(1e-3);
     let beeldhoek = AANSCHUIF_BEELDHOEK.to_radians();
     let horizontaal = 2.0 * ((beeldhoek / 2.0).tan() * 16.0 / 9.0).atan();
     let afstand = (breed / (horizontaal / 2.0 * AANSCHUIF_VULLING).tan()).clamp(2.5, lengte * 0.85);
     let positie = [
         midden[0] + naar[0] / lengte * afstand,
-        (midden[1] + 1.2 + 0.18 * afstand).clamp(2.0, 4.2),
+        (midden[1] + AANSCHUIF_HOOGTE + 0.12 * afstand).clamp(2.0, 3.6),
         midden[2] + naar[1] / lengte * afstand,
     ];
-    let d = [midden[0] - positie[0], midden[1] + 0.2 - positie[1], midden[2] - positie[2]];
+    let d = [midden[0] - positie[0], midden[1] - 0.2 - positie[1], midden[2] - positie[2]];
     Some(Camerastand {
         positie,
         draai: (-d[0]).atan2(-d[2]),
@@ -380,6 +384,12 @@ pub fn aanschuif_stand(van: usize, tot: usize) -> Option<Camerastand> {
 
 /// Vanaf dit punt (x, z) kijkt Aanschuiven naar een blok: voor de Voorzitter, in het midden.
 const AANSCHUIF_VANAF: [f32; 2] = [0.0, 1.5];
+/// Zoveel graden draait Aanschuiven van recht voor het blok naar de middenlijn van de Zaal, en zo
+/// hoog boven het blok staat de camera (plus een deel van de afstand). Recht van voren en hoog
+/// (1,2 m plus 0,18 van de afstand) keek hij op de rijen als op een plat vlak met de muur in het
+/// bovenste derde (council-ronde 5); schuin en lager lopen de rijen in de diepte af.
+const AANSCHUIF_OPZIJ: f32 = 24.0;
+const AANSCHUIF_HOOGTE: f32 = 0.9;
 /// De verticale beeldhoek van Aanschuiven, in graden.
 const AANSCHUIF_BEELDHOEK: f32 = 40.0;
 /// Welk deel van de breedte van het beeld het blok vult.

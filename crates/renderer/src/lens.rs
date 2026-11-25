@@ -48,6 +48,10 @@ const OCCLUSIE_EXTRA: f32 = 0.3;
 const OCCLUSIE_STRAAL_DICHTBIJ: f32 = 0.35;
 /// Nooit onscherper dan dit, in pixels.
 const MEESTE_ONSCHERPTE: f32 = 20.0;
+/// Bij de Persoonskaart is de Zaal achtergrond: minder scherptediepte en meer onscherpte, zodat
+/// de Stoel en de bureaus niet eerder het oog trekken dan het gezicht op de kaart (council-ronde 5).
+const DIAFRAGMA_PERSOON: f32 = 0.14;
+const MEESTE_ONSCHERPTE_PERSOON: f32 = 30.0;
 /// Alleen in de Zaal: onder het plafond.
 const ONDER_Y: f32 = 5.0;
 
@@ -112,14 +116,15 @@ fn stel_scherpte_bij(
             continue;
         }
         let afstand = (s > 0.0).then(|| scherp_op(plek, p.fov, uitlichting.stoel)).flatten();
+        let persoon = uitlichting.sterkte();
         match afstand {
             Some(afstand) => {
                 let dof = DepthOfField {
                     mode: DepthOfFieldMode::Gaussian,
                     focal_distance: afstand,
                     // zwakker is een kleiner diafragma (een groter getal)
-                    aperture_f_stops: DIAFRAGMA / s,
-                    max_circle_of_confusion_diameter: MEESTE_ONSCHERPTE,
+                    aperture_f_stops: (DIAFRAGMA + (DIAFRAGMA_PERSOON - DIAFRAGMA) * persoon) / s,
+                    max_circle_of_confusion_diameter: MEESTE_ONSCHERPTE + (MEESTE_ONSCHERPTE_PERSOON - MEESTE_ONSCHERPTE) * persoon,
                     max_depth: 60.0,
                     ..default()
                 };
