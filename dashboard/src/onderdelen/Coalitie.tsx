@@ -172,6 +172,7 @@ export function Coalitie() {
               tweeKeer={inEther}
               title={inEther ? "Haalt alle Partijen uit de coalitie in Live. Klik twee keer; daarna kun je ze nog terugzetten." : "Haalt alle Partijen uit de coalitie"}
               vraag="Klik nog eens: wis uit Live"
+              geldigVoor={inEther ? `${inBeeld?.set}:${partijen.join(",")}` : ""}
               onClick={wis}
             >
               {inEther ? "Wis coalitie live" : "Wis coalitie"}

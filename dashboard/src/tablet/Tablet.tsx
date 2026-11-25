@@ -238,6 +238,7 @@ function Coalitiebouwer({ stand: s }: { stand: Stand }) {
         className="knop tablet-wis"
         tweeKeer={inEther}
         vraag="Tik nog eens: wis alle Partijen uit Live"
+        geldigVoor={inEther ? b.partijen.join(",") : ""}
         disabled={regie.staat !== "verbonden" || b.partijen.length === 0}
         onClick={() => stuur([], "Coalitie gewist")}
       >
