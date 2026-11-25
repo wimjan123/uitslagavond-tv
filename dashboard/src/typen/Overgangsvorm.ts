@@ -3,4 +3,4 @@
 /**
  * De vorm van een Kleurovergang.
  */
-export type Overgangsvorm = "Golf" | "Vervagen";
+export type Overgangsvorm = "Golf" | "Vervagen" | "Opbouw";

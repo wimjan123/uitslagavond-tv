@@ -7,6 +7,6 @@ import type { Overgangsvorm } from "./Overgangsvorm";
  */
 export type Kleurovergang = { vorm: Overgangsvorm, 
 /**
- * Hoe lang de hele overgang duurt, in milliseconden.
+ * Hoe lang de hele overgang duurt, in milliseconden; bij de Opbouw de tijd per Partij.
  */
 duur_ms: number, };

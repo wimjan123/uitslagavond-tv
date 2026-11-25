@@ -31,7 +31,7 @@ export function fout(s: Stijl): string | null {
     return `Kies een snelheid tussen ${MIN_SNELHEID} en ${MAX_SNELHEID} procent`;
   if ([...s.programmalogo.tekst].length > MAX_LOGOTEKST) return `De tekst van het programmalogo is langer dan ${MAX_LOGOTEKST} tekens`;
   if (!Number.isInteger(s.kleurkracht) || s.kleurkracht < 0 || s.kleurkracht > 100) return "Kies een Kleurkracht tussen 0 en 100 procent";
-  return foutKleurovergang(s.kleurovergang);
+  return foutKleurovergang(s.kleurovergang, false);
 }
 
 /** Of `concept` iets anders is dan de opgeslagen Stijl. */

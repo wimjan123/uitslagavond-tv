@@ -329,7 +329,7 @@ The shell is a CSS grid of three rows (tab strip, multiviewer, work area) over t
 
 **Multiviewer row (Graphite Panel, 10px 12px padding, 10px gaps, 1px line below).** Four columns, `1fr 170px 1fr 330px`, always visible in every section:
 1. **Voorbeeld:** a monitor (see Components) with label "VOORBEELD", the Graphic name, a green top line when something is ready. During Oefenen the top line and label turn amber, the label reads OEFENEN (or a red dot with the recording time), and the label text says the gamepad only drives this picture. While the Regie tries a Standpunt or plays a Camerarit here, the top line is dashed.
-2. **Take column (170px):** TOON (62px), then Bijwerken (B), Uit beeld (X) and Kleur uit (Z) as 34px buttons with the key cap at the right.
+2. **Take column (170px):** TOON (62px), then Bijwerken (B), Uit beeld (X), Kleur uit (Z) and Opbouw overslaan (C) as 34px buttons with the key cap at the right.
 3. **Ether:** a monitor with label "ETHER", the Graphic name, "sinds hh.mm" at the right and a red top line. When figures changed after showing, the right side reads "Nieuwere cijfers" in amber.
 4. **Camera (330px):** a label row "CAMERA" with the current Standpunt or Camerarit name in paper ink, the floor plan of the Zaal, then a grid of keys in three columns: one per Standpunt and Camerarit with its letter, then Vrij (V), Oefenen (O) and Opnemen (R, only enabled during Oefenen, reads Stop while recording).
 
@@ -358,8 +358,9 @@ The keyboard works anywhere outside a text field. Inside a field keys type, and 
 | B | Bijwerken: refresh the figures of the Graphic on air. |
 | X | Uit beeld: take the Graphic off air. |
 | Z | Kleur uit: the Stoelen in the Ether go back to their own blue leather; the Graphic stays. |
+| C | Opbouw overslaan: during an Opbouw, the Partijen not yet lit colour at once and the labels go to their end state. |
 
-When focus sits on a button, Space and Enter press that button and do not show. Every shortcut is printed on its control as a key cap: Spatie on TOON, B, X and Z under it, the letter on each Standpunt key and pin, the number in the first column of each Preset row.
+When focus sits on a button, Space and Enter press that button and do not show. Every shortcut is printed on its control as a key cap: Spatie on TOON, B, X, Z and C under it, the letter on each Standpunt key and pin, the number in the first column of each Preset row.
 
 ## Elevation & Depth
 

@@ -14,7 +14,7 @@ use bevy::prelude::*;
 use bevy::world_serialization::WorldInstanceReady;
 use bevy::color::Mix;
 use gedeeld::uitslagindeling::stoelen_van_links_naar_rechts;
-use gedeeld::sjabloon::{Kleurovergang, Overgangsvorm};
+use gedeeld::sjabloon::{Kleurovergang, OPBOUW_WACHTKLEUR, Overgangsvorm};
 use gedeeld::{AANTAL_STOELEN, Kleur, Stoel};
 use serde::Deserialize;
 
@@ -22,7 +22,7 @@ use crate::omgeving::{self, OmgevingPlugin, Reflecties};
 use crate::volging::Standen;
 #[cfg(test)]
 use crate::{BREEDTE, HOOGTE};
-use crate::kleurgolf;
+use crate::kleurgolf::{self, Opbouwdeel};
 use crate::lichtkaart;
 
 /// De kom van een plafondspot: dat is wat je van onderen ziet. In Cycles straalt daar de lamp zelf;
@@ -43,6 +43,7 @@ impl Plugin for ZaalPlugin {
         app.insert_resource(ZaalKlaar(self.map.is_none()))
             .init_resource::<StoelMaterialen>()
             .init_resource::<Golf>()
+            .init_resource::<Opbouwstand>()
             .init_resource::<Zaaldimmer>()
             .init_resource::<Uitlichting>()
             .add_systems(
@@ -398,25 +399,106 @@ struct Golf {
     rang: Vec<usize>,
     vorm: Overgangsvorm,
     tijd: f32,
+    /// De duur van de overgang; bij de Opbouw de tijd per Partij.
     duur: f32,
+    /// De stappen van de Opbouw.
+    opbouw: kleurgolf::Opbouw,
     bezig: bool,
     /// De Kleurkracht (0 tot 1) waarmee de materialen per kleur gemaakt zijn.
     kracht: f32,
 }
 
+/// Waar een Stoel in de Kleurovergang is.
+enum Stoelstand {
+    /// Nog niet aan de beurt: hij houdt wat hij had.
+    Wacht,
+    /// Onderweg: dit leer en deze straling.
+    Onderweg(LinearRgba, LinearRgba),
+    /// Klaar: de nieuwe kleur.
+    Klaar,
+}
+
 impl Golf {
-    fn voortgang(&self, i: usize) -> f32 {
-        if self.bezig {
-            kleurgolf::voortgang(self.vorm, self.rang[i], AANTAL_STOELEN - 1, self.tijd, self.duur)
-        } else {
-            1.0
+    /// Waar Stoel `i` nu is. `lineair` en `straalt` geven het leer en de straling van een kleur.
+    fn stand(
+        &self,
+        i: usize,
+        lineair: impl Fn(Option<Kleur>) -> LinearRgba,
+        straalt: impl Fn(Option<Kleur>) -> LinearRgba,
+    ) -> Stoelstand {
+        if !self.bezig {
+            return Stoelstand::Klaar;
+        }
+        let (van, van_straalt, naar) = (self.van[i], self.van_straalt[i], self.naar[i]);
+        let meng = |a: LinearRgba, a_straalt: LinearRgba, b: Option<Kleur>, f: f32| {
+            Stoelstand::Onderweg(a.mix(&lineair(b), f), a_straalt.mix(&straalt(b), f))
+        };
+        match self.vorm {
+            Overgangsvorm::Golf | Overgangsvorm::Vervagen => {
+                let f = kleurgolf::voortgang(self.vorm, self.rang[i], AANTAL_STOELEN - 1, self.tijd, self.duur);
+                if f >= 1.0 || van == lineair(naar) {
+                    Stoelstand::Klaar
+                } else if f <= 0.0 {
+                    Stoelstand::Wacht
+                } else {
+                    meng(van, van_straalt, naar, f)
+                }
+            }
+            Overgangsvorm::Opbouw => {
+                let wacht = Some(OPBOUW_WACHTKLEUR);
+                match self.opbouw.deel(i, self.tijd) {
+                    Opbouwdeel::Donker(f) if f <= 0.0 => Stoelstand::Wacht,
+                    // zonder kleur gaat hij meteen naar zijn eigen leer
+                    Opbouwdeel::Donker(f) if naar.is_none() && f >= 1.0 => Stoelstand::Klaar,
+                    Opbouwdeel::Donker(f) if naar.is_none() => meng(van, van_straalt, None, f),
+                    // donker zonder straling
+                    Opbouwdeel::Donker(f) => {
+                        Stoelstand::Onderweg(van.mix(&lineair(wacht), f), van_straalt.mix(&LinearRgba::BLACK, f))
+                    }
+                    Opbouwdeel::Oplichten(f) => {
+                        let g = self.opbouw.gloed(i, self.tijd);
+                        if f >= 1.0 && g <= 0.0 {
+                            return Stoelstand::Klaar;
+                        }
+                        let leer = lineair(wacht).mix(&lineair(naar), f).mix(&lineair(Some(Kleur { r: 255, g: 255, b: 255 })), GLOED_LICHT * g);
+                        let eigen = naar.map_or(LinearRgba::BLACK, |k| LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)));
+                        let straling = LinearRgba::BLACK.mix(&straalt(naar), f) + eigen * (GLOED_STRAALT * g);
+                        Stoelstand::Onderweg(leer, straling)
+                    }
+                }
+            }
         }
     }
+
+    /// Hoe lang de overgang in zijn geheel duurt.
+    fn totaal(&self) -> f32 {
+        match self.vorm {
+            Overgangsvorm::Opbouw => self.opbouw.duur(),
+            _ => self.duur,
+        }
+    }
+}
+
+/// Waar de Opbouw in de Zaal is, voor het grote label ([`gedeeld::sjabloon::Bloksoort::Opbouwlabel`])
+/// en de Partijlabels die op het eind wachten.
+#[derive(Resource, Clone, Copy, Debug, Default, PartialEq)]
+pub struct Opbouwstand {
+    /// Er loopt een Opbouw.
+    pub bezig: bool,
+    /// De kleur die nu oplicht, met de seconden sinds hij begon; `None` als de Stoelen nog donker
+    /// worden.
+    pub stap: Option<(Kleur, f32)>,
+    /// Seconden per Partij.
+    pub per_stap: f32,
 }
 
 /// Hoe fel het leer bij Kleurkracht 100 straalt in zijn eigen kleur, bovenop het licht uit de bak:
 /// zo blijft de kleur vol, ook waar de bak donker is.
 const KLEUR_STRAALT: f32 = 0.25;
+/// Bij de Opbouw: hoeveel de Partij die aan de beurt is naar wit opschuift, en hoe fel ze extra
+/// straalt in haar eigen kleur.
+const GLOED_LICHT: f32 = 0.35;
+const GLOED_STRAALT: f32 = 0.4;
 /// Hoeveel licht de rest van de Zaal bij Kleurkracht 100 overhoudt, zolang er Stoelen gekleurd
 /// zijn. Daartussen daalt het licht in gelijke stappen voor het oog: bij 50 ongeveer een derde.
 const MINSTE_LICHT: f32 = 0.1;
@@ -448,6 +530,7 @@ fn kleur_stoelen(
     mut materialen: ResMut<Assets<StandardMaterial>>,
     mut pm: ResMut<StoelMaterialen>,
     mut golf: ResMut<Golf>,
+    mut opbouwstand: ResMut<Opbouwstand>,
 ) {
     let veranderd = standen.is_changed() || !nieuw_leer.is_empty();
     if !veranderd && !golf.bezig {
@@ -509,31 +592,40 @@ fn kleur_stoelen(
             golf.naar = doel;
             golf.bezig = false;
             golf.begonnen = standen.huidig.is_some();
-        } else if doel != golf.naar {
-            // vanaf wat nu te zien is, ook midden in een vorige golf
-            let nu: Vec<LinearRgba> = (0..AANTAL_STOELEN)
-                .map(|i| golf.van[i].mix(&lineair(golf.naar[i]), golf.voortgang(i)))
-                .collect();
-            let nu_straalt: Vec<LinearRgba> = (0..AANTAL_STOELEN)
-                .map(|i| golf.van_straalt[i].mix(&straalt(golf.naar[i]), golf.voortgang(i)))
-                .collect();
-            golf.van = nu;
-            golf.van_straalt = nu_straalt;
-            golf.naar = doel;
-            golf.tijd = 0.0;
-            (golf.vorm, golf.duur) = kleurovergang(&standen);
-            golf.bezig = true;
+        } else {
+            let (vorm, duur) = kleurovergang(&standen);
+            // Opbouw overslaan: dezelfde kleuren, de rest met een andere overgang
+            let overslaan = golf.bezig && golf.vorm == Overgangsvorm::Opbouw && vorm != Overgangsvorm::Opbouw;
+            if doel != golf.naar || overslaan {
+                // vanaf wat nu te zien is, ook midden in een vorige golf
+                let nu: Vec<(LinearRgba, LinearRgba)> = (0..AANTAL_STOELEN)
+                    .map(|i| match golf.stand(i, &lineair, &straalt) {
+                        Stoelstand::Wacht => (golf.van[i], golf.van_straalt[i]),
+                        Stoelstand::Onderweg(k, st) => (k, st),
+                        Stoelstand::Klaar => (lineair(golf.naar[i]), straalt(golf.naar[i])),
+                    })
+                    .collect();
+                (golf.van, golf.van_straalt) = nu.into_iter().unzip();
+                golf.naar = doel;
+                golf.tijd = 0.0;
+                (golf.vorm, golf.duur) = (vorm, duur);
+                golf.opbouw = if vorm == Overgangsvorm::Opbouw {
+                    kleurgolf::Opbouw::nieuw(&golf.naar, &golf.rang, duur)
+                } else {
+                    kleurgolf::Opbouw::default()
+                };
+                golf.bezig = true;
+            }
         }
     }
 
     for (stoel, mut materiaal) in &mut leer {
         let i = stoel.index;
-        let (Some(van), Some(naar)) = (golf.van.get(i).copied(), golf.naar.get(i).copied()) else {
+        let (true, Some(naar)) = (i < golf.van.len(), golf.naar.get(i).copied()) else {
             continue;
         };
-        let f = golf.voortgang(i);
-        let gewenst = if f >= 1.0 || van == lineair(naar) {
-            match naar {
+        let gewenst = match golf.stand(i, &lineair, &straalt) {
+            Stoelstand::Klaar => match naar {
                 None => origineel.clone(),
                 Some(kleur) => match pm.per_kleur.get(&kleur) {
                     Some(h) => h.clone(),
@@ -548,12 +640,11 @@ fn kleur_stoelen(
                         h
                     }
                 },
-            }
-        } else if f <= 0.0 {
+            },
             // nog niet aan de beurt: hij houdt wat hij had
-            continue;
-        } else {
+            Stoelstand::Wacht => continue,
             // midden in de golf: een eigen materiaal voor deze Stoel, tot hij klaar is
+            Stoelstand::Onderweg(kleur, straling) => {
             let h = match pm.per_stoel.get(&i) {
                 Some(h) => h.clone(),
                 None => {
@@ -566,20 +657,32 @@ fn kleur_stoelen(
                 }
             };
             if let Some(mut m) = materialen.get_mut(&h) {
-                m.base_color = van.mix(&lineair(naar), f).into();
-                // van is de kleur van het leer; zijn straling volgt die verhouding
-                m.emissive = golf.van_straalt[i].mix(&straalt(naar), f);
+                m.base_color = kleur.into();
+                m.emissive = straling;
             }
             h
+            }
         };
         if materiaal.0 != gewenst {
             materiaal.0 = gewenst;
         }
     }
-    if golf.bezig && golf.tijd >= golf.duur {
+    if golf.bezig && golf.tijd >= golf.totaal() {
         golf.bezig = false;
         golf.van = golf.naar.iter().map(|k| lineair(*k)).collect();
         golf.van_straalt = golf.naar.iter().map(|k| straalt(*k)).collect();
+    }
+    let stand = if golf.bezig && golf.vorm == Overgangsvorm::Opbouw {
+        Opbouwstand {
+            bezig: true,
+            stap: golf.opbouw.stap(golf.tijd).map(|(k, t)| (golf.opbouw.stappen[k], t)),
+            per_stap: golf.opbouw.per_stap,
+        }
+    } else {
+        Opbouwstand::default()
+    };
+    if *opbouwstand != stand {
+        *opbouwstand = stand;
     }
 }
 
@@ -1214,6 +1317,63 @@ mod tests {
         assert!(leer.iter().all(|k| ongeveer(*k, leer[0])), "halverwege links en rechts gelijk");
         wacht(&mut app, 0.8);
         assert!(leerkleuren(&mut app).iter().all(|k| ongeveer(*k, groen)), "na anderhalve seconde alles groen");
+    }
+
+    #[test]
+    fn de_opbouw_kleurt_een_partij_tegelijk_de_grootste_eerst_en_kan_worden_overgeslagen() {
+        let (mut app, _) = zaal_zonder_gpu();
+        app.update();
+        // VOORBEELDGEGEVENS: 40 Stoelen rood links, 110 groen rechts; anderhalve seconde per Partij
+        let rood: Kleur = "#d4202c".parse().unwrap();
+        let groen: Kleur = "#00ae41".parse().unwrap();
+        let mut kleuren = vec![groen; 150];
+        for i in stoelen_van_links_naar_rechts().into_iter().take(40) {
+            kleuren[i] = rood;
+        }
+        let opbouw = Kleurovergang::standaard(Overgangsvorm::Opbouw);
+        let stand = Stand { stoelkleuren: kleuren.clone(), kleurovergang: opbouw, ..default() };
+        app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 1, stand: stand.clone() });
+        app.update();
+        let lin = |k: Kleur| Srgba::from(LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * 0.5);
+        let stap = |app: &App| app.world().resource::<Opbouwstand>().stap.map(|(k, _)| k);
+        let tel = |app: &mut App, k: Kleur| leerkleuren(app).iter().filter(|l| ongeveer(**l, lin(k))).count();
+
+        // de eerste Stand na het opstarten komt meteen; de volgende bouwt op
+        let mut nieuw = stand.clone();
+        nieuw.stoelkleuren.iter_mut().for_each(|k| *k = if *k == rood { groen } else { rood });
+        app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 2, stand: nieuw.clone() });
+        app.update();
+        wacht(&mut app, 0.74);
+        assert!(app.world().resource::<Opbouwstand>().bezig);
+        assert_eq!(stap(&app), None, "eerst worden de Stoelen donker");
+        assert_eq!(tel(&mut app, OPBOUW_WACHTKLEUR), 150);
+
+        // de grootste Partij (nu rood, 110) eerst en gloeit; de rest wacht donker
+        wacht(&mut app, 0.7);
+        assert_eq!(stap(&app), Some(rood));
+        assert_eq!(tel(&mut app, OPBOUW_WACHTKLEUR), 40);
+        assert_eq!(tel(&mut app, rood), 0, "rood gloeit nog, lichter dan zijn eigen kleur");
+        // in de volgende stap zakt rood terug naar zijn eigen kleur
+        wacht(&mut app, 1.5);
+        assert_eq!(stap(&app), Some(groen));
+        assert_eq!(tel(&mut app, rood), 110);
+        wacht(&mut app, 1.5);
+        assert_eq!(tel(&mut app, groen), 40);
+        assert!(!app.world().resource::<Opbouwstand>().bezig, "na de laatste Partij en haar nagloed klaar");
+
+        // overslaan: dezelfde kleuren met Vervagen; de Partijen die nog wachtten, kleuren meteen mee
+        app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 3, stand });
+        app.update();
+        wacht(&mut app, 1.0);
+        assert_eq!(stap(&app), Some(groen), "groen (110) is nu het grootst");
+        let mut over = app.world().resource::<Standen>().huidig.clone().unwrap();
+        over.volgnummer = 4;
+        over.stand.kleurovergang = Kleurovergang { vorm: Overgangsvorm::Vervagen, duur_ms: gedeeld::OPBOUW_OVERSLAAN_MS };
+        app.world_mut().resource_mut::<Standen>().huidig = Some(over);
+        app.update();
+        assert!(!app.world().resource::<Opbouwstand>().bezig);
+        wacht(&mut app, 0.55);
+        assert_eq!((tel(&mut app, groen), tel(&mut app, rood)), (110, 40));
     }
 
     #[test]

@@ -24,10 +24,11 @@ use gedeeld::sjabloon::{Achtergrond, IngevuldBlok, Inhoud, Invulling, Sjabloon, 
 use crate::animatie::{Aard, Tijden, Toestand, op_hele_pixels, zacht_uit};
 use crate::bestanden::Bestanden;
 use crate::blokken::{
-    Binnen, BlokKnoop, Deel, Krimp, Letter, Pasbreedte, PastIn, Puls, Randkleur, Rijplek, Segment, Teller,
+    Binnen, BlokKnoop, Deel, Krimp, Letter, Opbouwkaart, Pasbreedte, PastIn, Puls, Randkleur, Rijplek, Segment, Teller,
     Verloopdeel, Vorig, WachtOpBeeld, bouw_blok, bouw_inhoud, krimp,
 };
 use crate::volging::Standen;
+use crate::zaal::Opbouwstand;
 
 pub struct GraphicPlugin;
 
@@ -46,6 +47,7 @@ impl Plugin for GraphicPlugin {
                     animeer,
                     tel_en_schuif,
                     pulseer,
+                    toon_opbouwlabel,
                     zet_letters,
                     krimp_teksten,
                     crate::stemmingsblokken::pas_in,
@@ -128,7 +130,15 @@ pub struct Kaart {
     stijl: Stijl,
     /// Wat elk Blok nu toont.
     blokken: Vec<IngevuldBlok>,
+    /// Hoe zichtbaar de Partijlabels zijn (0 tot 1): in de Ether wachten ze op het eind van een
+    /// Opbouw in de Zaal.
+    na_opbouw: f32,
 }
+
+/// Hoe lang de Partijlabels na een Opbouw over hun komst doen, in seconden.
+const NA_OPBOUW_S: f32 = 0.5;
+/// Hoe lang het grote label van een Partij in de Opbouw over zijn komst doet, in seconden.
+const OPBOUWLABEL_S: f32 = 0.3;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum Fase {
@@ -451,6 +461,7 @@ pub(crate) fn spawn_kaart(
                 sjabloon: sjabloon.clone(),
                 stijl: stijl.clone(),
                 blokken: blokken.clone(),
+                na_opbouw: 1.0,
             },
             Node {
                 position_type: PositionType::Absolute,
@@ -631,7 +642,9 @@ fn animeer(
     schaal: Option<Res<UiScale>>,
     mut bestanden: ResMut<Bestanden>,
     beelden: Res<Assets<Image>>,
-    mut kaarten: Query<(Entity, &mut Kaart, &Children)>,
+    mut kaarten: Query<(Entity, &mut Kaart, &Children, &ChildOf)>,
+    lagen: Query<&Laag>,
+    opbouw: Option<Res<Opbouwstand>>,
     mut knopen: Query<
         (
             &BlokKnoop,
@@ -657,8 +670,16 @@ fn animeer(
 ) {
     let dt = tijd.delta_secs();
     let schaal = schaal.map_or(1.0, |s| s.0);
-    for (kaart_id, mut kaart, blok_ids) in &mut kaarten {
+    let opbouw_bezig = opbouw.is_some_and(|o| o.bezig);
+    for (kaart_id, mut kaart, blok_ids, laag) in &mut kaarten {
         kaart.tijd += dt;
+        // In de Ether wachten de Partijlabels op het eind van een Opbouw in de Zaal.
+        let ether = lagen.get(laag.parent()).is_ok_and(|l| l.bron == Bron::Ether);
+        kaart.na_opbouw = if ether && opbouw_bezig && kaart.fase != Fase::Eruit {
+            0.0
+        } else {
+            (kaart.na_opbouw + dt / NA_OPBOUW_S).min(1.0)
+        };
         let n = kaart.blokken.len();
         match kaart.fase {
             Fase::Wacht(duur) if kaart.tijd >= duur => {
@@ -757,7 +778,8 @@ fn animeer(
                 node.top = top;
                 node.overflow = overflow;
             }
-            let dekking = t.dekking * wissel_dekking;
+            let na_opbouw = if matches!(blok.inhoud, Inhoud::Partijlabels { .. }) { kaart.na_opbouw } else { 1.0 };
+            let dekking = t.dekking * wissel_dekking * na_opbouw;
             for k in knoop_kinderen.into_iter().flatten() {
                 if let Ok(mut bn) = binnen.get_mut(*k) {
                     let top = Val::Px(-open);
@@ -810,6 +832,32 @@ fn animeer(
                     }
                 }
             }
+        }
+    }
+}
+
+/// Het grote label van de Opbouw: in de Ether alleen het label van de Partij met de kleur die in
+/// de Zaal oplicht. Het schuift kort omhoog als het komt. In het Voorbeeld en na de Opbouw is het
+/// weg.
+fn toon_opbouwlabel(
+    opbouw: Option<Res<Opbouwstand>>,
+    mut labels: Query<(Entity, &Opbouwkaart, &mut Visibility, &mut UiTransform)>,
+    ouders: Query<&ChildOf>,
+    lagen: Query<&Laag>,
+) {
+    let stap = opbouw.and_then(|o| o.stap.filter(|_| o.bezig));
+    for (e, kaart, mut zicht, mut vorm) in &mut labels {
+        let ether = || ouders.iter_ancestors(e).any(|a| lagen.get(a).is_ok_and(|l| l.bron == Bron::Ether));
+        let t = stap.filter(|(k, _)| *k == kaart.kleur && ether()).map(|(_, t)| t);
+        zicht.set_if_neq(if t.is_some() { Visibility::Inherited } else { Visibility::Hidden });
+        if let Some(t) = t {
+            let f = zacht_uit((t / OPBOUWLABEL_S).min(1.0));
+            let doel = UiTransform {
+                translation: Val2::px(0.0, (24.0 * (1.0 - f)).round()),
+                scale: Vec2::splat(0.94 + 0.06 * f),
+                ..default()
+            };
+            vorm.set_if_neq(doel);
         }
     }
 }

@@ -11,6 +11,7 @@ fn inhoud() -> String {
     let letters = serde_json::to_string(&INGEBOUWD).unwrap();
     let golf = Kleurovergang::standaard(Overgangsvorm::Golf).duur_ms;
     let vervagen = Kleurovergang::standaard(Overgangsvorm::Vervagen).duur_ms;
+    let opbouw = Kleurovergang::standaard(Overgangsvorm::Opbouw).duur_ms;
     format!(
         "// Gemaakt door `cargo test -p gedeeld` (crates/gedeeld/tests/standaard_stijl.rs). Niet met de hand wijzigen.\n\
          import type {{ Stijl }} from \"./Stijl\";\n\n\
@@ -23,10 +24,10 @@ fn inhoud() -> String {
          export const MAX_SNELHEID = {MAX_SNELHEID};\n\n\
          /** Langste tekst van het programmalogo zonder beeld, in tekens. */\n\
          export const MAX_LOGOTEKST = {MAX_LOGOTEKST};\n\n\
-         /** De kortste en langste Kleurovergang, en de standaardduur per vorm, in milliseconden. */\n\
+         /** De kortste en langste Kleurovergang, en de standaardduur per vorm, in milliseconden (bij de Opbouw per Partij). */\n\
          export const MIN_KLEUROVERGANG_MS = {MIN_KLEUROVERGANG_MS};\n\
          export const MAX_KLEUROVERGANG_MS = {MAX_KLEUROVERGANG_MS};\n\
-         export const STANDAARD_KLEUROVERGANG_MS = {{ Golf: {golf}, Vervagen: {vervagen} }} as const;\n"
+         export const STANDAARD_KLEUROVERGANG_MS = {{ Golf: {golf}, Vervagen: {vervagen}, Opbouw: {opbouw} }} as const;\n"
     )
 }
 

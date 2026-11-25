@@ -91,6 +91,7 @@ export const BLOKNAMEN: Record<Bloksoort["blok"], string> = {
   Programmalogo: "Programmalogo",
   Afbeelding: "Afbeelding",
   Partijlabels: "Partijlabels",
+  Opbouwlabel: "Opbouwlabel",
   Stemmingsbalk: "Stemmingsbalk",
   Uitkomst: "Uitkomst",
   Fractielijst: "Fractielijst",
@@ -253,7 +254,7 @@ export function benodigd(s: Sjabloon): { velden: string[]; set: boolean; partij:
     const tekstbron = b.blok === "Tekst" ? b.bron : b.blok === "Partijregel" ? b.tekst : null;
     if (b.blok === "Partijlogo" || b.blok === "Partijregel" || tekstbron === "Partijnaam") partij = true;
     if (b.blok === "Getal" && (b.bron === "Zetels" || b.bron === "Winst")) set = partij = true;
-    if (b.blok === "Zetelbalk" || b.blok === "Uitslaggrafiek" || b.blok === "WinstEnVerliesgrafiek" || b.blok === "Partijlabels") set = true;
+    if (b.blok === "Zetelbalk" || b.blok === "Uitslaggrafiek" || b.blok === "WinstEnVerliesgrafiek" || b.blok === "Partijlabels" || b.blok === "Opbouwlabel") set = true;
     if (tekstbron === "Setnaam" || tekstbron === "VorigeSetnaam" || tekstbron === "ZetelsTegenover") set = true;
   }
   return { velden, set, partij };

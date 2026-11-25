@@ -120,6 +120,14 @@ function Take() {
       >
         Kleur uit <kbd>Z</kbd>
       </button>
+      <button
+        className="knop knop-take"
+        disabled={!verbonden || !kan("SlaOpbouwOver", s)}
+        onClick={() => voerUit(regie, "SlaOpbouwOver")}
+        title="De Partijen die nog niet aan de beurt waren, kleuren meteen mee; de kaartjes komen direct"
+      >
+        Opbouw overslaan <kbd>C</kbd>
+      </button>
       {melding && (
         <p className="take-melding" role="alert">
           {melding}

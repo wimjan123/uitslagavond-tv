@@ -81,7 +81,7 @@ fn standaard_kleurkracht() -> u8 {
 #[ts(export)]
 pub struct Kleurovergang {
     pub vorm: Overgangsvorm,
-    /// Hoe lang de hele overgang duurt, in milliseconden.
+    /// Hoe lang de hele overgang duurt, in milliseconden; bij de Opbouw de tijd per Partij.
     pub duur_ms: u16,
 }
 
@@ -92,13 +92,20 @@ impl Default for Kleurovergang {
 }
 
 impl Kleurovergang {
-    /// De standaard van een vorm: de Golf duurt een seconde, Vervagen anderhalve.
+    /// De standaard van een vorm: de Golf duurt een seconde, Vervagen anderhalve, de Opbouw
+    /// anderhalve seconde per Partij.
     pub fn standaard(vorm: Overgangsvorm) -> Self {
         let duur_ms = match vorm {
             Overgangsvorm::Golf => 1000,
-            Overgangsvorm::Vervagen => 1500,
+            Overgangsvorm::Vervagen | Overgangsvorm::Opbouw => 1500,
         };
         Kleurovergang { vorm, duur_ms }
+    }
+
+    /// De Kleurovergang bij Bijwerken: de Opbouw is voor Toon, bij nieuwe cijfers gaan de
+    /// Stoelen die veranderen als Golf.
+    pub fn bij_bijwerken(self) -> Self {
+        if self.vorm == Overgangsvorm::Opbouw { Kleurovergang::default() } else { self }
     }
 
     /// Of de duur tussen [`MIN_KLEUROVERGANG_MS`] en [`MAX_KLEUROVERGANG_MS`] ligt.
@@ -116,7 +123,14 @@ pub enum Overgangsvorm {
     Golf,
     /// Alle Stoelen tegelijk.
     Vervagen,
+    /// Eén Partij tegelijk, de grootste eerst: de Stoelen worden eerst donker, dan licht elk
+    /// blok op in zijn kleur ([`Bloksoort::Opbouwlabel`] toont intussen de Partij). Stoelen met
+    /// dezelfde kleur lichten samen op. Alleen voor een Sjabloon, niet in de Stijl.
+    Opbouw,
 }
+
+/// De kleur van de Stoelen die in een Opbouw nog niet aan de beurt zijn.
+pub const OPBOUW_WACHTKLEUR: Kleur = Kleur { r: 0x30, g: 0x30, b: 0x30 };
 
 /// De kortste en langste Kleurovergang, in milliseconden.
 pub const MIN_KLEUROVERGANG_MS: u16 = 100;
@@ -265,6 +279,8 @@ pub enum StijlWeigering {
     Kleurovergang(u16),
     #[error("de Kleurkracht is {0} procent; kies tussen 0 en 100")]
     Kleurkracht(u8),
+    #[error("de Opbouw kan alleen in een Sjabloon, niet in de Stijl")]
+    OpbouwInStijl,
 }
 
 /// De eerste standaardstijl (tot 22 november 2026), zoals een oude stand.json hem bewaarde.
@@ -346,6 +362,9 @@ impl Stijl {
         }
         if !self.kleurovergang.kan() {
             return Err(StijlWeigering::Kleurovergang(self.kleurovergang.duur_ms));
+        }
+        if self.kleurovergang.vorm == Overgangsvorm::Opbouw {
+            return Err(StijlWeigering::OpbouwInStijl);
         }
         if self.kleurkracht > 100 {
             return Err(StijlWeigering::Kleurkracht(self.kleurkracht));
@@ -574,7 +593,22 @@ pub enum Bloksoort {
     /// Uitslagindeling). De invulvelden [`crate::VELD_NAMEN`] en [`crate::VELD_ZETELS`] zetten
     /// naam en Zetels aan ("ja") of uit; beide uit: geen labels. Het aantal Zetels staat in
     /// `letter` en de kleur Tekst, de korte naam in `naamletter` en de kleur Hoofd.
+    /// Bij een Opbouw in de Zaal verschijnen ze in de Ether pas als de laatste Partij gekleurd is.
     Partijlabels {
+        letter: Letterkeuze,
+        naamletter: Letterkeuze,
+        grootte: u16,
+        /// Elke Partij een eigen kaartje, even breed, met de Zetels boven de naam en een streep in
+        /// de partijkleur eronder. Anders één balk met de labels erin.
+        #[serde(default)]
+        kaartjes: bool,
+    },
+    /// Groot Blok van de Opbouw ([`Overgangsvorm::Opbouw`]): één groot label midden in zijn
+    /// Plek voor de Partij die in de Zaal oplicht, met een streep in de partijkleur, de Zetels in
+    /// `letter` en Tekst, de korte naam in `naamletter` en Hoofd, en "zetels" eronder. Na de
+    /// Opbouw, en in het Voorbeeld, is het weg. Naam en Zetels volgen de invulvelden zoals bij de
+    /// Partijlabels.
+    Opbouwlabel {
         letter: Letterkeuze,
         naamletter: Letterkeuze,
         grootte: u16,
@@ -695,6 +729,7 @@ impl Bloksoort {
             | Bloksoort::Zetelbalk { letter, .. }
             | Bloksoort::Programmalogo { letter, .. }
             | Bloksoort::Partijlabels { letter, .. }
+            | Bloksoort::Opbouwlabel { letter, .. }
             | Bloksoort::Stemmingsbalk { letter, .. }
             | Bloksoort::Uitkomst { letter, .. }
             | Bloksoort::Fractielijst { letter, .. }
@@ -1037,6 +1072,17 @@ pub enum Inhoud {
         tekstkleur: Kleur,
         /// De kleur van de korte naam (Hoofd uit de Stijl).
         naamkleur: Kleur,
+        kaartjes: bool,
+    },
+    /// Het grote label van de Opbouw: de Renderer toont het label van de Partij met de kleur die
+    /// in de Zaal oplicht.
+    Opbouwlabel {
+        labels: Vec<Partijlabel>,
+        letter: String,
+        naamletter: String,
+        grootte: u16,
+        tekstkleur: Kleur,
+        naamkleur: Kleur,
     },
     Stemmingsbalk {
         voor: u16,
@@ -1300,6 +1346,7 @@ impl Sjabloon {
         self.blokken.iter().flat_map(move |b| {
             let tweede = match &b.soort {
                 Bloksoort::Partijlabels { naamletter: l, .. }
+                | Bloksoort::Opbouwlabel { naamletter: l, .. }
                 | Bloksoort::Uitslaggrafiek { naamletter: l, .. }
                 | Bloksoort::Namenlijst { naamletter: l, .. }
                 | Bloksoort::Stemmingsbalk { tekstletter: l, .. }
@@ -1309,6 +1356,30 @@ impl Sjabloon {
             b.soort.letter().into_iter().chain(tweede).map(|l| l.in_stijl(stijl))
         })
     }
+}
+
+/// De labels van de Zetelverdeling: per Partij met Zetels in de set, in de volgorde van de
+/// cijfers. De invulvelden [`crate::VELD_NAMEN`] en [`crate::VELD_ZETELS`] zetten naam en Zetels
+/// aan; beide uit: geen labels.
+fn partijlabels(i: &Invulling, set: Option<&crate::cijfers::Cijferset>, cijfers: &Cijfers) -> Vec<Partijlabel> {
+    let aan = |veld: &str| i.velden.get(veld).is_some_and(|v| v == "ja");
+    let (namen, zetels) = (aan(crate::VELD_NAMEN), aan(crate::VELD_ZETELS));
+    let Some(s) = set.filter(|_| namen || zetels) else {
+        return Vec::new();
+    };
+    cijfers
+        .partijen
+        .iter()
+        .filter_map(|p| {
+            let z = s.zetels_van(&p.sleutel);
+            (z > 0).then(|| Partijlabel {
+                partij: p.sleutel.clone(),
+                kort: namen.then(|| p.kort.clone()),
+                zetels: zetels.then_some(z as u16),
+                kleur: p.kleur.parse().unwrap_or(GRIJS),
+            })
+        })
+        .collect()
 }
 
 fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_regel: bool) -> Inhoud {
@@ -1645,36 +1716,23 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
             }
         }
         Bloksoort::Lijn { dekking } => Inhoud::Lijn { dekking: *dekking },
-        Bloksoort::Partijlabels {
-            letter,
-            naamletter,
-            grootte,
-        } => {
-            let aan = |veld: &str| i.velden.get(veld).is_some_and(|v| v == "ja");
-            let (namen, zetels) = (aan(crate::VELD_NAMEN), aan(crate::VELD_ZETELS));
-            let mut labels = Vec::new();
-            if let Some(s) = set().filter(|_| namen || zetels) {
-                for p in &cijfers.partijen {
-                    let z = s.zetels_van(&p.sleutel);
-                    if z > 0 {
-                        labels.push(Partijlabel {
-                            partij: p.sleutel.clone(),
-                            kort: namen.then(|| p.kort.clone()),
-                            zetels: zetels.then_some(z as u16),
-                            kleur: p.kleur.parse().unwrap_or(GRIJS),
-                        });
-                    }
-                }
-            }
-            Inhoud::Partijlabels {
-                labels,
-                letter: letter.in_stijl(stijl),
-                naamletter: naamletter.in_stijl(stijl),
-                grootte: *grootte,
-                tekstkleur: stijl.kleur(Stijlkleur::Tekst),
-                naamkleur: stijl.kleur(Stijlkleur::Hoofd),
-            }
-        }
+        Bloksoort::Partijlabels { letter, naamletter, grootte, kaartjes } => Inhoud::Partijlabels {
+            labels: partijlabels(i, set(), cijfers),
+            letter: letter.in_stijl(stijl),
+            naamletter: naamletter.in_stijl(stijl),
+            grootte: *grootte,
+            tekstkleur: stijl.kleur(Stijlkleur::Tekst),
+            naamkleur: stijl.kleur(Stijlkleur::Hoofd),
+            kaartjes: *kaartjes,
+        },
+        Bloksoort::Opbouwlabel { letter, naamletter, grootte } => Inhoud::Opbouwlabel {
+            labels: partijlabels(i, set(), cijfers),
+            letter: letter.in_stijl(stijl),
+            naamletter: naamletter.in_stijl(stijl),
+            grootte: *grootte,
+            tekstkleur: stijl.kleur(Stijlkleur::Tekst),
+            naamkleur: stijl.kleur(Stijlkleur::Hoofd),
+        },
         Bloksoort::Stemmingsbalk { letter, tekstletter } => {
             let (voor, tegen, algemeen) = i
                 .stemming
@@ -2006,8 +2064,12 @@ fn titelkaart() -> Sjabloon {
 }
 
 /// De Zetelverdeling in de Zaal: de Stoelen kleuren in de Uitslagindeling (dat doet de Zaal, niet
-/// een Blok). Linksboven een naambalk met de kicker "ZETELVERDELING" en de naam van de set;
-/// onderaan de labels per Partij; rechtsboven het programmalogo.
+/// een Blok), als Opbouw: één Partij tegelijk, de grootste eerst, met haar label groot op de
+/// vloer. Daarna staan alle Partijen als kaartjes op één rij in het plafond, in dezelfde volgorde
+/// als hun Stoelen van links naar rechts. Linksboven een naambalk met de kicker "ZETELVERDELING"
+/// en de naam van de set; rechtsboven het programmalogo. De camera staat stil op Standpunt A, met
+/// de hele halve cirkel in beeld: zo zie je bij elke stap het blok bij het label. De plekken passen
+/// daarbij en bij het eindbeeld van de Onthulling.
 fn zetelverdeling() -> Sjabloon {
     let [streepje, kicker_tekst] = kicker(140, 84, 1000, Tekstbron::Vast("ZETELVERDELING".into()));
     Sjabloon {
@@ -2017,8 +2079,8 @@ fn zetelverdeling() -> Sjabloon {
         snelheid: 100,
         achtergrond: Achtergrond::Zaal,
         stoelen: Stoelen::Gegevens,
-        // de Onthulling: van boven de banken de Zaal in (vaste Camerarit Q)
-        standpunt: Some("Q".into()),
+        // Standpunt A, zoals elke zetelgraphic: geen beweging tijdens de Opbouw
+        standpunt: None,
         blokken: vec![
             naambalk(plek(96, 54, 1100, 166), vec![2, 3]),
             streepje,
@@ -2031,17 +2093,28 @@ fn zetelverdeling() -> Sjabloon {
             },
             programmabug(),
             Blok {
-                plek: plek(96, 894, 1728, 132),
+                plek: plek(96, 236, 1728, 92),
                 soort: Bloksoort::Partijlabels {
                     letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                     naamletter: Letterkeuze::Stijl(Stijlletter::Tekst),
-                    grootte: 30,
+                    grootte: 21,
+                    kaartjes: true,
                 },
                 kleur: Kleurkeuze::Stijl(Stijlkleur::Vlak),
-                animatie: animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0),
+                animatie: animatie(Erin::Vervagen, Eruit::Vervagen, 0),
+            },
+            Blok {
+                plek: plek(96, 760, 1728, 150),
+                soort: Bloksoort::Opbouwlabel {
+                    letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
+                    naamletter: Letterkeuze::Stijl(Stijlletter::Kop),
+                    grootte: 52,
+                },
+                kleur: Kleurkeuze::Stijl(Stijlkleur::Vlak),
+                animatie: animatie(Erin::Vervagen, Eruit::Vervagen, 0),
             },
         ],
-        kleurovergang: None,
+        kleurovergang: Some(Kleurovergang::standaard(Overgangsvorm::Opbouw)),
     }
 }
 
@@ -2850,6 +2923,7 @@ impl Sjabloon {
 fn tweede_letter(soort: &Bloksoort) -> Option<&Letterkeuze> {
     match soort {
         Bloksoort::Partijlabels { naamletter: l, .. }
+        | Bloksoort::Opbouwlabel { naamletter: l, .. }
         | Bloksoort::Uitslaggrafiek { naamletter: l, .. }
         | Bloksoort::WinstEnVerliesgrafiek { naamletter: l, .. }
         | Bloksoort::Zetelbalk { naamletter: l, .. }

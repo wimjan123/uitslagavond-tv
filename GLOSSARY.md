@@ -17,8 +17,12 @@ Een van de 150 politieke posities in de Tweede Kamer, toegekend aan een partij. 
 _Avoid_: seat, stoel (als politieke eenheid)
 
 **Kleurovergang**:
-De manier waarop de Stoelen van kleur wisselen: als Golf, van links naar rechts, of door Vervagen, alle Stoelen tegelijk.
+De manier waarop de Stoelen van kleur wisselen: als Golf, van links naar rechts, door Vervagen, alle Stoelen tegelijk, of als Opbouw.
 _Avoid_: fade, animatie (voor de Stoelen)
+
+**Opbouw**:
+Een Kleurovergang die één Partij tegelijk laat oplichten, de grootste eerst, terwijl een groot label op de vloer haar Zetels en naam toont. Daarna staan alle Partijen als kaartjes op één rij, in dezelfde volgorde als hun Stoelen van links naar rechts. Alleen bij Toon van een Sjabloon dat hem kiest, zoals de Zetelverdeling; Bijwerken gaat als Golf. Opbouw overslaan kleurt de rest meteen.
+_Avoid_: onthulling (dat is de vaste Camerarit), aftellen, Opbouwen (dat is een animatie van een Blok)
 
 **Kleur uit**:
 Een Opdracht die de Stoelen in de Ether direct hun eigen blauwe leer teruggeeft, los van de Graphic. De volgende Graphic die de Stoelen kleurt, zet de kleuren weer aan.

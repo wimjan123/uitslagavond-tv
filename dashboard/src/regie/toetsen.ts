@@ -4,8 +4,9 @@ import { toetsVan } from "./camerarit.ts";
 
 export { toetsVan };
 
-/** Kleur uit geeft de Stoelen in de Ether direct hun eigen leer terug, los van de Graphic. */
-export type TakeActie = "Toon" | "Bijwerken" | "UitBeeld" | "KleurUit";
+/** Kleur uit geeft de Stoelen in de Ether direct hun eigen leer terug, los van de Graphic. Opbouw
+ * overslaan kleurt de Partijen die nog niet aan de beurt waren meteen mee. */
+export type TakeActie = "Toon" | "Bijwerken" | "UitBeeld" | "KleurUit" | "SlaOpbouwOver";
 
 /** Stuur de camera van de Ether naar het Standpunt met deze toets; met Shift knipt hij meteen. */
 export interface StandpuntActie {
@@ -44,6 +45,7 @@ const TOETSEN: Record<string, TakeActie | CameraActie> = {
   b: "Bijwerken",
   x: "UitBeeld",
   z: "KleurUit",
+  c: "SlaOpbouwOver",
   v: "VrijeCamera",
   o: "Oefenen",
   r: "Opnemen",

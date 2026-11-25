@@ -149,6 +149,9 @@ impl Default for Stand {
 /// Aantal Stoelen in de Zaal.
 pub const AANTAL_STOELEN: usize = 150;
 
+/// Hoe lang de rest van een overgeslagen Opbouw duurt, in milliseconden ([`Opdracht::SlaOpbouwOver`]).
+pub const OPBOUW_OVERSLAAN_MS: u16 = 500;
+
 /// Stoelen per rij in elk vak, van voor (rij 1) naar achter (rij 6).
 pub const STOELEN_PER_RIJ: [u8; 6] = [2, 3, 4, 5, 5, 6];
 
@@ -268,6 +271,9 @@ pub enum Opdracht {
     /// Kleurovergang van de Stijl. De Graphic blijft staan; de volgende Graphic die de Stoelen
     /// kleurt, zet de kleuren weer aan.
     KleurUit,
+    /// Slaat de Opbouw over: de Partijen die nog niet aan de beurt waren, kleuren meteen mee
+    /// (Vervagen, kort), en de labels gaan direct naar hun eindbeeld.
+    SlaOpbouwOver,
     /// Stuurt de camera van de Ether naar een Standpunt of Camerarit: bewegen zoals het
     /// Standpunt zegt, of met `knip` meteen (Shift met de letter).
     KiesStandpunt {
@@ -494,6 +500,8 @@ pub enum Weigering {
     NietsInBeeld,
     #[error("de Stoelen hebben al hun eigen kleur")]
     KleurAlUit,
+    #[error("er loopt geen Opbouw")]
+    GeenOpbouw,
     #[error("er is geen Standpunt {0}")]
     OnbekendStandpunt(String),
     #[error("Standpunt {0} is vast")]
@@ -648,7 +656,7 @@ impl Stand {
                 ether.standpunt = klaar.standpunt.clone();
                 if let Some(k) = ether.stoelkleuren() {
                     self.stoelkleuren = k;
-                    self.kleurovergang = ether.kleurovergang();
+                    self.kleurovergang = ether.kleurovergang().bij_bijwerken();
                 }
                 if ander_standpunt {
                     let letter = klaar.standpunt().into_owned();
@@ -667,6 +675,13 @@ impl Stand {
                 }
                 self.stoelkleuren.clear();
                 self.kleurovergang = self.stijl_van_ether().kleurovergang;
+            }
+            Opdracht::SlaOpbouwOver => {
+                if self.kleurovergang.vorm != sjabloon::Overgangsvorm::Opbouw || self.stoelkleuren.is_empty() {
+                    return Err(Weigering::GeenOpbouw);
+                }
+                self.kleurovergang =
+                    sjabloon::Kleurovergang { vorm: sjabloon::Overgangsvorm::Vervagen, duur_ms: OPBOUW_OVERSLAAN_MS };
             }
             Opdracht::KiesStandpunt { letter, knip } => {
                 self.controleer_standpunt(Some(letter))?;
@@ -1054,7 +1069,7 @@ impl Stand {
             e.versie = h.volgnummer;
             if let Some(k) = e.stoelkleuren() {
                 self.stoelkleuren = k;
-                self.kleurovergang = e.kleurovergang();
+                self.kleurovergang = e.kleurovergang().bij_bijwerken();
             }
             gedaan = true;
         }

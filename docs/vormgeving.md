@@ -57,7 +57,7 @@ Alles staat in `crates/gedeeld/src/sjabloon.rs`. Een Vlak heeft naast kleur en d
 - `rand`: een rand binnen het vlak, met kleur, dekking en dikte.
 - `om_tekst`: het vlak is zo breed als de langste tekst van de genoemde Blokken plus een marge, en nooit breder dan zijn Plek. Een Tekst in zo'n vlak blijft op één regel; past hij niet in zijn eigen Plek, dan wordt de letter kleiner.
 
-Een Lijn en het Programmalogo hebben een dekking. Partijlabels tonen de Zetels in de cijferletter en Tekst, en de korte naam in een tweede letter (`naamletter`) en Hoofd.
+Een Lijn en het Programmalogo hebben een dekking. Partijlabels tonen de Zetels in de cijferletter en Tekst, en de korte naam in een tweede letter (`naamletter`) en Hoofd; met `kaartjes` krijgt elke Partij een eigen kaartje. Het Opbouwlabel toont tijdens een Opbouw de Partij die in de Zaal oplicht.
 
 Hulpfuncties voor Sjablonen in deze stijl, gebruik ze in plaats van losse getallen:
 
@@ -76,7 +76,7 @@ Een waas in Achtergrond van 97 procent naar doorzichtig (90 graden, van 30 tot 9
 
 ### Zetelverdeling in de Zaal (gebouwd)
 
-Linksboven een naambalk met de kicker "ZETELVERDELING" en de naam van de set (64 px), rechtsboven het programmalogo, onderaan het Blok Partijlabels op een vlak (93 procent): per Partij een streep van 8 px in de partijkleur, daaronder de Zetels (42 px, cijferletter) en de korte naam (30 px, Hoofd).
+Linksboven een naambalk met de kicker "ZETELVERDELING" en de naam van de set (64 px), rechtsboven het programmalogo. De Stoelen komen als Opbouw (1,5 seconde per Partij). Intussen staat op de vloer (y 760) het Opbouwlabel: een vlak (94 procent) met een streep van 18 px in de partijkleur, de Zetels (110 px, cijferletter), de korte naam (52 px, kopletter, Hoofd) en "zetels" eronder. Daarna staan in het plafond (y 236) de Partijlabels als kaartjes (92 procent), even breed, 8 px uit elkaar: de Zetels (44 px), de korte naam (21 px, Hoofd) en een streep van 5 px in de partijkleur onderaan. De camera staat stil op Standpunt A; de plekken passen daarbij en bij het eindbeeld van de Onthulling.
 
 ### Uitslag per Partij (#49, gebouwd)
 
