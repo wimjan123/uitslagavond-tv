@@ -3,4 +3,4 @@
 /**
  * Wat de Stoelen doen bij een Graphic van een Sjabloon.
  */
-export type Stoelen = "Gegevens" | "PartijUitgelicht" | "Houden" | "Uit";
+export type Stoelen = "Gegevens" | "PartijUitgelicht" | "StoelUitgelicht" | "Houden" | "Uit";

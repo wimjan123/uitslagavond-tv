@@ -2,7 +2,6 @@
 //! met de coalitie als één blok links, en het directe bijwerken in de Ether (besluiten #6 en #7).
 
 use gedeeld::cijfers::Invoer;
-use gedeeld::coalitie::donker;
 use gedeeld::kamer::{Fractie, Kamerlid};
 use gedeeld::sjabloon::{Getalwaarde, Inhoud, Zeteldeel, vast_sjabloon};
 use gedeeld::uitslagindeling::{HUIDIGE_KAMER, Uitslagvolgorde, stoelen_van_links_naar_rechts};
@@ -133,22 +132,19 @@ fn van_links_naar_rechts(kleuren: &[Kleur]) -> Vec<(Kleur, usize)> {
 }
 
 #[test]
-fn de_coalitie_staat_links_als_een_blok_en_de_rest_wordt_donker() {
+fn de_coalitie_staat_links_als_een_blok_en_de_rest_wordt_grijs() {
     let mut p = Proef::new();
     p.toon(coalitie("exitpoll", &["geel", "blauw"]));
-    let (rood, blauw, groen, geel) =
-        (kleur("#d4202c"), kleur("#12357a"), kleur("#2dbe4f"), kleur("#e8c21a"));
+    let (blauw, geel) = (kleur("#12357a"), kleur("#e8c21a"));
     assert_eq!(
         van_links_naar_rechts(&p.stand.stoelkleuren),
         [
             // de coalitie in de volgorde van de Uitslagindeling (groen, rood, blauw, geel)
             (blauw, 40),
             (geel, 20),
-            // de rest op volgorde, donker
-            (donker(groen), 30),
-            (donker(rood), 50),
-            // nog niet verdeeld: grijs
-            (gedeeld::sjabloon::GRIJS, 10),
+            // de rest (groen en rood, en de 10 nog niet verdeelde Zetels) grijs: in de Zaal
+            // hetzelfde donkere neutraal als bij Partij uitgelicht
+            (gedeeld::sjabloon::GRIJS, 90),
         ]
     );
 }

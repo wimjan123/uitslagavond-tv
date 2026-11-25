@@ -2,10 +2,9 @@
 //! Uitslagindeling met de gekozen Partijen samen als één blok links (besluit #7).
 //!
 //! De gekozen Partijen schuiven samen naar links, in de volgorde van de Uitslagindeling; de andere
-//! Partijen staan daarna, ook op volgorde, en worden donker. Zetels zonder Partij blijven grijs,
-//! rechts achteraan.
+//! Partijen staan daarna, ook op volgorde, in grijs (in de Zaal donker neutraal, net als Zetels
+//! zonder Partij).
 
-use crate::Kleur;
 use crate::cijfers::Cijferset;
 
 /// Zoveel Zetels is een meerderheid in de Tweede Kamer.
@@ -86,13 +85,6 @@ pub fn blokken(volgorde: &[String], gekozen: &[String]) -> Vec<(String, bool)> {
         .map(|p| (p.clone(), true))
         .chain(rest.map(|p| (p.clone(), false)))
         .collect()
-}
-
-/// Een partijkleur donker gemaakt, voor de Partijen buiten de coalitie in de Zaal.
-pub fn donker(k: Kleur) -> Kleur {
-    // een vijfde van de kleur: in de Zaal nog net te zien welk blok bij welke Partij hoort
-    let d = |c: u8| (u16::from(c) / 5) as u8;
-    Kleur { r: d(k.r), g: d(k.g), b: d(k.b) }
 }
 
 #[cfg(test)]
@@ -177,12 +169,5 @@ mod tests {
         .map(|(p, c)| (p.to_string(), *c))
         .collect();
         assert_eq!(b, verwacht);
-    }
-
-    #[test]
-    fn een_donkere_partijkleur_is_veel_donkerder_maar_houdt_zijn_tint() {
-        let oranje = Kleur { r: 0xff, g: 0x7a, b: 0x1a };
-        let d = donker(oranje);
-        assert!(d.r < 0x50 && d.r > d.g && d.g > d.b, "{d:?}");
     }
 }

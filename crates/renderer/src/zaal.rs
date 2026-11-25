@@ -49,7 +49,11 @@ impl Plugin for ZaalPlugin {
             .init_resource::<Uitlichting>()
             .add_systems(
                 Update,
-                ((herken_stoelen, kleur_stoelen, licht_stoel_op).chain(), dim_zaal, geef_stoelen_licht)
+                (
+                    stel_stof_en_hout_bij,
+                    ((herken_stoelen, kleur_stoelen, licht_stoel_op).chain(), dim_zaal, geef_stoelen_licht),
+                )
+                    .chain()
                     .after(Afgewerkt),
             );
         if let Some(map) = &self.map {
@@ -463,7 +467,7 @@ impl Golf {
                             return Stoelstand::Klaar;
                         }
                         let leer = lineair(wacht).mix(&lineair(naar), f).mix(&lineair(Some(Kleur { r: 255, g: 255, b: 255 })), GLOED_LICHT * g);
-                        let eigen = naar.filter(|k| *k != GRIJS).map_or(LinearRgba::BLACK, |k| LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)));
+                        let eigen = naar.filter(|k| *k != GRIJS).map_or(LinearRgba::BLACK, als_stof);
                         let straling = LinearRgba::BLACK.mix(&straalt(naar), f) + eigen * (GLOED_STRAALT * g);
                         Stoelstand::Onderweg(leer, straling)
                     }
@@ -499,16 +503,29 @@ pub struct Opbouwstand {
 /// grijs zelf blijft voor de Graphics.
 const STOEL_UIT: Kleur = Kleur { r: 0x30, g: 0x32, b: 0x36 };
 
+/// Hoeveel van de verzadiging van een partijkleur het leer houdt: stof in een zaal is minder fel
+/// dan een kleur op een scherm. De huiskleur blijft herkenbaar.
+const STOF_VERZADIGING: f32 = 0.72;
+
+/// Een partijkleur als stof (lineair): dezelfde tint en helderheid, minder verzadigd.
+fn als_stof(k: Kleur) -> LinearRgba {
+    let c = LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b));
+    let l = helderheid(c);
+    let v = |x: f32| l + (x - l) * STOF_VERZADIGING;
+    LinearRgba::rgb(v(c.red), v(c.green), v(c.blue))
+}
+
 /// De kleur van het leer bij een kleur uit de Stand (lineair). De leertextuur heeft ruimte voor
 /// een factor 2 (webexport.K bij het model); de helft brengt hem terug op de kleur zelf.
 fn leer_in_de_zaal(k: Kleur) -> LinearRgba {
     let k = if k == GRIJS { STOEL_UIT } else { k };
-    LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * 0.5
+    als_stof(k) * 0.5
 }
 
 /// Hoe fel het leer bij Kleurkracht 100 straalt in zijn eigen kleur, bovenop het licht uit de bak:
-/// zo blijft de kleur vol, ook waar de bak donker is.
-const KLEUR_STRAALT: f32 = 0.25;
+/// zo blijft de kleur vol, ook waar de bak donker is. Laag, anders leest de stof als plastic dat
+/// zelf licht geeft.
+const KLEUR_STRAALT: f32 = 0.12;
 /// Bij de Opbouw: hoeveel de Partij die aan de beurt is naar wit opschuift, en hoe fel ze extra
 /// straalt in haar eigen kleur.
 const GLOED_LICHT: f32 = 0.35;
@@ -567,7 +584,7 @@ fn kleur_stoelen(
     // Stoel die niet meedoet niet.
     let kracht = kleurkracht(&standen);
     let straalt = |k: Option<Kleur>| match k {
-        Some(k) if k != GRIJS => LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * (kracht * KLEUR_STRAALT),
+        Some(k) if k != GRIJS => als_stof(k) * (kracht * KLEUR_STRAALT),
         _ => LinearRgba::BLACK,
     };
     if kracht != golf.kracht {
@@ -848,45 +865,110 @@ fn dim_zaal(
     }
 }
 
-/// De lijn bij Zetel 76 in de Coalitiebouwer (besluit #7): een streep in Accent tussen de 75e en
-/// de 76e Stoel van links, van voor naar achter. `zicht` loopt van 0 (weg) tot 1 (helemaal).
+/// De lijn bij Zetel 76 in de Coalitiebouwer (besluit #7): een lichtstrook in Accent tussen de
+/// 75e en de 76e Stoel van links, plat op de vloer van het middenpad
+/// ([`gedeeld::uitslagindeling::lijn_bij_76`]). `zicht` loopt van 0 (weg) tot 1 (helemaal);
+/// `stil` telt hoe lang de camera al stilstaat.
 #[derive(Component)]
 struct LijnBij76 {
     zicht: f32,
+    stil: f32,
+    camera: Option<Transform>,
 }
 
-/// Breedte en hoogte van de lijn bij 76, in meter.
-const LIJN_76_DIKTE: Vec2 = Vec2::new(0.18, 0.05);
+/// Breedte van de lijn bij 76, in meter.
+const LIJN_76_BREEDTE: f32 = 0.12;
 /// Zo lang groeit de lijn van voor naar achter, of krimpt hij weer, bij snelheid 100.
-const LIJN_76_GROEIT: f32 = 0.5;
+const LIJN_76_GROEIT: f32 = 0.6;
+/// Zo lang staat de camera stil voor de lijn verschijnt, in seconden: tijdens een camerarit
+/// leest een lijn in de Zaal als een losse prop.
+const LIJN_76_NA_STIL: f32 = 0.25;
+/// Langzamer dan dit (meter en radialen per seconde) telt de camera als stil, ook bij langzaam
+/// schuiven na aankomst.
+const STIL_M_PER_S: f32 = 0.15;
+const STIL_RAD_PER_S: f32 = 0.05;
+/// Hoe fel de lijn straalt in Accent: iets boven de drempel van de gloed, zodat hij leest als licht.
+const LIJN_76_LICHT: f32 = 1.6;
+
+/// De strook over de vloer van de lijn bij 76, tot `deel` (0 tot 1) van zijn lengte van voor
+/// naar achter.
+fn lijnstrook(lijn: &[Vec3], deel: f32) -> Mesh {
+    use bevy::asset::RenderAssetUsages;
+    use bevy::mesh::{Indices, PrimitiveTopology};
+    let lengte: f32 = lijn.windows(2).map(|p| p[0].distance(p[1])).sum();
+    let mut over = lengte * deel.clamp(0.0, 1.0);
+    // opzij: horizontaal, loodrecht op de lijn
+    let langs = (lijn[lijn.len() - 1] - lijn[0]).with_y(0.0).normalize_or(Vec3::NEG_Z);
+    let opzij = Vec3::Y.cross(langs) * (LIJN_76_BREEDTE / 2.0);
+    let (mut punten, mut normalen, mut driehoeken) = (Vec::new(), Vec::new(), Vec::new());
+    for paar in lijn.windows(2) {
+        let (a, mut b) = (paar[0], paar[1]);
+        let stuk = a.distance(b);
+        if over <= 0.0 || stuk <= 0.0 {
+            break;
+        }
+        if stuk > over {
+            b = a + (b - a) * (over / stuk);
+        }
+        over -= stuk;
+        // een trede kijkt omhoog, een stootbord naar voren
+        let normaal = if (b.y - a.y).abs() > 1e-4 { -langs } else { Vec3::Y };
+        let i = punten.len() as u32;
+        punten.extend([a - opzij, a + opzij, b + opzij, b - opzij].map(|p| p.to_array()));
+        normalen.extend([normaal.to_array(); 4]);
+        driehoeken.extend([i, i + 1, i + 2, i, i + 2, i + 3]);
+    }
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, punten)
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normalen)
+        .with_inserted_indices(Indices::U32(driehoeken))
+}
+
+fn lijn_76_punten() -> Vec<Vec3> {
+    gedeeld::uitslagindeling::lijn_bij_76().into_iter().map(Vec3::from).collect()
+}
 
 fn zet_lijn_bij_76(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materialen: ResMut<Assets<StandardMaterial>>,
 ) {
-    let (voor, achter) = gedeeld::uitslagindeling::lijn_bij_76();
-    let lengte = Vec3::from(achter).distance(Vec3::from(voor));
     commands.spawn((
-        LijnBij76 { zicht: 0.0 },
-        Mesh3d(meshes.add(Cuboid::new(LIJN_76_DIKTE.x, LIJN_76_DIKTE.y, lengte))),
+        LijnBij76 { zicht: 0.0, stil: 0.0, camera: None },
+        Mesh3d(meshes.add(lijnstrook(&lijn_76_punten(), 0.0))),
         MeshMaterial3d(materialen.add(StandardMaterial {
             base_color: Color::WHITE,
             unlit: true,
+            double_sided: true,
+            cull_mode: None,
             ..default()
         })),
-        Transform::from_translation(Vec3::from(voor)),
+        Transform::IDENTITY,
         Visibility::Hidden,
+        bevy::light::NotShadowCaster,
     ));
 }
 
+/// Of de camera tussen twee beelden stilstond (of heel langzaam schoof).
+fn camera_stil(vorig: &Transform, nu: &Transform, dt: f32) -> bool {
+    let dt = dt.max(1e-4);
+    let schuift = vorig.translation.distance(nu.translation) / dt;
+    let draait = vorig.rotation.angle_between(nu.rotation) / dt;
+    schuift < STIL_M_PER_S && draait < STIL_RAD_PER_S
+}
+
 /// De lijn bij 76 staat er zolang de Graphic in de Ether een Coalitie of Coalitiebalk is, in de
-/// kleur Accent van de Stijl. Hij groeit van voor naar achter en krimpt terug als hij weggaat.
+/// kleur Accent van de Stijl. Hij verschijnt pas als de camera stilstaat, groeit dan van voor naar
+/// achter, en krimpt terug als hij weggaat. Wat er al staat, blijft staan als de camera weer gaat
+/// rijden.
 fn toon_lijn_bij_76(
     standen: Res<Standen>,
     tijd: Res<Time>,
+    camera: Query<&Transform, (With<crate::beeld::HoofdCamera>, Without<LijnBij76>)>,
+    mut meshes: ResMut<Assets<Mesh>>,
     mut materialen: ResMut<Assets<StandardMaterial>>,
-    mut lijn: Query<(&mut LijnBij76, &mut Transform, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
+    mut lijn: Query<(&mut LijnBij76, &Mesh3d, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
+    mut punten: Local<Vec<Vec3>>,
 ) {
     let Some(stand) = standen.huidig.as_ref().map(|s| &s.stand) else {
         return;
@@ -895,21 +977,37 @@ fn toon_lijn_bij_76(
         stand.ether.as_ref().map(|e| &e.graphic),
         Some(gedeeld::Graphic::Coalitie { .. } | gedeeld::Graphic::Coalitiebalk { .. })
     );
+    if punten.is_empty() {
+        *punten = lijn_76_punten();
+    }
+    let dt = tijd.delta_secs();
     let snelheid = f32::from(stand.stijl.snelheid.max(10)) / 100.0;
-    for (mut l, mut transform, mut zicht, materiaal) in &mut lijn {
-        let stap = tijd.delta_secs() * snelheid / LIJN_76_GROEIT;
-        l.zicht = if coalitie { (l.zicht + stap).min(1.0) } else { (l.zicht - stap).max(0.0) };
-        let (voor, achter) = gedeeld::uitslagindeling::lijn_bij_76();
-        let (voor, achter) = (Vec3::from(voor), Vec3::from(achter));
-        let f = crate::animatie::zacht_uit(l.zicht);
-        let mut t = Transform::from_translation(voor + (achter - voor) * f / 2.0).looking_at(achter, Vec3::Y);
-        t.scale = Vec3::new(1.0, 1.0, f.max(0.001));
-        if *transform != t {
-            *transform = t;
+    let nu = camera.iter().next().copied();
+    for (mut l, mesh, mut zicht, materiaal) in &mut lijn {
+        let stil = match (l.camera, nu) {
+            (Some(vorig), Some(nu)) => camera_stil(&vorig, &nu, dt),
+            _ => true,
+        };
+        l.stil = if stil { l.stil + dt } else { 0.0 };
+        l.camera = nu;
+        let vorig = l.zicht;
+        let stap = dt * snelheid / LIJN_76_GROEIT;
+        l.zicht = if coalitie && (l.zicht > 0.0 || l.stil >= LIJN_76_NA_STIL) {
+            (l.zicht + stap).min(1.0)
+        } else if coalitie {
+            l.zicht
+        } else {
+            (l.zicht - stap).max(0.0)
+        };
+        if l.zicht != vorig
+            && let Some(mut m) = meshes.get_mut(&mesh.0)
+        {
+            *m = lijnstrook(&punten, crate::animatie::zacht_uit(l.zicht));
         }
         zicht.set_if_neq(if l.zicht > 0.0 { Visibility::Inherited } else { Visibility::Hidden });
         let accent = stand.stijl.kleur(gedeeld::sjabloon::Stijlkleur::Accent);
-        let kleur = Color::srgb_u8(accent.r, accent.g, accent.b);
+        let kleur = LinearRgba::from(Color::srgb_u8(accent.r, accent.g, accent.b)) * LIJN_76_LICHT;
+        let kleur = Color::from(kleur.with_alpha(1.0));
         if let Some(m) = materialen.get(&materiaal.0)
             && m.base_color != kleur
             && let Some(mut m) = materialen.get_mut(&materiaal.0)
@@ -922,7 +1020,7 @@ fn toon_lijn_bij_76(
 /// Hoe fel de Stoel van de Persoonskaart straalt in de kleur van zijn Partij (of, zonder Partij,
 /// in zijn eigen kleur): een duidelijke maar natuurlijke markering, geen wit licht dat leest als
 /// een renderfout.
-const UITGELICHT_STRAALT: f32 = 0.55;
+const UITGELICHT_STRAALT: f32 = 0.4;
 /// Zo lang duurt het oplichten en uitgaan, in seconden bij snelheid 100.
 const UITLICHTEN_S: f32 = 0.5;
 
@@ -1036,6 +1134,75 @@ fn licht_stoel_op(
         // alles is weer gewoon: de kopieën zijn niet meer nodig
         u.straalt.clear();
         u.gewoon.clear();
+    }
+}
+
+/// Het neutrale beukenhout van bladen en randen (#C9A87C): het model gaf ze een oranje of
+/// geelgroene kleur, die in close-ups zalmroze en limoengroen las.
+const BEUKEN: Srgba = Srgba::rgb(0xC9 as f32 / 255.0, 0xA8 as f32 / 255.0, 0x7C as f32 / 255.0);
+/// Het hout dat neutraal beuken wordt: de bureaubladen, de kuip van de Stoelen, de balies en de
+/// tafels voor de Voorzitter. Elk houdt zijn eigen helderheid.
+const HOUT: [&str; 9] = [
+    "perenhout",
+    "perenhout_blad",
+    "middenvak_blad",
+    "balies_fineer_lichta",
+    "balies_fineer_lichtb",
+    "balies_fineer_middena",
+    "balies_fineer_middenb",
+    "balies_fineer_donkera",
+    "balies_fineer_donkerb",
+];
+/// De rand van de bureaubladen en balies: hetzelfde hout, donkerder, zodat het blad een rand
+/// houdt zonder te gloeien.
+const HOUTRAND: [&str; 2] = ["desk_rand", "balies_bladrand"];
+/// De kleur van de rand: beuken op deze helderheid.
+const RAND_DONKER: f32 = 0.55;
+/// Het leer van de Stoelen is matte stof: geen glans van de reflecties, geen snoepkleur.
+const STOF_RUWHEID: f32 = 0.85;
+const STOF_REFLECTIE: f32 = 0.3;
+
+/// De helderheid van een lineaire kleur, zoals het oog hem ziet (Rec. 709).
+fn helderheid(k: LinearRgba) -> f32 {
+    0.2126 * k.red + 0.7152 * k.green + 0.0722 * k.blue
+}
+
+/// Het hout in neutraal beuken met de helderheid van `oud`; de rand vast iets donkerder.
+fn neutraal_hout(oud: LinearRgba, rand: bool) -> LinearRgba {
+    let beuken = LinearRgba::from(BEUKEN);
+    let f = if rand { RAND_DONKER } else { helderheid(oud) / helderheid(beuken) };
+    LinearRgba::new(beuken.red * f, beuken.green * f, beuken.blue * f, oud.alpha)
+}
+
+/// Stelt het hout en het leer uit het model bij, één keer per materiaal en vóór de Stoelen hun
+/// kleur krijgen en de Zaal dimt (die nemen de bijgestelde kleur als hun eigen):
+/// - hout ([`HOUT`], [`HOUTRAND`]) naar neutraal beuken;
+/// - het leer van de Stoelen ([`STOEL_LEER`]) naar matte stof, zonder de ruwheidstextuur die het
+///   liet glanzen als plastic.
+fn stel_stof_en_hout_bij(
+    nieuw: Query<(&GltfMaterialName, &MeshMaterial3d<StandardMaterial>), Added<GltfMaterialName>>,
+    mut materialen: ResMut<Assets<StandardMaterial>>,
+    mut gedaan: Local<std::collections::HashSet<AssetId<StandardMaterial>>>,
+) {
+    for (naam, materiaal) in &nieuw {
+        let naam = naam.0.as_str();
+        let (hout, rand, leer) = (HOUT.contains(&naam), HOUTRAND.contains(&naam), naam == STOEL_LEER);
+        if !(hout || rand || leer) || !gedaan.insert(materiaal.0.id()) {
+            continue;
+        }
+        let Some(mut m) = materialen.get_mut(&materiaal.0) else {
+            // een glTF-scène komt pas in de wereld als zijn materialen geladen zijn
+            warn!("materiaal {naam} nog niet geladen: niet bijgesteld");
+            continue;
+        };
+        if leer {
+            m.metallic_roughness_texture = None;
+            m.perceptual_roughness = STOF_RUWHEID;
+            m.metallic = 0.0;
+            m.reflectance = STOF_REFLECTIE;
+        } else {
+            m.base_color = neutraal_hout(LinearRgba::from(m.base_color), rand).into();
+        }
     }
 }
 
@@ -1222,7 +1389,7 @@ mod tests {
         // VOORBEELDGEGEVENS: alle Stoelen rood (#d4202c); het leer krijgt de helft (lineair) door de textuur
         zet_stand(&mut app, 1, vec!["#d4202c".parse().unwrap(); 150]);
         app.update();
-        let rood_half = Srgba::from(LinearRgba::from(Color::srgb_u8(0xd4, 0x20, 0x2c)) * 0.5);
+        let rood_half = Srgba::from(leer_in_de_zaal(Kleur { r: 0xd4, g: 0x20, b: 0x2c }));
         let leer = leerkleuren(&mut app);
         let fout: Vec<usize> = (0..150)
             .filter(|i| !ongeveer(leer[*i], rood_half))
@@ -1288,7 +1455,7 @@ mod tests {
         // VOORBEELDGEGEVENS: alle Stoelen rood, daarna alle Stoelen groen
         let rood: Kleur = "#d4202c".parse().unwrap();
         let groen: Kleur = "#00ae41".parse().unwrap();
-        let half = |k: Kleur| Srgba::from(LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * 0.5);
+        let half = |k: Kleur| Srgba::from(leer_in_de_zaal(k));
         zet_stand(&mut app, 1, vec![rood; 150]);
         app.update();
         assert!(leerkleuren(&mut app).iter().all(|k| ongeveer(*k, half(rood))), "de eerste Stand meteen");
@@ -1347,7 +1514,7 @@ mod tests {
         app.update();
         wacht(&mut app, 0.75);
         let leer = leerkleuren(&mut app);
-        let groen = Srgba::from(LinearRgba::from(Color::srgb_u8(0x00, 0xae, 0x41)) * 0.5);
+        let groen = Srgba::from(leer_in_de_zaal(Kleur { r: 0x00, g: 0xae, b: 0x41 }));
         assert!(!ongeveer(leer[0], groen), "halverwege nog niet groen");
         assert!(leer.iter().all(|k| ongeveer(*k, leer[0])), "halverwege links en rechts gelijk");
         wacht(&mut app, 0.8);
@@ -1369,7 +1536,7 @@ mod tests {
         let stand = Stand { stoelkleuren: kleuren.clone(), kleurovergang: opbouw, ..default() };
         app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 1, stand: stand.clone() });
         app.update();
-        let lin = |k: Kleur| Srgba::from(LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * 0.5);
+        let lin = |k: Kleur| Srgba::from(leer_in_de_zaal(k));
         let stap = |app: &App| app.world().resource::<Opbouwstand>().stap.map(|(k, _)| k);
         let tel = |app: &mut App, k: Kleur| leerkleuren(app).iter().filter(|l| ongeveer(**l, lin(k))).count();
 
@@ -1453,7 +1620,7 @@ mod tests {
             Some(GenummerdeStand { volgnummer: 2, stand });
         app.update();
         wacht(&mut app, 0.52);
-        let groen = Srgba::from(LinearRgba::from(Color::srgb_u8(0x00, 0xae, 0x41)) * 0.5);
+        let groen = Srgba::from(leer_in_de_zaal(Kleur { r: 0x00, g: 0xae, b: 0x41 }));
         assert!(leerkleuren(&mut app).iter().all(|k| ongeveer(*k, groen)), "snelheid 200: na een halve seconde klaar");
     }
 
@@ -1615,7 +1782,7 @@ mod tests {
         // nieuwe Stoelkleuren (zoals een Zetelverdeling): de Stoel straalt in de nieuwe kleur
         zet_persoonskaart(&mut app, 2, Some(stoel), vec!["#d4202c".parse().unwrap(); 150]);
         wacht(&mut app, 2.0);
-        let rood_half = Srgba::from(LinearRgba::from(Color::srgb_u8(0xd4, 0x20, 0x2c)) * 0.5);
+        let rood_half = Srgba::from(leer_in_de_zaal(Kleur { r: 0xd4, g: 0x20, b: 0x2c }));
         assert!(ongeveer(leerkleuren(&mut app)[i], rood_half));
         // gekleurd leer straalt zacht in zijn kleur (de Kleurkracht); de uitgelichte Stoel feller
         let s = straling(&mut app);

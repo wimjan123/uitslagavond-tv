@@ -133,8 +133,8 @@ fn bij_toon_licht_de_stoel_op_en_gaat_de_camera_naar_het_shot_van_die_stoel() {
     assert!(!p.stand.camera.knip, "bewegen, zoals naar een Standpunt");
     assert_eq!(p.stand.camerastand_van(&p.stand.camera.standpunt), shot_op_stoel(stoel));
     assert_eq!(p.stand.ether.as_ref().unwrap().graphic.uitgelichte_stoel(), Some(stoel));
-    // de Zaal houdt de kleuren van de vorige Graphic
-    assert!(p.stand.stoelkleuren.is_empty());
+    // alle Stoelen grijs (in de Zaal donker neutraal): alleen de uitgelichte Stoel valt op
+    assert_eq!(p.stand.stoelkleuren, vec![gedeeld::sjabloon::GRIJS; gedeeld::AANTAL_STOELEN]);
 }
 
 #[test]

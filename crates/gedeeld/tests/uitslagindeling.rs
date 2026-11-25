@@ -158,7 +158,8 @@ fn een_fractie_zonder_lijst_staat_direct_rechts_naast_haar_oude_fractie() {
 #[test]
 fn de_lijn_bij_76_scheidt_de_eerste_75_stoelen_van_links_van_de_rest() {
     use gedeeld::uitslagindeling::lijn_bij_76;
-    let (voor, achter) = lijn_bij_76();
+    let lijn = lijn_bij_76();
+    let (voor, achter) = (lijn[0], lijn[lijn.len() - 1]);
     // aan welke kant van de lijn (boven gezien) een punt ligt
     let kant = |p: [f32; 3]| {
         (achter[0] - voor[0]) * (p[2] - voor[2]) - (achter[2] - voor[2]) * (p[0] - voor[0])
@@ -175,4 +176,15 @@ fn de_lijn_bij_76_scheidt_de_eerste_75_stoelen_van_links_van_de_rest() {
     let stralen: Vec<f32> = STOELPLEKKEN.iter().map(|p| straal(*p)).collect();
     assert!(straal(voor) < stralen.iter().copied().fold(f32::MAX, f32::min));
     assert!(straal(achter) > stralen.iter().copied().fold(0.0, f32::max));
+    // plat op de vloer van het middenpad: elk stuk is een trede (vlak) of een stootbord (recht
+    // omhoog), van voor naar achter, en alle punten op één rechte lijn boven gezien
+    for paar in lijn.windows(2) {
+        let [a, b] = [paar[0], paar[1]];
+        let (vlak, omhoog) = (a[1] == b[1], (a[0], a[2]) == (b[0], b[2]) && b[1] > a[1]);
+        assert!(vlak != omhoog, "{a:?} -> {b:?}");
+        assert!(straal(b) >= straal(a));
+        assert!(kant(b).abs() < 1e-3, "{b:?} ligt niet op de lijn");
+    }
+    assert!(voor[1] < 0.05, "de lijn begint op de vloer, niet op de hoogte van de rugleuningen");
+    assert_eq!(lijn.iter().filter(|p| p[1] > voor[1]).map(|p| p[1].to_bits()).collect::<std::collections::BTreeSet<_>>().len(), 5, "vijf treden omhoog");
 }

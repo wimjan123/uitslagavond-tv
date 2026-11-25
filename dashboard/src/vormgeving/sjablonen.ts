@@ -142,6 +142,7 @@ export const ACHTERGRONDEN = [
 export const STOELEN: { stoelen: Stoelen; naam: string }[] = [
   { stoelen: "Gegevens", naam: "Kleuren volgens de gegevens" },
   { stoelen: "PartijUitgelicht", naam: "Gekozen Partij licht op, de rest grijs" },
+  { stoelen: "StoelUitgelicht", naam: "Alleen de Stoel van het Kamerlid licht op, de rest donker" },
   { stoelen: "Houden", naam: "Houden hun kleur" },
   { stoelen: "Uit", naam: "Uit: hun eigen blauwe leer" },
 ];

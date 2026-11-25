@@ -155,23 +155,45 @@ pub fn stoelen_van_links_naar_rechts() -> Vec<usize> {
     v
 }
 
-/// De lijn bij Zetel 76 in de Zaal (besluit #7): tussen de 75e en de 76e Stoel van links, van
-/// voor de voorste rij tot achter de achterste, boven gezien recht vanuit het midden van de Zaal.
-/// Begin en eind in meter in de assen van [`STOELPLEKKEN`], op de hoogte van de rugleuningen.
-pub fn lijn_bij_76() -> ([f32; 3], [f32; 3]) {
+/// Hoe hoog de bovenrand van een rugleuning boven de vloer van zijn rij staat, en hoe ver achter
+/// de rugleuning de trede naar de volgende rij ligt, in meter (gemeten in `zaal.glb`).
+const RUGLEUNING_BOVEN_VLOER: f32 = 0.805;
+const TREDE_ACHTER_RUGLEUNING: f32 = 0.2;
+/// Zo ver ligt de lijn bij 76 boven de vloer, zodat hij er niet mee door elkaar flikkert.
+const LIJN_BOVEN_VLOER: f32 = 0.01;
+
+/// De lijn bij Zetel 76 in de Zaal (besluit #7): tussen de 75e en de 76e Stoel van links, boven
+/// gezien recht vanuit het midden van de Zaal, plat op de vloer van het middenpad. Hij loopt van
+/// voor de voorste rij tot net voor de achterwand en volgt de treden: over elke trede en langs
+/// elk stootbord omhoog, zonder eigen hoogte. Punten in meter in de assen van [`STOELPLEKKEN`],
+/// van voor naar achter.
+pub fn lijn_bij_76() -> Vec<[f32; 3]> {
     let hoek = |i: usize| STOELPLEKKEN[i][0].atan2(-STOELPLEKKEN[i][2]);
     let straal = |p: &[f32; 3]| p[0].hypot(p[2]);
     let volgorde = stoelen_van_links_naar_rechts();
     let laatste = crate::coalitie::MEERDERHEID as usize - 1;
     let h = (hoek(volgorde[laatste - 1]) + hoek(volgorde[laatste])) / 2.0;
-    let (binnen, buiten) = STOELPLEKKEN
-        .iter()
-        .fold((f32::MAX, 0.0f32), |(b, u), p| (b.min(straal(p)), u.max(straal(p))));
-    let (laag, hoog) = STOELPLEKKEN
-        .iter()
-        .fold((f32::MAX, 0.0f32), |(l, h), p| (l.min(p[1]), h.max(p[1])));
-    let punt = |r: f32, y: f32| [r * h.sin(), y, -r * h.cos()];
-    (punt(binnen - 0.6, laag), punt(buiten + 0.6, hoog))
+    // de rijen van voor naar achter: de straal en de vloer van elke rij
+    let mut rijen: Vec<(f32, f32)> = Vec::new();
+    for p in &STOELPLEKKEN {
+        let vloer = p[1] - RUGLEUNING_BOVEN_VLOER;
+        match rijen.iter_mut().find(|(_, v)| (*v - vloer).abs() < 0.01) {
+            Some(rij) => rij.0 = rij.0.max(straal(p)),
+            None => rijen.push((straal(p), vloer)),
+        }
+    }
+    rijen.sort_by(|a, b| a.0.total_cmp(&b.0));
+    let binnen = STOELPLEKKEN.iter().map(straal).fold(f32::MAX, f32::min);
+    let punt = |r: f32, y: f32| [r * h.sin(), y + LIJN_BOVEN_VLOER, -r * h.cos()];
+    let mut lijn = vec![punt(binnen - 0.6, rijen[0].1)];
+    for paar in rijen.windows(2) {
+        let trede = paar[0].0 + TREDE_ACHTER_RUGLEUNING;
+        lijn.push(punt(trede, paar[0].1));
+        lijn.push(punt(trede, paar[1].1));
+    }
+    let (achter, vloer) = rijen[rijen.len() - 1];
+    lijn.push(punt(achter + 2.0 * TREDE_ACHTER_RUGLEUNING, vloer));
+    lijn
 }
 
 /// Verdeelt de Stoelen: elk deel (kleur en aantal Zetels) krijgt op volgorde de volgende
@@ -342,16 +364,16 @@ impl Zetelstand {
     }
 
     /// De kleur per Stoel in de Coalitiebouwer: de `gekozen` Partijen samen als één blok links,
-    /// daarna de rest donker, elk in de volgorde van de Uitslagindeling (besluit #7). Altijd in
-    /// de Uitslagindeling, ook als de kopie uit de Zaalindeling komt.
+    /// elk in de volgorde van de Uitslagindeling (besluit #7), en de rest grijs: in de Zaal
+    /// hetzelfde donkere neutraal als bij Partij uitgelicht. Altijd in de Uitslagindeling, ook
+    /// als de kopie uit de Zaalindeling komt.
     pub fn coalitiekleuren(&self, gekozen: &[String]) -> Vec<Kleur> {
         let volgorde: Vec<String> = self.partijen.iter().map(|p| p.sleutel.clone()).collect();
         let kleur = |s: &str| {
             self.partijen.iter().find(|p| p.sleutel == s).and_then(|p| p.kleur.parse().ok()).unwrap_or(GRIJS)
         };
         verdeel(crate::coalitie::blokken(&volgorde, gekozen).into_iter().map(|(p, in_coalitie)| {
-            let k = kleur(&p);
-            (if in_coalitie { k } else { crate::coalitie::donker(k) }, self.set.zetels_van(&p))
+            (if in_coalitie { kleur(&p) } else { GRIJS }, self.set.zetels_van(&p))
         }))
     }
 

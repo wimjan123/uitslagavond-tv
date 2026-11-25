@@ -921,6 +921,9 @@ pub enum Stoelen {
     Gegevens,
     /// De Stoelen van de gekozen Partij in haar kleur, de rest grijs.
     PartijUitgelicht,
+    /// Alle Stoelen grijs (in de Zaal donker neutraal), zodat alleen de Stoel van het Kamerlid
+    /// op de Persoonskaart opvalt: die licht op in de kleur van zijn Partij.
+    StoelUitgelicht,
     /// Ze houden de kleuren van de vorige Graphic.
     Houden,
     /// Ze krijgen hun eigen leer terug, net als bij Kleur uit.
@@ -2152,7 +2155,8 @@ fn zetelverdeling() -> Sjabloon {
 /// De Persoonskaart: een zijpaneel rechts tot de rand van het beeld, met de foto, daaronder de
 /// Partij met de functie, de naam, een regel met extra gegevens en de vrije regel met een
 /// streepje in Accent ervoor. De Zaal
-/// blijft links in beeld, met de Stoel van het Kamerlid (zie [`crate::camera::shot_op_stoel`]).
+/// blijft links in beeld, met de Stoel van het Kamerlid (zie [`crate::camera::shot_op_stoel`]):
+/// alleen die Stoel in de kleur van zijn Partij, de rest donker ([`Stoelen::StoelUitgelicht`]).
 fn persoonskaart() -> Sjabloon {
     let open = |start| animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, start);
     let tekstblok = |p, bron, letter, grootte, kleur, een_regel| Blok {
@@ -2270,7 +2274,7 @@ fn persoonskaart() -> Sjabloon {
         groep: "Algemeen".into(),
         snelheid: 100,
         achtergrond: Achtergrond::Zaal,
-        stoelen: Stoelen::Gegevens,
+        stoelen: Stoelen::StoelUitgelicht,
         standpunt: None,
         blokken,
         kleurovergang: None,
