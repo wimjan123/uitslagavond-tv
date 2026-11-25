@@ -21,6 +21,7 @@ mod blokken;
 mod camera;
 mod graphic;
 mod kleurgolf;
+mod lens;
 mod lichtkaart;
 mod meting;
 mod occlusie;

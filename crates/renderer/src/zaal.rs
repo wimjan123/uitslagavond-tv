@@ -65,7 +65,7 @@ impl Plugin for ZaalPlugin {
                     .after(Afgewerkt),
             );
         if let Some(map) = &self.map {
-            app.add_plugins((OmgevingPlugin, AfwerkingPlugin, crate::occlusie::OcclusiePlugin, crate::schil::SchilPlugin, crate::studio::StudioPlugin))
+            app.add_plugins((OmgevingPlugin, AfwerkingPlugin, crate::occlusie::OcclusiePlugin, crate::schil::SchilPlugin, crate::studio::StudioPlugin, crate::lens::LensPlugin))
                 .insert_resource(ZaalMap(map.clone()))
                 .init_resource::<ModelGeladen>()
                 .insert_resource(GlobalAmbientLight {
@@ -613,9 +613,11 @@ fn straling_van(k: Kleur, kracht: f32) -> LinearRgba {
 }
 
 /// Bij de Opbouw: een Partij na haar stap wordt grijs en donker, met nog een kwart van haar kleur
-/// (council-ronde 3: met de tint erin waren kleine stappen als JA21 en BBB niet te vinden).
-const GEDIMD_KLEUR: f32 = 0.25;
-const GEDIMD_LICHT: f32 = 0.62;
+/// in beeld (council-ronde 3: met de tint erin waren kleine stappen als JA21 en BBB niet te
+/// vinden). Een donkere kleur verliest in beeld minder van zijn kleurigheid dan een volle, dus het
+/// leer krijgt minder dan een kwart mee.
+const GEDIMD_KLEUR: f32 = 0.12;
+const GEDIMD_LICHT: f32 = 0.5;
 
 /// Het leer van een gedimde Partij in de Opbouw (lineair).
 fn gedimd_leer(k: Kleur) -> LinearRgba {
@@ -1009,8 +1011,13 @@ struct LijnBij76 {
     camera: Option<Transform>,
 }
 
-/// Breedte van de lijn bij 76, in meter.
-const LIJN_76_BREEDTE: f32 = 0.16;
+/// Breedte van de lijn bij 76, in meter: smal, zodat hij leest als een lijn en niet als een strook
+/// (council-ronde 3).
+const LIJN_76_BREEDTE: f32 = 0.1;
+/// Het getal 76 klein op de vloer aan het voeteind van de lijn: zo hoog (meter), en zo ver voor
+/// het begin van de lijn.
+const GETAL_76_HOOGTE: f32 = 0.5;
+const GETAL_76_VOOR_LIJN: f32 = 0.12;
 /// Zo lang groeit de lijn van voor naar achter, of krimpt hij weer, bij snelheid 100.
 const LIJN_76_GROEIT: f32 = 0.6;
 /// Zo lang staat de camera stil voor de lijn verschijnt, in seconden: tijdens een camerarit
@@ -1061,11 +1068,92 @@ fn lijn_76_punten() -> Vec<Vec3> {
     gedeeld::uitslagindeling::lijn_bij_76().into_iter().map(Vec3::from).collect()
 }
 
+/// Het getal 76 als beeld: wit, met de dekking van de letters in de alfa.
+fn getal_76_beeld() -> Image {
+    use ab_glyph::{Font, FontRef, PxScale, ScaleFont, point};
+    use bevy::asset::RenderAssetUsages;
+    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+    let letter = FontRef::try_from_slice(include_bytes!("../assets/fonts/NunitoSans-ExtraBold.ttf"))
+        .expect("NunitoSans ExtraBold");
+    let schaal = PxScale::from(192.0);
+    let geschaald = letter.as_scaled(schaal);
+    let rand = 8.0;
+    let mut x = rand;
+    let mut tekens = Vec::new();
+    for c in "76".chars() {
+        let id = geschaald.glyph_id(c);
+        tekens.push(id.with_scale_and_position(schaal, point(x, rand + geschaald.ascent())));
+        x += geschaald.h_advance(id);
+    }
+    let (b, h) = ((x + rand).ceil() as usize, (geschaald.ascent() - geschaald.descent() + 2.0 * rand).ceil() as usize);
+    let mut alfa = vec![0.0_f32; b * h];
+    for t in tekens {
+        if let Some(o) = letter.outline_glyph(t) {
+            let grens = o.px_bounds();
+            o.draw(|gx, gy, dekking| {
+                let (px, py) = (grens.min.x as i64 + gx as i64, grens.min.y as i64 + gy as i64);
+                if (0..b as i64).contains(&px) && (0..h as i64).contains(&py) {
+                    let a = &mut alfa[py as usize * b + px as usize];
+                    *a = a.max(dekking);
+                }
+            });
+        }
+    }
+    let data = alfa.iter().flat_map(|a| [255, 255, 255, (a.clamp(0.0, 1.0) * 255.0).round() as u8]).collect();
+    Image::new(
+        Extent3d { width: b as u32, height: h as u32, depth_or_array_layers: 1 },
+        TextureDimension::D2,
+        data,
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::RENDER_WORLD,
+    )
+}
+
+/// Het vlak voor het getal 76: plat op de vloer voor het begin van de lijn, te lezen vanaf de
+/// kant van de Voorzitter (de bovenkant van het getal wijst langs de lijn naar achteren).
+fn getal_76_vlak(lijn: &[Vec3], verhouding: f32) -> Mesh {
+    use bevy::asset::RenderAssetUsages;
+    use bevy::mesh::{Indices, PrimitiveTopology};
+    let langs = (lijn[1] - lijn[0]).with_y(0.0).normalize_or(Vec3::NEG_Z);
+    let rechts = langs.cross(Vec3::Y);
+    let (h, b) = (GETAL_76_HOOGTE, GETAL_76_HOOGTE * verhouding);
+    let midden = lijn[0] - langs * (GETAL_76_VOOR_LIJN + h / 2.0);
+    let hoek = |x: f32, y: f32| (midden + rechts * (x * b / 2.0) + langs * (y * h / 2.0)).to_array();
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![hoek(-1.0, 1.0), hoek(1.0, 1.0), hoek(1.0, -1.0), hoek(-1.0, -1.0)])
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 1.0, 0.0]; 4])
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+        .with_inserted_indices(Indices::U32(vec![0, 2, 1, 0, 3, 2]))
+}
+
+/// Het getal 76 op de vloer bij de lijn bij 76.
+#[derive(Component)]
+struct Getal76;
+
 fn zet_lijn_bij_76(
     mut commands: Commands,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materialen: ResMut<Assets<StandardMaterial>>,
+    mut beelden: ResMut<Assets<Image>>,
 ) {
+    let beeld = getal_76_beeld();
+    let verhouding = beeld.width() as f32 / beeld.height() as f32;
+    commands.spawn((
+        Getal76,
+        Mesh3d(meshes.add(getal_76_vlak(&lijn_76_punten(), verhouding))),
+        MeshMaterial3d(materialen.add(StandardMaterial {
+            base_color: Color::WHITE.with_alpha(0.0),
+            base_color_texture: Some(beelden.add(beeld)),
+            unlit: true,
+            alpha_mode: AlphaMode::Blend,
+            double_sided: true,
+            cull_mode: None,
+            ..default()
+        })),
+        Transform::IDENTITY,
+        Visibility::Hidden,
+        bevy::light::NotShadowCaster,
+    ));
     commands.spawn((
         LijnBij76 { zicht: 0.0, stil: 0.0, camera: None },
         Mesh3d(meshes.add(lijnstrook(&lijn_76_punten(), 0.0))),
@@ -1117,6 +1205,7 @@ fn toon_lijn_bij_76(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materialen: ResMut<Assets<StandardMaterial>>,
     mut lijn: Query<(&mut LijnBij76, &Mesh3d, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
+    mut getal: Query<(&mut Visibility, &MeshMaterial3d<StandardMaterial>), (With<Getal76>, Without<LijnBij76>)>,
     mut punten: Local<Vec<Vec3>>,
 ) {
     let Some(stand) = standen.huidig.as_ref().map(|s| &s.stand) else {
@@ -1155,6 +1244,17 @@ fn toon_lijn_bij_76(
         {
             m.base_color = kleur;
         }
+        // het getal komt op zodra de lijn het voeteind uit is, en gaat met hem weg
+        let dekking = crate::animatie::zacht_uit((l.zicht * 3.0).min(1.0));
+        for (mut z, m) in &mut getal {
+            z.set_if_neq(if dekking > 0.0 { Visibility::Inherited } else { Visibility::Hidden });
+            let kleur = kleur.with_alpha(dekking);
+            if materialen.get(&m.0).is_some_and(|m| m.base_color != kleur)
+                && let Some(mut m) = materialen.get_mut(&m.0)
+            {
+                m.base_color = kleur;
+            }
+        }
     }
 }
 
@@ -1168,8 +1268,8 @@ const UITLICHTEN_S: f32 = 0.5;
 /// De Stoel die oplicht (Persoonskaart): welke, hoe ver, en per materiaal van het leer de
 /// stralende kopie.
 #[derive(Resource, Default)]
-struct Uitlichting {
-    stoel: Option<usize>,
+pub struct Uitlichting {
+    pub stoel: Option<usize>,
     /// 0 uit, 1 helemaal aan.
     sterkte: f32,
     /// De kleur van de Partij van wie er zit.

@@ -17,6 +17,8 @@ clap.workspace = true
 image = { version = "0.25", default-features = false, features = ["jpeg"] }
 serde.workspace = true
 serde_json.workspace = true
+# het getal 76 op de vloer van de Zaal; dezelfde versie als in Bevy
+ab_glyph = "0.2"
 # Geen gamepad (die leest de server) en geen geluid.
 bevy = { workspace = true, features = [
     "default_app",

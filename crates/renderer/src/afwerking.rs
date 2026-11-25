@@ -67,6 +67,21 @@ pub const PLAFOND: Afwerking = Afwerking {
     ..GEWOON
 };
 
+/// De publiekstribune met het witte balkonfront: veel donkerder, zodat in het totaalbeeld de boog
+/// van de Kamerbanken het lichtste deel is en niet het balkon erboven (council-ronde 3). Daar
+/// staat geen informatie, en bovenin komen de Graphics.
+pub const TRIBUNE: Afwerking = Afwerking {
+    verzadiging: 0.8,
+    kleur: [0.42, 0.43, 0.45],
+    ..GEWOON
+};
+
+/// De wand achter de banken: iets rustiger.
+pub const WAND: Afwerking = Afwerking {
+    kleur: [0.8, 0.8, 0.82],
+    ..GEWOON
+};
+
 /// De afwerking bij een materiaal uit het model.
 pub fn afwerking(materiaal: &str) -> Option<Afwerking> {
     Some(match materiaal {
@@ -77,6 +92,9 @@ pub fn afwerking(materiaal: &str) -> Option<Afwerking> {
         "stoel_leer" | "stoel_bies" | "stoel_naad" | "balies_leer" => STOF,
         "tapijt" => TAPIJT,
         "plafond" | "daklicht_plafond" => PLAFOND,
+        "tribune_band" | "tribune_stof" | "tribune_stof_zij" | "tribune_achter" | "tribune_kop"
+        | "tribune_trede" | "tribune_tapijt" => TRIBUNE,
+        "wand" => WAND,
         _ => return None,
     })
 }

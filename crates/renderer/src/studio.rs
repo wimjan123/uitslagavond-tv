@@ -30,7 +30,7 @@ const VERLOOP_KLEUR: Srgba = Srgba::rgb(0x0b as f32 / 255.0, 0x0f as f32 / 255.0
 /// Stoelen (1): hoe dicht het daar is. Dicht tot boven de tribune, en weg waar de Stoelen beginnen.
 const BOVEN: [(f32, f32); 7] = [(0.0, 0.9), (0.24, 0.85), (0.46, 0.72), (0.65, 0.5), (0.81, 0.24), (0.93, 0.07), (1.0, 0.0)];
 /// Het verloop onderin, van net onder de voorste Stoelen (0) tot de onderrand van het beeld (1).
-const ONDER: [(f32, f32); 5] = [(0.0, 0.0), (0.27, 0.16), (0.57, 0.36), (0.85, 0.5), (1.0, 0.55)];
+const ONDER: [(f32, f32); 5] = [(0.0, 0.0), (0.22, 0.24), (0.5, 0.48), (0.8, 0.64), (1.0, 0.7)];
 /// Zoveel ruimte (van -1 tot 1 over de hoogte) blijft tussen het verloop en de Stoelen.
 const MARGE: f32 = 0.01;
 /// Een rugleuning met de Stoel eronder: van de bovenrand tot zoveel meter lager.
