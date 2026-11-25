@@ -495,8 +495,9 @@ fn labelbreedte<'a>(fracties: impl Iterator<Item = &'a Fractielabel>, g: f32, ko
 /// De hoogte van de uitleg onder de Namenlijst.
 const UITLEG_HOOG: f32 = 54.0;
 
-/// De ondergrond van een label of tegel van een Fractie: wit op 10 procent over het paneel.
-const NEUTRAAL: Color = Color::srgba(1.0, 1.0, 1.0, 0.10);
+/// De ondergrond van een label of tegel van een Fractie: wit op 7 procent over het paneel, zodat
+/// de tegels niet het lichtste vlak in beeld zijn.
+const NEUTRAAL: Color = Color::srgba(1.0, 1.0, 1.0, 0.07);
 /// De streep in de partijkleur links in een label of tegel.
 const STREEP: f32 = 10.0;
 
