@@ -1006,7 +1006,7 @@ fn kleur_stoelen(
 ///
 /// Het extra licht op de top van de flits (1 is twee keer zo licht) en wat daarna blijft.
 const OPBOUWLICHT_TOP: f32 = 6.5;
-const OPBOUWLICHT_BLIJFT: f32 = 0.7;
+const OPBOUWLICHT_BLIJFT: f32 = 0.85;
 /// Zo ver buiten de buitenste Stoel van het blok reikt de kring, in meter; de rand loopt zacht af.
 const OPBOUWLICHT_RAND: f32 = 2.0;
 /// Hoeveel van de partijkleur in het licht zit; de rest is warm wit.
