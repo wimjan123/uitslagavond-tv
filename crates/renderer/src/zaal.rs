@@ -640,7 +640,7 @@ fn gekalibreerd(k: Kleur, nabij: f32) -> LinearRgba {
 /// In een wijd shot is de kleur van het leer minder vol dan de kalibratie zegt: met de volle kleur
 /// lazen de Stoelen als snoepkleurig (council-ronde 4), en met 0,88 nog steeds tegen de donkere
 /// Zaal (ronde 5). Van dichtbij geldt dit niet.
-const BREED_VERZADIGING: f32 = 0.72;
+const BREED_VERZADIGING: f32 = 0.64;
 /// Van dichtbij: zoveel van de kleurigheid van het leer.
 const NABIJ_VERZADIGING: f32 = 0.74;
 
@@ -1030,6 +1030,9 @@ fn sleutelplek(camera: &Transform, afstand: f32) -> (Vec3, Vec3) {
 /// Het wapen bij deze nabijheid: van wit en zacht stralend (`wit`) naar een donkere laag over het
 /// leer, en de straling.
 fn wapen_bij(wit: Color, nabij: f32) -> (Color, LinearRgba) {
+    if nabij <= 0.0 {
+        return (wit, WAPEN_STRAALT);
+    }
     let wit = LinearRgba::from(wit);
     let donker = LinearRgba::new(0.0, 0.0, 0.0, WAPEN_NABIJ_DEKKING);
     (wit.mix(&donker, nabij).into(), WAPEN_STRAALT * (1.0 - nabij))
@@ -1740,6 +1743,11 @@ fn zet_lijn_bij_76(
     ));
 }
 
+/// Of de lijn bij 76 op de vloer hoort bij deze Graphic in de Ether: alleen bij de Coalitie.
+fn lijn_76_bij(graphic: Option<&gedeeld::Graphic>) -> bool {
+    matches!(graphic, Some(gedeeld::Graphic::Coalitie { .. }))
+}
+
 /// De kleur van lijn en getal (lineair, boven 1 voor de gloed) bij deze kleur Accent.
 fn lijn_76_kleur(accent: Kleur) -> LinearRgba {
     let mut c = Oklcha::from(Srgba::rgb_u8(accent.r, accent.g, accent.b));
@@ -1794,7 +1802,7 @@ fn toon_lijn_bij_76(
     let Some(stand) = standen.huidig.as_ref().map(|s| &s.stand) else {
         return;
     };
-    let coalitie = matches!(stand.ether.as_ref().map(|e| &e.graphic), Some(gedeeld::Graphic::Coalitie { .. }));
+    let coalitie = lijn_76_bij(stand.ether.as_ref().map(|e| &e.graphic));
     if punten.is_empty() {
         *punten = lijn_76_punten();
     }
@@ -2742,4 +2750,68 @@ mod tests {
         assert_eq!(s[100], 0.0);
         assert!(s[0] > 0.0);
     }
+
+    #[test]
+    fn de_lijn_bij_76_staat_alleen_bij_de_coalitie_en_is_licht_roze() {
+        let partijen = vec!["d66".to_string(), "cda".to_string()];
+        let coalitie = gedeeld::Graphic::Coalitie { set: "tk2025".into(), partijen: partijen.clone(), cijfers: None };
+        let balk = gedeeld::Graphic::Coalitiebalk { set: "tk2025".into(), partijen, cijfers: None };
+        assert!(lijn_76_bij(Some(&coalitie)));
+        assert!(!lijn_76_bij(Some(&balk)), "de Coalitiebalk heeft 76 al in de balk");
+        assert!(!lijn_76_bij(None));
+        // VOORBEELDGEGEVENS: een rode Accent; de lijn is veel lichter en houdt zijn tint
+        let accent = Kleur { r: 0xe8, g: 0x2e, b: 0x5c };
+        let lijn = Oklcha::from(lijn_76_kleur(accent) * (1.0 / LIJN_76_LICHT));
+        let eigen = Oklcha::from(Srgba::rgb_u8(accent.r, accent.g, accent.b));
+        assert!(lijn.lightness >= LIJN_76_L - 0.01, "{lijn:?}");
+        assert!((lijn.hue - eigen.hue).abs() < 3.0 && lijn.chroma > 0.05, "roze, niet wit: {lijn:?} {eigen:?}");
+    }
+
+    #[test]
+    fn al_geweest_is_grijs_en_leeg_is_donker_blauwgrijs_niet_zwart() {
+        // VOORBEELDGEGEVENS: de felste kleuren uit het palet van een uitslag
+        for k in ["#e8336b", "#2dbe4f", "#0a8a74", "#2b63d9", "#a8c81e", "#ff7a1a"] {
+            let g = Oklcha::from(gedimd_leer(k.parse().unwrap()));
+            assert!(g.chroma <= GEDIMD_HOOGSTE_C + 1e-3, "{k}: {g:?}");
+        }
+        let leeg = Srgba::from(leeg_leer() * (1.0 / kalibratie().albedo));
+        assert!(leeg.blue > leeg.red + 0.03, "blauwgrijs: {leeg:?}");
+        let licht = helderheid(LinearRgba::from(leeg));
+        assert!(licht > 0.04, "geen zwart gat: {licht}");
+        assert!(helderheid(gedimd_leer("#2b63d9".parse().unwrap())) > 2.0 * helderheid(leeg_leer()), "donkerder dan al geweest");
+    }
+
+    #[test]
+    fn het_sleutellicht_hangt_opzij_onder_het_plafond_en_het_wapen_wordt_reliëf() {
+        // de camera van Aanschuiven bij een blok links, 5 m van de Stoelen
+        let camera = Transform::from_xyz(-2.0, 3.0, 1.0).looking_at(Vec3::new(-5.0, 1.0, -3.0), Vec3::Y);
+        let (plek, doel) = sleutelplek(&camera, 5.0);
+        assert!(plek.y <= SLEUTEL_HOOGSTE_Y && plek.y > doel.y + 1.5, "van boven, onder het plafond: {plek}");
+        let naar_lamp = (plek - doel).with_y(0.0).normalize();
+        let naar_camera = (camera.translation - doel).with_y(0.0).normalize();
+        let hoek = naar_lamp.angle_between(naar_camera).to_degrees();
+        assert!(hoek > 45.0, "van opzij, niet van voren: {hoek}");
+        let wit = Color::srgb(0.8, 0.8, 0.78);
+        assert_eq!(wapen_bij(wit, 0.0), (wit, WAPEN_STRAALT), "in een wijd shot wit");
+        let (k, straalt) = wapen_bij(wit, 1.0);
+        let k = LinearRgba::from(k);
+        assert!(k.red < 0.01 && k.alpha < 0.5, "van dichtbij een donkere laag over het leer: {k:?}");
+        assert_eq!(straalt.red + straalt.green + straalt.blue, 0.0, "zonder eigen licht");
+    }
+
+    #[test]
+    fn de_lichtbundel_van_de_titelkaart_draait_naar_de_camera() {
+        let a = gedeeld::camera::Standpunt::vaste()[0].stand;
+        let camera = Vec3::from(a.positie);
+        let t = bundelstand(camera);
+        let as_ = (BUNDEL_BOVEN - BUNDEL_ONDER).normalize();
+        assert!((t.rotation * Vec3::Y).distance(as_) < 1e-4, "y langs de bundel");
+        let naar = (camera - (BUNDEL_BOVEN + BUNDEL_ONDER) / 2.0).normalize();
+        let vlak = t.rotation * Vec3::Z;
+        assert!(vlak.dot(naar) > 0.9, "het vlak kijkt naar de camera: {vlak} {naar}");
+        // en de bundel staat vanaf A in beeld, van boven naar de middelste Stoelen
+        let onder = a.in_beeld(BUNDEL_ONDER.to_array()).unwrap();
+        assert!(onder[0].abs() < 0.05 && onder[1].abs() < 0.5, "{onder:?}");
+    }
 }
+

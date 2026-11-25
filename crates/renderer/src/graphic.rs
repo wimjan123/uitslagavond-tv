@@ -381,7 +381,7 @@ const ONSCHERP_S: f32 = 0.5;
 /// stonden achter de stemmingstabellen grote groene en rode vlekken (gemiddeld RGB 23, 40, 32
 /// tegen 5, 4, 4 achter Uitslag per partij, council-ronde 5).
 const ONSCHERP_VERZADIGING: f32 = 0.12;
-const ONSCHERP_STOPS: f32 = 2.5;
+const ONSCHERP_STOPS: f32 = 3.5;
 
 /// De kleurcorrectie van de Zaal achter Zaal donker, bij onscherpte `f` (0 tot 1).
 fn kleurcorrectie_achter_donker(f: f32) -> bevy::render::view::ColorGrading {
@@ -1262,4 +1262,15 @@ mod tests {
         assert!(app.world().get::<DepthOfField>(voorbeeld).is_some(), "het Voorbeeld is meteen onscherp");
     }
 
+    #[test]
+    fn achter_zaal_donker_verliest_de_zaal_zijn_kleur_en_wordt_donkerder() {
+        let gewoon = crate::beeld::BEELD.kleurcorrectie();
+        let scherp = kleurcorrectie_achter_donker(0.0);
+        assert_eq!((scherp.global.post_saturation, scherp.global.exposure), (gewoon.global.post_saturation, gewoon.global.exposure));
+        let donker = kleurcorrectie_achter_donker(1.0);
+        assert!(donker.global.post_saturation <= 0.15, "bijna grijs: {}", donker.global.post_saturation);
+        assert!(donker.global.exposure <= -1.0, "donkerder: {}", donker.global.exposure);
+        assert_eq!(donker.midtones.saturation, gewoon.midtones.saturation, "de rest van de correctie blijft");
+    }
 }
+

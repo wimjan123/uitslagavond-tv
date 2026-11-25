@@ -448,4 +448,27 @@ mod tests {
             vec![50, 50, 50, 255, 150, 150, 150, 255]
         );
     }
+
+    #[test]
+    fn meer_relief_maakt_een_schuine_normaal_schuiner_en_laat_een_vlakke_staan() {
+        // een vlakke normaal (128, 128, 255) en een iets schuine (140, 128, 254)
+        let mut beeld = Image::new(
+            Extent3d {
+                width: 2,
+                height: 1,
+                depth_or_array_layers: 1,
+            },
+            TextureDimension::D2,
+            vec![128, 128, 255, 255, 140, 128, 254, 255],
+            TextureFormat::Rgba8Unorm,
+            RenderAssetUsages::default(),
+        );
+        versterk_relief(&mut beeld, 4.0);
+        let d = beeld.data.unwrap();
+        assert!((i32::from(d[0]) - 128).abs() <= 1 && d[2] >= 254, "vlak blijft vlak: {:?}", &d[..4]);
+        assert!(d[4] > 160, "schuiner: {:?}", &d[4..8]);
+        let n = Vec3::new(f32::from(d[4]), f32::from(d[5]), f32::from(d[6])) / 127.5 - Vec3::ONE;
+        assert!((n.length() - 1.0).abs() < 0.02, "lengte 1: {n}");
+    }
 }
+
