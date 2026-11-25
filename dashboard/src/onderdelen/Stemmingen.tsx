@@ -342,8 +342,9 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
 
         <div className="uitkomst-blok">
           <div className="uitkomst">
-            <span className={`uitkomst-woord ${woordKlasse}`}>
-              {u.besluit ?? "Open"}
+            {/* Zolang de Stemming niet vastligt, is het besluit een tussenstand: neutraal en met "nu". */}
+            <span className={`uitkomst-woord ${u.besluit && !stemming.vastgelegd ? "uitkomst-tussen" : woordKlasse}`}>
+              {u.besluit && !stemming.vastgelegd ? `Nu ${u.besluit.toLowerCase()}` : (u.besluit ?? "Open")}
             </span>
             {u.besluit && !stemming.vastgelegd && (
               <span className="stempel" title="Nog niet vastgelegd: zo staat het nu">

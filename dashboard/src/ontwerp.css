@@ -431,3 +431,16 @@ details > summary { cursor: pointer; }
 .boog-oud .boog-totaal { color: var(--warn-amber); }
 .boog-oud .zacht { color: var(--warn-amber); }
 .tablet .coalitie-live-regel { padding-inline: 12px; }
+
+/* Tijdens typen: geen toetskappen in de multiviewer, want letters gaan naar het veld. */
+[data-typt] .multiviewer kbd { display: none; }
+/* Cameraritten: een eigen kopje, want één letter start een rit die tot 50 seconden live loopt. */
+.rit-kop { margin-top: 2px; font-size: 11.5px; font-weight: 500; color: var(--slate-mute); }
+.standpunt-duur { font-size: 12px; color: var(--slate-mute); }
+/* Stemmingen: een besluit dat nog niet vastligt, neutraal. */
+.uitkomst-woord.uitkomst-tussen { color: var(--paper-ink); }
+/* Het camerablok blijft met het kopje Cameraritten binnen de hoogte van de monitoren. */
+.camera { gap: 4px; }
+.camera .standpunt-toets { height: 30px; }
+.camera .rit-toetsen .standpunt-toets { height: 29px; }
+.rit-kop { margin-top: 0; line-height: 1.1; }

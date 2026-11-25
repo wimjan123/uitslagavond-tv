@@ -106,12 +106,18 @@ function Ether() {
       Live-Renderer weg
     </span>
   ) : !ether ? null : s && kanBijwerken(s) ? (
-    <span className="strook-chip" title="Wat klaarstaat is een nieuwere versie van deze Graphic, of heeft nieuwere cijfers">
-      {nieuwereCijfers(s, ether.graphic) ? "oude cijfers" : "nieuwere versie klaar"} · <kbd>B</kbd> werkt bij
-    </span>
+    // Eén handeling op deze plek: de chip is zelf de knop Update.
+    <button
+      className="strook-knop"
+      title="Wat klaarstaat is een nieuwere versie van deze Graphic, of heeft nieuwere cijfers: Update zet die in Live"
+      onClick={() => voerUit(regie, "Bijwerken")}
+    >
+      {nieuwereCijfers(s, ether.graphic) ? "oude cijfers" : "nieuwere versie"} · Update <kbd>B</kbd>
+    </button>
   ) : s && nieuwereCijfers(s, ether.graphic) ? (
     s.klaar ? (
-      <span className="strook-chip" title="Deze Graphic in Live heeft niet de cijfers van nu. Zet haar opnieuw klaar (cijfers van nu) en Take.">oude cijfers</span>
+      // Iets anders staat klaar: hier valt niets te doen, dus gewone tekst, geen knopvorm.
+      <span className="let-op" title="Deze Graphic in Live heeft niet de cijfers van nu. Zet haar opnieuw klaar (cijfers van nu) en Take.">oude cijfers</span>
     ) : (
       <button
         className="strook-knop"
@@ -125,9 +131,11 @@ function Ether() {
     `sinds ${uurMinuut(ether.sinds_ms)}`
   );
   return (
+    // Live is altijd de uitzending, ook zonder Graphic (dan de Zaal): daarom altijd de rode tally.
     <Monitor
       label="Live"
-      toestand={geenEther ? "fout" : ether ? "ether" : "rust"}
+      leeg="Geen Graphic"
+      toestand={geenEther ? "fout" : "ether"}
       {...regels(ether?.graphic, s?.sjablonen)}
       rechts={rechts}
       beeld={beelden.Ether}
@@ -190,26 +198,30 @@ function Take() {
           <kbd>X</kbd>
         </button>
       </span>
-      <button
-        className="knop knop-take"
-        disabled={!verbonden || !kan("KleurUit", s)}
-        onClick={() => voerUit(regie, "KleurUit")}
-        title="De Stoelen in Live krijgen hun eigen leer terug; de Graphic blijft staan"
+      <span
+        className="take-uitleg"
+        title={kan("KleurUit", s) ? "De Stoelen in Live krijgen hun eigen leer terug; de Graphic blijft staan" : "De Stoelen in Live hebben geen kleur"}
       >
-        <Druppel />
-        <span className="knop-woord">Kleur uit</span>
-        <kbd>Z</kbd>
-      </button>
-      <button
-        className="knop knop-take"
-        disabled={!verbonden || !kan("SlaOpbouwOver", s)}
-        onClick={() => voerUit(regie, "SlaOpbouwOver")}
-        title="De Partijen die nog niet aan de beurt waren, kleuren meteen mee; de kaartjes komen direct"
+        <button className="knop knop-take" disabled={!verbonden || !kan("KleurUit", s)} onClick={() => voerUit(regie, "KleurUit")}>
+          <Druppel />
+          <span className="knop-woord">Kleur uit</span>
+          <kbd>Z</kbd>
+        </button>
+      </span>
+      <span
+        className="take-uitleg"
+        title={
+          kan("SlaOpbouwOver", s)
+            ? "De Partijen die nog niet aan de beurt waren, kleuren meteen mee; de kaartjes komen direct"
+            : "Er loopt geen Opbouw in Live"
+        }
       >
-        <Overslaan />
-        <span className="knop-woord">Opbouw over</span>
-        <kbd>C</kbd>
-      </button>
+        <button className="knop knop-take" disabled={!verbonden || !kan("SlaOpbouwOver", s)} onClick={() => voerUit(regie, "SlaOpbouwOver")}>
+          <Overslaan />
+          <span className="knop-woord">Opbouw over</span>
+          <kbd>C</kbd>
+        </button>
+      </span>
       {melding && (
         <p className="take-melding" role="alert">
           {melding}
@@ -223,6 +235,10 @@ function Take() {
 /** Of de focus in een tekstveld staat: dan typen toetsen en werken de sneltoetsen niet. */
 function useTypt(): boolean {
   const [typt, setTypt] = useState(false);
+  // Tijdens typen gaan letters naar het veld: dan verdwijnen alle toetskappen in de multiviewer (CSS).
+  useEffect(() => {
+    document.documentElement.toggleAttribute("data-typt", typt);
+  }, [typt]);
   useEffect(() => {
     const kijk = () => setTypt(doelVan(document.activeElement) === "tekstveld");
     // Na focusout staat de focus nog even op het oude veld; daarna kijken.

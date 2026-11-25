@@ -142,6 +142,7 @@ export function Camera() {
       <div className="standpunt-toetsen" role="group" aria-label="Standpunten">
         {vastePunten.map((p) => toets(p, false))}
       </div>
+      {ritToetsen.length > 0 && <span className="rit-kop">Cameraritten · direct live</span>}
       {ritToetsen.length > 0 && (
         <div className="standpunt-toetsen rit-toetsen" role="group" aria-label="Cameraritten">
           {ritToetsen.map((p) => toets(p, true))}

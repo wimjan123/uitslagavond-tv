@@ -14,8 +14,11 @@ export function Monitor({
   rechts,
   beeld,
   zonderBeeld,
+  leeg = "Leeg",
 }: {
   label: string;
+  /** Wat er als naam staat zonder Graphic. */
+  leeg?: string;
   /** Wat er in de labelstrook staat, als dat iets anders is dan het label. */
   kop?: ReactNode;
   toestand: Toestand;
@@ -32,13 +35,13 @@ export function Monitor({
   return (
     <figure className={`monitor monitor-${toestand}${gestippeld ? " monitor-gestippeld" : ""}`}>
       <div className="monitor-beeld">
-        {beeld ? <img src={beeld} alt={`${label}: ${naam ?? "leeg"}`} /> : <span className="monitor-zonder">{zonderBeeld}</span>}
+        {beeld ? <img src={beeld} alt={`${label}: ${naam ?? leeg}`} /> : <span className="monitor-zonder">{zonderBeeld}</span>}
       </div>
       <figcaption className="monitor-strook">
         <span className="monitor-regel">
           <span className="monitor-label">{kop ?? label}</span>
           <span className="monitor-naam" title={naam ?? undefined}>
-            {naam ?? "Leeg"}
+            {naam ?? leeg}
           </span>
           {rechts && <span className="monitor-rechts">{rechts}</span>}
         </span>

@@ -13,6 +13,8 @@ export function Systeem({ kiesOnderdeel }: WerkvlakProps) {
     <>
       <Werkbalk naam="Systeem" />
       <div className="werkvlak-inhoud systeem">
+        {/* Waarschuwingen over de gegevens bovenaan: die mag de hoofdredacteur niet missen. */}
+        <Kamermelding stand={stand?.stand} />
         <section className="blok">
           <h3 className="label">Werkplek</h3>
           <p className="kop-regel">{werkplek}</p>
@@ -77,7 +79,6 @@ export function Systeem({ kiesOnderdeel }: WerkvlakProps) {
             </button>
           </div>
         </section>
-        <Kamermelding stand={stand?.stand} />
       </div>
     </>
   );

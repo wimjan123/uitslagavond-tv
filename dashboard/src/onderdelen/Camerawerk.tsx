@@ -212,7 +212,7 @@ export function Camerawerk() {
               </tbody>
             </table>
             <p className="zacht">
-              De gamepad zit aan de server. Met Vrij stuurt hij de Ether, met Oefenen alleen het Voorbeeld. Na loslaten glijdt de
+              De gamepad zit aan de server. Met Vrij stuurt hij Live, met Oefenen alleen Preview. Na loslaten glijdt de
               camera in een halve seconde tot stilstand.
             </p>
           </details>
@@ -510,7 +510,7 @@ function StandpuntDetail({ p }: { p: Standpunt }) {
           title={blok ?? "Speel de overgang vanaf Live af in Preview"}
           onClick={() => stuur({ soort: "ProbeerInVoorbeeld", letter: p.letter })}
         >
-          Probeer in Voorbeeld
+          Probeer in Preview
         </button>
       </div>
       <div className="instelling">
@@ -661,7 +661,7 @@ function RitDetail({ r }: { r: Camerarit }) {
           title={blok ?? "Speel de rit vanaf Live af in Preview"}
           onClick={() => stuur({ soort: "ProbeerInVoorbeeld", letter: r.letter })}
         >
-          Speel af in Voorbeeld
+          Speel af in Preview
         </button>
       </div>
       <Ritbalk r={r} />

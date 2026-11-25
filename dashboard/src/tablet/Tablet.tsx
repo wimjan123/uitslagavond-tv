@@ -150,8 +150,8 @@ function Rij({ preset: p, stand: s }: { preset: Preset; stand: Stand }) {
         </div>
         <div className="zacht een-regel">{graphicTekst(p.graphic)}</div>
         {nieuwereCijfers(s, p.graphic) && (
-          <div className="tablet-oud" title="Er zijn nieuwere cijfers; de Regie ververst ze voor Toon">
-            cijfers van {uurMinuut(p.bewaard_ms)}, er zijn nieuwere
+          <div className="tablet-oud" >
+            cijfers van {uurMinuut(p.bewaard_ms)} · de Regie ververst ze voor Take
           </div>
         )}
       </div>
