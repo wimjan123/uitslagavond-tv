@@ -1,6 +1,6 @@
 // Vormgeving: de Stijl van het programma (vijf kleuren, drie lettertypes, het programmalogo en de
 // snelheid) en de Sjablonen (Sjablonen.tsx). Een wijziging geldt pas na Opslaan: het Voorbeeld toont hem
-// meteen, de Graphic in de Ether houdt haar vorm tot de volgende Toon.
+// meteen, de Graphic in Live houdt haar vorm tot de volgende Toon.
 import { useEffect, useRef, useState } from "react";
 import { useRegie } from "../regie/regie";
 import { MAX_LOGOTEKST, MAX_SNELHEID, MIN_SNELHEID, STANDAARD_STIJL } from "../typen/standaardStijl";
@@ -19,7 +19,7 @@ export function Vormgeving() {
   const [deel, setDeel] = useState<Deel>("stijl");
   return (
     <>
-      <Werkbalk naam="Vormgeving" hint="Een wijziging geldt na Opslaan, in de Ether pas bij de volgende Toon">
+      <Werkbalk naam="Vormgeving" hint="Een wijziging geldt na Opslaan, in Live pas bij de volgende Take">
         <div className="filters">
           <button className="filter" aria-pressed={deel === "stijl"} onClick={() => setDeel("stijl")}>
             Stijl
@@ -220,8 +220,8 @@ function StijlDeel() {
         <h3 className="label">Schets</h3>
         <Schets stijl={stijl} logo={logo.url} />
         <p className="zacht">
-          Alleen de kleuren en het logo. Het Voorbeeld bovenin toont de echte Graphic in de nieuwe Stijl, zodra je opslaat. De Ether houdt haar vorm tot
-          de volgende Toon.
+          Alleen de kleuren en het logo. Preview bovenin toont de echte Graphic in de nieuwe Stijl, zodra je opslaat. Live houdt haar vorm tot
+          de volgende Take.
         </p>
       </aside>
 

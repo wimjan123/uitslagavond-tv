@@ -15,7 +15,7 @@ use std::sync::{Arc, LazyLock};
 use gedeeld::Stand;
 use gedeeld::camera::{
     CameraOvergang, Camerabeeld, Camerakeuze, Camerapunt, Camerastand, NaAankomst, OvergangSoort,
-    SCHUIVEN_S, Standpunt, TIKKEN_PER_SECONDE, aanschuif_overgang, aanschuif_stand, aanschuif_uit_sleutel,
+    BLIJF, SCHUIVEN_S, Standpunt, TIKKEN_PER_SECONDE, aanschuif_overgang, aanschuif_stand, aanschuif_uit_sleutel,
     shot_op_stoel, stoel_uit_sleutel,
 };
 use gedeeld::camerarit::{Camerarit, OPNAME_MAX_S, RitBegin, Ritbaan, als_opnamepunt};
@@ -663,7 +663,8 @@ impl Spoor {
 /// Waar het Voorbeeld zijn camera vandaan haalt.
 #[derive(Clone, Debug, PartialEq)]
 enum Voorbeeldbron {
-    /// De Vrije camera staat aan: het Voorbeeld toont de camera van de Ether.
+    /// De Vrije camera staat aan, of de camera blijft staan bij de klaargezette Graphic
+    /// ([`BLIJF`]): het Voorbeeld toont de camera van de Ether.
     Ether,
     /// Het Standpunt of de Camerarit van de klaargezette Graphic (of zonder Graphic dat van de
     /// Ether).
@@ -788,6 +789,14 @@ impl Cameraregie {
             return;
         }
         if speelt_af {
+            return;
+        }
+        // blijft de camera staan bij de klaargezette Graphic, dan toont het Voorbeeld de Ether
+        if stand.klaar.as_ref().is_some_and(|k| k.standpunt() == BLIJF) {
+            if self.bron != Voorbeeldbron::Ether {
+                self.voorbeeld.snede = self.voorbeeld.snede.wrapping_add(1);
+                self.bron = Voorbeeldbron::Ether;
+            }
             return;
         }
         let letter = stand
@@ -1258,6 +1267,42 @@ mod tests {
             x(20 * T) - begin
         );
         assert_eq!(x(20 * T), x(60 * T));
+    }
+
+    #[test]
+    fn bij_blijf_volgt_het_voorbeeld_de_ether_en_toon_beweegt_niets() {
+        let mut stand = Stand::default();
+        let mut v = 0;
+        let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
+        // de Ether rijdt naar D terwijl de Graphic klaarstaat
+        doe(&mut stand, &mut v, kies("D", false));
+        regie.volg(&stand, 0);
+        let graphic = Graphic::Titelkaart {
+            kop: "Voorbeeldgegevens".into(),
+            regel: String::new(),
+        };
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::ZetKlaar {
+                graphic,
+                standpunt: Some(BLIJF.into()),
+            },
+        );
+        regie.volg(&stand, T / 2);
+        for tik in [T / 2, T, 3 * T] {
+            let beeld = regie.beeld(tik);
+            assert!(ongeveer(beeld.voorbeeld.stand, beeld.ether.stand), "tik {tik}");
+        }
+        assert!(!ongeveer(regie.beeld(T / 2).ether.stand, standpunt(&stand, "D")));
+
+        doe(&mut stand, &mut v, Opdracht::Toon { versie: None });
+        regie.volg(&stand, T);
+        assert_eq!(stand.camera.standpunt, "D");
+        // de rit naar D loopt gewoon door, zonder snede
+        let snede = regie.beeld(T).ether.snede;
+        assert!(ongeveer(regie.beeld(3 * T).ether.stand, standpunt(&stand, "D")));
+        assert_eq!(regie.beeld(3 * T).ether.snede, snede);
     }
 
     #[test]

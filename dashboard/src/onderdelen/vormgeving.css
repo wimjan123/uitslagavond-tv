@@ -9,19 +9,20 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-  padding: 12px 14px;
+  padding: 12px 14px 40px;
   min-height: 0;
   overflow: auto;
 }
-.stijl-deel { display: flex; flex-direction: column; gap: 6px; max-width: 860px; }
+.stijl-deel { display: flex; flex-direction: column; gap: 6px; max-width: 1000px; }
 .stijl-kleuren td, .stijl-letters td { vertical-align: middle; }
 .stijl-kleuren td:first-child, .stijl-letters td:first-child { width: 110px; }
 .stijl-kleuren input[type="color"] {
   width: 40px;
   height: 28px;
   padding: 2px;
-  background: var(--graphite-field);
-  border: 1px solid var(--graphite-line);
+  /* Een licht schaakbord achter de staal, zodat ook een donkere kleur zichtbaar is. */
+  background: repeating-conic-gradient(#3a3f47 0 25%, #2a2e35 0 50%) 0 0 / 8px 8px;
+  border: 1px solid var(--slate-mute);
   border-radius: 3px;
   cursor: pointer;
 }
@@ -101,8 +102,7 @@
   gap: 8px;
   padding: 8px 10px;
   border: 1px solid var(--warn-amber);
-  border-radius: 3px;
-  box-shadow: inset 3px 0 0 var(--warn-amber);
+  border-radius: 2px;
 }
 .sjablonen-melding span { flex: 1; min-width: 240px; }
 .sjablonen-blokbalk { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }

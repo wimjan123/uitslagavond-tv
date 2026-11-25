@@ -4,7 +4,7 @@
 // Met Vrij of Oefenen aan komt er "Bewaar als Standpunt" bij.
 import { plaatsVan } from "../persoonskaart/persoonskaart";
 import { useStoelkiezer } from "../persoonskaart/stoelkeuze";
-import { AANSCHUIVEN, BOVEN_HET_PANEEL, BOVEN_HET_PANEEL_NAAM, opnameTijd } from "../regie/camerarit";
+import { AANSCHUIVEN, BLIJF, BLIJF_NAAM, BOVEN_HET_PANEEL, BOVEN_HET_PANEEL_NAAM, opnameTijd } from "../regie/camerarit";
 import { useCamera, useRegie } from "../regie/regie";
 import { CAMERA, kiesStandpunt, voerUit } from "../regie/take";
 import { toetsVan } from "../regie/toetsen";
@@ -24,6 +24,7 @@ export function naamVan(s: Stand | undefined, letter: string | null): string {
   const stoel = /^stoel-(\d+-\d+-\d+)$/.exec(letter);
   if (stoel) return `Stoel ${stoel[1]}`;
   if (letter === AANSCHUIVEN || letter.startsWith(`${AANSCHUIVEN}-`)) return "Aanschuiven";
+  if (letter === BLIJF) return BLIJF_NAAM;
   if (letter === BOVEN_HET_PANEEL) return BOVEN_HET_PANEEL_NAAM;
   return s.standpunten.find((p) => p.letter === letter)?.naam ?? s.cameraritten.find((r) => r.letter === letter)?.naam ?? "";
 }
@@ -50,7 +51,7 @@ export function OefenToetsen({ klasse }: { klasse: string }) {
         title={
           neemtOp
             ? "Stop eerst de opname"
-            : "Oefenen aan of uit: de gamepad stuurt alleen de camera van het Voorbeeld, de Ether blijft staan"
+            : "Oefenen aan of uit: de gamepad stuurt alleen de camera van Preview, Live blijft staan"
         }
         onClick={() => voerUit(regie, "Oefenen")}
       >
@@ -87,63 +88,81 @@ export function Camera() {
   const kiesStoel = useStoelkiezer();
   const ether = s?.ether?.graphic;
   const stoel = ether?.sjabloon === "Persoonskaart" ? ether.gegevens?.stoel : undefined;
+  const vastePunten = metToets.filter((p) => standpunten.includes(p as Standpunt));
+  const ritToetsen = metToets.filter((p) => !standpunten.includes(p as Standpunt));
+  const toets = (p: (typeof metToets)[number], rit: boolean) => (
+    <button
+      key={p.letter}
+      className={`standpunt-toets${rit ? " standpunt-rit" : ""}`}
+      aria-pressed={p.letter === huidig}
+      disabled={!verbonden}
+      title={`${rit ? "Camerarit" : "Standpunt"} ${p.naam}: de Live-camera gaat erheen. Shift+${toetsVan(p)} knipt meteen.`}
+      onClick={(e) => kies(p.letter, e.shiftKey)}
+    >
+      <kbd>{toetsVan(p)}</kbd>
+      <span className="standpunt-naam">{p.naam}</span>
+      {rit && "bijschaving" in p && <span className="standpunt-duur">{Math.round(p.bijschaving.duur_s)} s</span>}
+    </button>
+  );
   return (
     <section className="camera" aria-label="Camera">
       <div className="camera-kop">
-        <span className="monitor-label">Camera</span>
-        <span className="camera-naam">{naam}</span>
+        <span className="monitor-label" title="Deze toetsen sturen de Live-camera">
+          Camera <span className="camera-live">Live</span>
+        </span>
+        <span className="camera-naam" title={naam}>
+          {naam}
+        </span>
       </div>
-      <Plattegrond
-        standpunten={standpunten}
-        cameraritten={ritten}
-        huidig={huidig}
-        vrij={vrij || oefenen}
-        voorbeeld={oefenen || !!s?.camera.proef}
-        stoelkleuren={s?.stoelkleuren ?? []}
-        uitgelicht={stoel ? plaatsVan(stoel) : null}
-        kiesStoel={kiesStoel}
-        kies={(l) => kies(l)}
-      />
-      <div className="standpunt-toetsen">
-        {metToets.map((p) => (
+      <div className="camera-kaart">
+        <Plattegrond
+          standpunten={standpunten}
+          cameraritten={ritten}
+          huidig={huidig}
+          vrij={vrij || oefenen}
+          voorbeeld={oefenen || !!s?.camera.proef}
+          stoelkleuren={s?.stoelkleuren ?? []}
+          uitgelicht={stoel ? plaatsVan(stoel) : null}
+          kiesStoel={kiesStoel}
+          kies={(l) => kies(l)}
+        />
+        <span className="camera-schakels">
           <button
-            key={p.letter}
-            className="standpunt-toets"
-            aria-pressed={p.letter === huidig}
+            className="camera-schakel"
+            aria-pressed={vrij}
             disabled={!verbonden}
-            title={`${p.naam}. Shift+${toetsVan(p)} knipt meteen.`}
-            onClick={(e) => kies(p.letter, e.shiftKey)}
+            title="Vrije camera aan of uit: de gamepad stuurt de Live-camera. Start op de gamepad doet hetzelfde."
+            onClick={() => voerUit(regie, "VrijeCamera")}
           >
-            <kbd>{toetsVan(p)}</kbd>
-            <span>{p.naam}</span>
+            <kbd>V</kbd>
+            <span>Vrij</span>
           </button>
-        ))}
+          <OefenToetsen klasse="camera-schakel" />
+        </span>
+      </div>
+      <div className="standpunt-toetsen" role="group" aria-label="Standpunten">
+        {vastePunten.map((p) => toets(p, false))}
+      </div>
+      {ritToetsen.length > 0 && <span className="rit-kop">Cameraritten · direct live</span>}
+      {ritToetsen.length > 0 && (
+        <div className="standpunt-toetsen rit-toetsen" role="group" aria-label="Cameraritten">
+          {ritToetsen.map((p) => toets(p, true))}
+        </div>
+      )}
+      {(vrij || oefenen) && (
         <button
-          className="standpunt-toets"
-          aria-pressed={vrij}
+          className="standpunt-toets standpunt-bewaar"
           disabled={!verbonden}
-          title="Vrije camera aan of uit: de gamepad stuurt de camera van de Ether. Start op de gamepad doet hetzelfde."
-          onClick={() => voerUit(regie, "VrijeCamera")}
+          title={
+            oefenen
+              ? "Bewaar waar de camera van Preview nu staat als eigen Standpunt"
+              : "Bewaar waar de camera nu staat als eigen Standpunt"
+          }
+          onClick={() => void regie.stuur({ soort: "BewaarStandpunt", naam: nieuweNaam(standpunten) }, CAMERA)}
         >
-          <kbd>V</kbd>
-          <span>Vrij</span>
+          <span>Bewaar als Standpunt</span>
         </button>
-        <OefenToetsen klasse="standpunt-toets" />
-        {(vrij || oefenen) && (
-          <button
-            className="standpunt-toets"
-            disabled={!verbonden}
-            title={
-              oefenen
-                ? "Bewaar waar de camera van het Voorbeeld nu staat als eigen Standpunt"
-                : "Bewaar waar de camera nu staat als eigen Standpunt"
-            }
-            onClick={() => void regie.stuur({ soort: "BewaarStandpunt", naam: nieuweNaam(standpunten) }, CAMERA)}
-          >
-            <span>Bewaar als Standpunt</span>
-          </button>
-        )}
-      </div>
+      )}
       {melding && (
         <p className="take-melding" role="alert">
           {melding}

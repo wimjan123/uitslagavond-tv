@@ -5,6 +5,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { CSSProperties, FormEvent } from "react";
 import { STEMMINGSJABLONEN, alsStemmingsjabloon, plaatsInUitslagindeling, sjabloonNaam, stemmingVan, uurMinuut } from "../graphic";
 import { Kruis, Microfoon, Plus, Slot, Ster, Zoek } from "../iconen";
+import { biedHerstel } from "../regie/herstel";
 import { useRegie } from "../regie/regie";
 import { LEEG, afwijkend, algemeen, andere, kamerlidNaam, overige, stemVan, tik, volgendeOpen, voorzitterZin, wis, zelfdeStemgedrag } from "../stemmingen/invoer";
 import type { Fractie } from "../typen/Fractie";
@@ -15,6 +16,7 @@ import type { Stem } from "../typen/Stem";
 import type { Stemgedrag } from "../typen/Stemgedrag";
 import type { Stemming } from "../typen/Stemming";
 import { Controle } from "./Controle";
+import { Slotknop } from "./Slotknop";
 import { Werkbalk } from "./Werkbalk";
 import "./stemmingen.css";
 
@@ -52,7 +54,7 @@ export function Stemmingen() {
       <Werkbalk naam="Stemmingen" hint={<Dag dag={s?.stemmingen.dag ?? null} ingelezen={s?.stemmingen.ingelezen ?? null} />}>
         <div className="filters" role="group" aria-label="Welke Stemmingen">
           <button className="filter" aria-pressed={filter === "uitzending"} onClick={() => setKeuze("uitzending")}>
-            Voor de uitzending ({aantalUitzending})
+            Voor de uitzending {aantalUitzending}
           </button>
           <button className="filter" aria-pressed={filter === "alle"} onClick={() => setKeuze("alle")}>
             Alle {lijst.length}
@@ -285,6 +287,20 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
     });
   };
   const melding = regie.melding?.bij === BIJ ? regie.melding.tekst : null;
+  // Ctrl+Enter legt vast, ook vanuit het zoekveld van Afwijkende stem.
+  const kanVastleggen = verbonden && !!u.besluit && wacht === null;
+  const legVastRef = useRef(legVast);
+  legVastRef.current = legVast;
+  useEffect(() => {
+    const toets = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.repeat && kanVastleggen) {
+        e.preventDefault();
+        legVastRef.current();
+      }
+    };
+    window.addEventListener("keydown", toets);
+    return () => window.removeEventListener("keydown", toets);
+  }, [kanVastleggen]);
   const zin = voorzitterZin(sg, kamer.fracties, namen);
   const totaal = u.voor + u.tegen + u.open || 150;
   const kop = [stemming.punt.nummer, stemming.punt.indieners].filter(Boolean).join(" · ");
@@ -303,30 +319,38 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
             <h3 className="kop-regel">{stemming.punt.titel}</h3>
           </div>
           <div className="invoer-kop-knoppen">
-            <button
-              className="filter"
-              aria-pressed={sg.hoofdelijk}
-              disabled={dicht}
-              onClick={() => zetel({ ...sg, hoofdelijk: !sg.hoofdelijk })}
+            <div
+              className="segment segment-klein"
+              role="group"
+              aria-label="Soort stemming"
               title="Een hoofdelijke stemming gaat in hetzelfde scherm: tik per Fractie, uitzonderingen met Afwijkende stem"
             >
-              Hoofdelijk
-            </button>
-            <button
-              className={`knop ${stemming.vergrendeld ? "knop-hoofd" : ""}`}
+              <button aria-pressed={!sg.hoofdelijk} disabled={dicht} onClick={() => sg.hoofdelijk && zetel({ ...sg, hoofdelijk: false })}>
+                Per Fractie
+              </button>
+              <button aria-pressed={sg.hoofdelijk} disabled={dicht} onClick={() => !sg.hoofdelijk && zetel({ ...sg, hoofdelijk: true })}>
+                Hoofdelijk
+              </button>
+            </div>
+            <Slotknop
+              op={stemming.vergrendeld}
               disabled={!verbonden}
-              onClick={() => void regie.stuur({ soort: stemming.vergrendeld ? "OntgrendelStemming" : "VergrendelStemming", stemming: id }, BIJ)}
-            >
-              <Slot open={!stemming.vergrendeld} /> {stemming.vergrendeld ? "Vergrendeld" : "Vergrendel"}
-            </button>
+              wissel={() => void regie.stuur({ soort: stemming.vergrendeld ? "OntgrendelStemming" : "VergrendelStemming", stemming: id }, BIJ)}
+            />
           </div>
         </header>
 
         <div className="uitkomst-blok">
           <div className="uitkomst">
-            <span className={`uitkomst-woord ${woordKlasse}`}>
-              {u.besluit ?? "Open"}
+            {/* Zolang de Stemming niet vastligt, is het besluit een tussenstand: neutraal en met "nu". */}
+            <span className={`uitkomst-woord ${u.besluit && !stemming.vastgelegd ? "uitkomst-tussen" : woordKlasse}`}>
+              {u.besluit && !stemming.vastgelegd ? `Nu ${u.besluit.toLowerCase()}` : (u.besluit ?? "Open")}
             </span>
+            {u.besluit && !stemming.vastgelegd && (
+              <span className="stempel" title="Nog niet vastgelegd: zo staat het nu">
+                tussenstand
+              </span>
+            )}
             <span className="uitkomst-getal">
               {u.voor} voor · {u.tegen} tegen{u.open > 0 && ` · ${u.open} open`}
             </span>
@@ -370,7 +394,7 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
           <Microfoon />
           <span>
             {zin.length === 0 ? (
-              <span className="zacht">Tik de Fracties in de volgorde waarin de Voorzitter ze noemt.</span>
+              <span className="zacht">Klik de Fracties in de volgorde waarin de Voorzitter ze noemt</span>
             ) : (
               zin.map((d, i) =>
                 d.stem ? (
@@ -386,7 +410,7 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
         </p>
 
         <div className="kant">
-          <span className="zacht">Ik tik nu</span>
+          <span className="zacht">Een klik zet</span>
           <div className="segment" role="group" aria-label="Kant">
             {(["Voor", "Tegen"] as const).map((k) => (
               <button key={k} className={`segment-${k.toLowerCase()}`} aria-pressed={kant === k} onClick={() => setKant(k)}>
@@ -394,13 +418,12 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
               </button>
             ))}
           </div>
-          <span className="zacht">Noemt de Voorzitter beide kanten? Tik de ene kant, wissel, tik de andere.</span>
         </div>
 
         {kamer.fracties.length === 0 ? (
           <p className="melding">Nog geen Fracties: de server heeft de Kamer nog niet uit de open data gehaald (zie Systeem).</p>
         ) : (
-          <div className="fractie-toetsen">
+          <div className={`fractie-toetsen tik-${kant === "Voor" ? "voor" : "tegen"}`}>
             {inUitslagindeling(stand, kamer.fracties).map((f) => {
               const st = stemVan(sg, f.id);
               const volg = sg.getikt.findIndex((g) => g.fractie === f.id);
@@ -414,9 +437,13 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
                   onClick={() => zetel(tik(sg, f.id, kant))}
                   title={`${f.naam}: ${f.zetels} Zetels`}
                 >
-                  <span className="toets-volg">{volg >= 0 ? volg + 1 : ""}</span>
+                  <span className="toets-volg" title={volg >= 0 ? `Als ${volg + 1}e geklikt: zo staat de Fractie in de zin van de Voorzitter` : undefined}>
+                    {volg >= 0 ? `als ${volg + 1}e` : ""}
+                  </span>
                   <span className="toets-stem">{st ? st.stem : ""}</span>
-                  <span className="toets-naam">{f.afkorting}</span>
+                  <span className="toets-naam">
+                    <span className="toets-naam-tekst">{f.afkorting}</span>
+                  </span>
                   <span className="toets-zetels">{f.zetels}</span>
                 </button>
               );
@@ -438,29 +465,73 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
             {melding}
           </p>
         )}
+        <button
+          className="knop knop-gevaar"
+          disabled={dicht || zelfdeStemgedrag(sg, { ...LEEG, hoofdelijk: sg.hoofdelijk })}
+          title="Wist alle stemmen van deze Stemming. Daarna kun je ze nog terugzetten (Ctrl+Z)."
+          onClick={() => {
+            const voor = sg;
+            const leeg = wis(sg);
+            zetel(leeg);
+            biedHerstel({
+              tekst: "Alle stemmen gewist",
+              wat: stemming.punt.titel,
+              knop: "Zet stemmen terug",
+              geldig: (nu) => {
+                const x = nu.stemmingen.lijst.find((y) => y.punt.id === id);
+                return !!x && !x.vergrendeld && zelfdeStemgedrag(x.stemgedrag, leeg);
+              },
+              doe: (r) => void r.stuur({ soort: "ZetStemgedrag", stemming: id, stemgedrag: voor }, BIJ),
+            });
+          }}
+        >
+          Wis alle stemmen
+        </button>
+        <span className="actiebalk-scheiding" aria-hidden />
         <button className="knop" aria-pressed={sg.overige === andere(kant)} disabled={dicht} onClick={() => zetel(overige(sg, kant))}>
           Overige {kant === "Voor" ? "tegen" : "voor"}
         </button>
-        <button className="knop" aria-pressed={sg.algemene_stemmen} disabled={dicht} onClick={() => zetel(algemeen(sg))}>
+        <button
+          className="knop"
+          aria-pressed={sg.algemene_stemmen}
+          disabled={dicht}
+          title="Zet alle stemmen op Voor, met algemene stemmen. De invoer van nu kun je daarna terugzetten (Ctrl+Z)."
+          onClick={() => {
+            const voor = sg;
+            const na = algemeen(sg);
+            zetel(na);
+            // Aanzetten gooit de getikte Fracties weg: daar hoort een weg terug bij.
+            if (!sg.algemene_stemmen && !zelfdeStemgedrag(sg, { ...LEEG, hoofdelijk: sg.hoofdelijk })) {
+              biedHerstel({
+                tekst: "Met algemene stemmen",
+                wat: stemming.punt.titel,
+                knop: "Zet stemmen terug",
+                geldig: (nu) => {
+                  const x = nu.stemmingen.lijst.find((y) => y.punt.id === id);
+                  return !!x && !x.vergrendeld && zelfdeStemgedrag(x.stemgedrag, na);
+                },
+                doe: (r) => void r.stuur({ soort: "ZetStemgedrag", stemming: id, stemgedrag: voor }, BIJ),
+              });
+            }
+          }}
+        >
           Met algemene stemmen
         </button>
         <button className="knop" aria-pressed={zoeken} disabled={dicht || kamer.kamerleden.length === 0} onClick={() => setZoeken(!zoeken)}>
           Afwijkende stem
         </button>
-        <button className="knop" disabled={dicht || zelfdeStemgedrag(sg, { ...LEEG, hoofdelijk: sg.hoofdelijk })} onClick={() => zetel(wis(sg))}>
-          Wissen
-        </button>
         <span className="actiebalk-rechts">
           <button className="knop" onClick={volgende}>
             Volgende
           </button>
+          {!u.besluit && <span className="knop-reden">Nog {u.open} Zetels open</span>}
           <button
             className="knop knop-commit"
             disabled={!verbonden || !u.besluit || wacht !== null}
-            title={u.besluit ? undefined : `Nog ${u.open} Zetels open: tik de Fracties of kies Overige`}
+            title={u.besluit ? "Legt de uitslag vast en zet de Graphic klaar (Ctrl+Enter)" : `Nog ${u.open} Zetels open: klik de Fracties of kies Overige`}
             onClick={legVast}
           >
-            Vastleggen en klaarzetten
+            Vastleggen en klaarzetten <kbd>Ctrl+Enter</kbd>
           </button>
         </span>
       </div>
@@ -538,3 +609,4 @@ function Afwijkend({
     </div>
   );
 }
+

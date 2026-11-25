@@ -102,3 +102,13 @@ test("een toets hoort bij het Standpunt dat hem nu heeft", () => {
   const rit = { letter: "R1", naam: "Rit", toets: "L" };
   assert.equal(standpuntVoorToets([...standpunten, rit], "L")?.letter, "R1");
 });
+
+test("Ctrl+Z herstelt, N ververst de cijfers; in een tekstveld doen ze niets", () => {
+  const t = (key: string, ctrlKey = false, doel: "tekstveld" | "knop" | "elders" = "elders") =>
+    actieVoorToets({ key, ctrlKey, metaKey: false, altKey: false, doel });
+  assert.equal(t("z", true), "Herstel");
+  assert.equal(t("z"), "KleurUit");
+  assert.equal(t("n"), "Ververs");
+  assert.equal(t("z", true, "tekstveld"), null);
+  assert.equal(t("n", false, "tekstveld"), null);
+});

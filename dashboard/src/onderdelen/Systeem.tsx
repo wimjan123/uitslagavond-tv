@@ -4,6 +4,7 @@
 import { Kamermelding } from "../Kamermelding";
 import { useRegie } from "../regie/regie";
 import { statusVan } from "../regie/systeem";
+import { TweeKeerKnop } from "./TweeKeerKnop";
 import { Werkbalk } from "./Werkbalk";
 import type { WerkvlakProps } from "./index";
 
@@ -13,14 +14,16 @@ export function Systeem({ kiesOnderdeel }: WerkvlakProps) {
     <>
       <Werkbalk naam="Systeem" />
       <div className="werkvlak-inhoud systeem">
+        {/* Waarschuwingen over de gegevens bovenaan: die mag de hoofdredacteur niet missen. */}
+        <Kamermelding stand={stand?.stand} />
         <section className="blok">
           <h3 className="label">Werkplek</h3>
           <p className="kop-regel">{werkplek}</p>
-          <p className="zacht">Deze naam staat bij alles wat je klaarzet of wijzigt.</p>
           <div>
-            <button className="knop" onClick={afmelden}>
+            {/* Afmelden haalt deze Werkplek uit de uitzending: een tweede klik, net als wissen in Live. */}
+            <TweeKeerKnop className="knop" tweeKeer vraag="Klik nog eens: afmelden" onClick={afmelden}>
               Andere naam of sleutel
-            </button>
+            </TweeKeerKnop>
           </div>
         </section>
         <section className="blok blok-breed">
@@ -38,7 +41,7 @@ export function Systeem({ kiesOnderdeel }: WerkvlakProps) {
             <tbody>
               {statusVan(staat, rendererstatus).map((r) => (
                 <tr key={r.naam}>
-                  <td className="titel-cel">{r.naam}</td>
+                  <td className="titel-cel" title={r.rol ? `Start met ${r.rol}` : undefined}>{r.label}</td>
                   <td className="zacht">{r.wat}</td>
                   <td>
                     {r.machines.map((m) => (
@@ -78,7 +81,6 @@ export function Systeem({ kiesOnderdeel }: WerkvlakProps) {
             </button>
           </div>
         </section>
-        <Kamermelding stand={stand?.stand} />
       </div>
     </>
   );

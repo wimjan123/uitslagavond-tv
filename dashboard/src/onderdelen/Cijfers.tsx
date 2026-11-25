@@ -16,6 +16,7 @@ import type { Cijfers as CijferStand } from "../typen/Cijfers";
 import type { Cijferset } from "../typen/Cijferset";
 import type { Partij } from "../typen/Partij";
 import type { Soort } from "../typen/Soort";
+import { Slotknop } from "./Slotknop";
 import { Werkbalk } from "./Werkbalk";
 import "./cijfers.css";
 
@@ -62,7 +63,7 @@ export function Cijfers() {
           </button>
           <button className="filter" aria-pressed={weergave === "partijen"} onClick={() => setWeergave("partijen")}>
             Partijen {cijfers?.partijen.length ?? 0}
-            {letOp > 0 && <span className="telling-let-op" title="Partijen met een tijdelijke kleur">{letOp}</span>}
+            {letOp > 0 && <span className="telling-let-op" title="Partijen met een tijdelijke kleur: geef ze bij de Partij een eigen kleur">{letOp} tijdelijke {letOp === 1 ? "kleur" : "kleuren"}</span>}
           </button>
         </div>
         <label className="werkbalk-keuze">
@@ -118,7 +119,7 @@ export function Cijfers() {
 
 /** Rechts in de werkbalk: welke set elke andere Werkplek open heeft. */
 function AnderenBewerken({ bewerkingen, sets }: { bewerkingen: Bewerking[]; sets: Cijferset[] }) {
-  if (bewerkingen.length === 0) return <>Geen andere Werkplek in Cijfers</>;
+  if (bewerkingen.length === 0) return null;
   return (
     <span className="anderen">
       {bewerkingen.map((b, i) => (
@@ -253,7 +254,9 @@ function SetInvoer({
   const dicht = set.vergrendeld || regie.staat !== "verbonden";
   // Met de eigen wijzigingen die nog onderweg zijn, zodat snel klikken optelt.
   const alle = rijen(cijfers, set.id, regie.stand?.stand.uitslagindeling).map((r) => metNu(r, zichtbaar(concept, set.id, r.partij.sleutel, r.nu)));
-  const [links, rechts] = verdeel(alle);
+  // Op een laptop of groter drie kolommen, zodat alle Partijen zonder scrollen in beeld staan.
+  const kolommen = useKolommen();
+  const delen = verdeel(alle, kolommen);
   const kop = kopVergelijking(cijfers);
   const t = alle.reduce((n, r) => n + r.nu, 0) + (set.zetels.overig ?? 0);
 
@@ -287,18 +290,16 @@ function SetInvoer({
           <span className={`set-totaal ${t !== ZETELS ? "let-op" : ""}`}>
             {t} van {ZETELS} Zetels
           </span>
-          <button
-            className={`knop ${set.vergrendeld ? "knop-hoofd" : ""}`}
+          <Slotknop
+            op={set.vergrendeld}
             disabled={regie.staat !== "verbonden"}
-            onClick={() => void regie.stuur({ soort: set.vergrendeld ? "OntgrendelSet" : "VergrendelSet", set: set.id }, BIJ)}
-          >
-            <Slot open={!set.vergrendeld} /> {set.vergrendeld ? "Vergrendeld" : "Vergrendel"}
-          </button>
+            wissel={() => void regie.stuur({ soort: set.vergrendeld ? "OntgrendelSet" : "VergrendelSet", set: set.id }, BIJ)}
+          />
         </div>
       </div>
       <Zetelbalk rijen={alle} />
-      <div className="partijkolommen">
-        {[links, rechts].map((kolom, k) => (
+      <div className="partijkolommen" style={{ gridTemplateColumns: `repeat(${kolommen}, minmax(0, 1fr))` }}>
+        {delen.map((kolom, k) => (
           <table key={k} className="tabel partijtabel">
             <thead>
               <tr>
@@ -313,7 +314,7 @@ function SetInvoer({
                 <PartijRij
                   key={r.partij.sleutel}
                   rij={r}
-                  volgorde={k * links.length + i}
+                  volgorde={k * delen[0].length + i}
                   dicht={dicht}
                   zet={(n) => zet(r.partij.sleutel, n)}
                 />
@@ -328,7 +329,7 @@ function SetInvoer({
         </button>
         <span className="zacht">
           {set.vergrendeld
-            ? "Vergrendeld: ontgrendel de set om cijfers te wijzigen."
+            ? "Op slot: kies Ontgrendel rechtsboven om cijfers te wijzigen."
             : kop
               ? `Verschil tegen ${cijfers.sets.find((s) => s.id === cijfers.vergelijk_met)?.label}, met de Voorgangers opgeteld.`
               : "Kies bovenin een set om mee te vergelijken."}
@@ -365,15 +366,22 @@ function PartijRij({ rij, volgorde, dicht, zet }: { rij: Rij; volgorde: number; 
         </span>
       </td>
       <td className="kol-nu">
-        <span className="stapper">
-          <button className="stap" aria-label={`${p.kort} min 1`} disabled={dicht || waarde <= 0} onClick={() => zet(waarde - 1)}>
-            <Min />
-          </button>
-          <ZetelVak partij={p} waarde={waarde} volgorde={volgorde} dicht={dicht} zet={zet} />
-          <button className="stap" aria-label={`${p.kort} plus 1`} disabled={dicht || waarde >= ZETELS} onClick={() => zet(waarde + 1)}>
-            <Plus />
-          </button>
-        </span>
+        {dicht ? (
+          // Op slot: alleen het getal, zonder knoppen die lijken te werken.
+          <span className="stapper stapper-dicht" title="Op slot: ontgrendel de set om te wijzigen">
+            {waarde}
+          </span>
+        ) : (
+          <span className="stapper">
+            <button className="stap" aria-label={`${p.kort} min 1`} disabled={waarde <= 0} onClick={() => zet(waarde - 1)}>
+              <Min />
+            </button>
+            <ZetelVak partij={p} waarde={waarde} volgorde={volgorde} dicht={dicht} zet={zet} />
+            <button className="stap" aria-label={`${p.kort} plus 1`} disabled={waarde >= ZETELS} onClick={() => zet(waarde + 1)}>
+              <Plus />
+            </button>
+          </span>
+        )}
       </td>
       <td className="kol-getal zacht-getal">{rij.eerder ?? ""}</td>
       <td className="kol-getal kol-verschil">
@@ -409,23 +417,32 @@ function ZetelVak({ partij, waarde, volgorde, dicht, zet }: { partij: Partij; wa
       if (n !== waarde) zet(n);
     }
   };
+  const gewijzigd = tekst !== null && tekst !== String(waarde);
   return (
-    <input
-      className="zetelvak"
-      inputMode="numeric"
-      aria-label={`Zetels ${partij.kort}`}
-      data-vakje={volgorde}
-      disabled={dicht}
-      value={tekst ?? String(waarde)}
-      onFocus={(e) => e.currentTarget.select()}
-      onChange={(e) => setTekst(e.target.value.replace(/\D/g, "").slice(0, 3))}
-      onKeyDown={toets}
-      onBlur={() => {
-        if (!annuleer.current && tekst !== null) stuur(tekst);
-        annuleer.current = false;
-        setTekst(null);
-      }}
-    />
+    <span className="zetelvak-plek">
+      <input
+        className="zetelvak"
+        inputMode="numeric"
+        aria-label={`Zetels ${partij.kort}`}
+        data-vakje={volgorde}
+        disabled={dicht}
+        value={tekst ?? String(waarde)}
+        onFocus={(e) => e.currentTarget.select()}
+        onChange={(e) => setTekst(e.target.value.replace(/\D/g, "").slice(0, 3))}
+        onKeyDown={toets}
+        onBlur={() => {
+          if (!annuleer.current && tekst !== null) stuur(tekst);
+          annuleer.current = false;
+          setTekst(null);
+        }}
+      />
+      {/* Een gewijzigd getal is nog niet bewaard: zeg hier wat Enter en Esc doen (Esc gooit het weg). */}
+      {gewijzigd && (
+        <span className="zetelvak-hint" role="status">
+          <kbd>Enter</kbd> bewaart · <kbd>Esc</kbd> annuleert
+        </span>
+      )}
+    </span>
   );
 }
 
@@ -680,4 +697,16 @@ function Tekstveld({ label, waarde, dicht, hint, bewaar }: { label: string; waar
       {hint && <span className="zacht">{hint}</span>}
     </label>
   );
+}
+
+/** Drie kolommen Partijen vanaf 1360 px breed, anders twee. */
+function useKolommen(): number {
+  const meet = () => (window.innerWidth >= 1360 ? 3 : 2);
+  const [n, setN] = useState(meet);
+  useEffect(() => {
+    const kijk = () => setN(meet());
+    window.addEventListener("resize", kijk);
+    return () => window.removeEventListener("resize", kijk);
+  }, []);
+  return n;
 }

@@ -267,6 +267,15 @@ pub enum Opdracht {
     ZetCoalitie { partijen: Vec<String> },
     /// Haalt de Graphic uit de Ether.
     UitBeeld,
+    /// Ongedaan maken van Uit beeld: zet precies deze Graphic terug in de Ether, met de cijfers
+    /// die erin zitten. Wat klaarstaat blijft gelijk. Alleen als de Ether leeg is; de camera
+    /// beweegt zoals bij Toon.
+    TerugInBeeld {
+        graphic: Graphic,
+        #[serde(default)]
+        #[ts(optional)]
+        standpunt: Option<String>,
+    },
     /// Kleur uit: de Stoelen in de Ether krijgen direct hun eigen leer terug, met de
     /// Kleurovergang van de Stijl. De Graphic blijft staan; de volgende Graphic die de Stoelen
     /// kleurt, zet de kleuren weer aan.
@@ -498,6 +507,8 @@ pub enum Weigering {
     NietsBijTeWerken,
     #[error("er staat geen Graphic in beeld")]
     NietsInBeeld,
+    #[error("er staat al een Graphic in beeld: haal die eerst uit beeld")]
+    EtherNietLeeg,
     #[error("de Stoelen hebben al hun eigen kleur")]
     KleurAlUit,
     #[error("er loopt geen Opbouw")]
@@ -616,28 +627,21 @@ impl Stand {
                 if self.staat_klaar_in_beeld() {
                     return Err(Weigering::AlInBeeld);
                 }
-                let ether = GraphicInBeeld {
-                    id: klaar.id,
-                    versie: klaar.versie,
-                    graphic: klaar.graphic.clone(),
-                    standpunt: klaar.standpunt.clone(),
-                    getoond: h.volgnummer,
-                    sinds_ms: h.tijd_ms,
-                    getoond_door: h.door.into(),
-                    stijl: self.stijl.clone(),
-                    sjabloon: self.sjabloon(&klaar.graphic.sjabloon_id()).map(Cow::into_owned),
-                };
-                // Een nieuwe Graphic tonen beweegt de camera naar haar Standpunt.
-                self.kies_standpunt(&ether.standpunt(), false, h);
-                if let Some(k) = ether.stoelkleuren() {
-                    self.stoelkleuren = k;
-                    self.kleurovergang = ether.kleurovergang();
-                }
+                let ether = self.in_beeld(klaar.id, klaar.versie, &klaar.graphic, &klaar.standpunt, h);
                 self.presets.iter_mut().for_each(|p| p.getoond(&ether));
-                if let Some(id) = ether.graphic.stemming() {
-                    self.stemmingen.in_ether(id, ether.sinds_ms);
+                self.zet_in_ether(ether, h);
+            }
+            Opdracht::TerugInBeeld { graphic, standpunt } => {
+                if self.ether.is_some() {
+                    return Err(Weigering::EtherNietLeeg);
                 }
-                self.ether = Some(ether);
+                graphic.controleer()?;
+                self.controleer_sjabloon_van(graphic)?;
+                self.controleer_standpunt(standpunt.as_deref())?;
+                // Een nieuw id: wat klaarstaat is niet deze Graphic, dus Bijwerken of de stempels
+                // van een Preset horen er niet bij.
+                let ether = self.in_beeld(h.volgnummer, h.volgnummer, graphic, standpunt, h);
+                self.zet_in_ether(ether, h);
             }
             Opdracht::Bijwerken => {
                 self.ververs_cijfers_van_klaar(h);
@@ -658,7 +662,7 @@ impl Stand {
                     self.stoelkleuren = k;
                     self.kleurovergang = ether.kleurovergang().bij_bijwerken();
                 }
-                if ander_standpunt {
+                if ander_standpunt && klaar.standpunt() != camera::BLIJF {
                     let letter = klaar.standpunt().into_owned();
                     self.kies_standpunt(&letter, false, h);
                 }
@@ -684,6 +688,10 @@ impl Stand {
                     sjabloon::Kleurovergang { vorm: sjabloon::Overgangsvorm::Vervagen, duur_ms: OPBOUW_OVERSLAAN_MS };
             }
             Opdracht::KiesStandpunt { letter, knip } => {
+                // "Camera blijft staan" is een keuze voor een Graphic, geen plek om heen te gaan
+                if letter == camera::BLIJF {
+                    return Err(Weigering::OnbekendStandpunt(letter.clone()));
+                }
                 self.controleer_standpunt(Some(letter))?;
                 // Aanschuiven gaat naar de Partij van de Graphic in de Ether
                 let letter = match (letter.as_str(), &self.ether) {
@@ -802,6 +810,14 @@ impl Stand {
                 self.controleer_standpunt(standpunt.as_deref())?;
                 let graphic = &self.vul_cijfers_in(graphic, h.tijd_ms)?;
                 let nummer = presets::eerste_vrije_nummer(&self.presets);
+                // Bewaar je wat klaarstaat of in beeld staat, dan krijgt de Preset meteen de
+                // stempel Klaar of Live, alsof hij uit deze Preset kwam.
+                let klaar = self.klaar.as_ref().filter(|k| {
+                    k.id == k.versie && k.graphic == *graphic && k.standpunt == *standpunt
+                });
+                let ether = self.ether.as_ref().filter(|e| {
+                    e.id == e.versie && e.graphic == *graphic && e.standpunt == *standpunt
+                });
                 self.presets.push(Preset {
                     nummer,
                     graphic: graphic.clone(),
@@ -809,9 +825,9 @@ impl Stand {
                     op_tablet: false,
                     bewaard_ms: h.tijd_ms,
                     bewaard_door: h.door.into(),
-                    klaargezet_als: None,
-                    getoond_als: None,
-                    laatst_live_ms: None,
+                    klaargezet_als: klaar.map(|k| k.id),
+                    getoond_als: ether.map(|e| e.id),
+                    laatst_live_ms: ether.map(|e| e.sinds_ms),
                 });
                 self.presets.sort_by_key(|p| p.nummer);
             }
@@ -1100,6 +1116,38 @@ impl Stand {
         self.ether.as_ref().is_some_and(|e| p.is_bron_van_ether(e))
     }
 
+    /// Een kopie voor de Ether van deze Graphic, in de Stijl en het Sjabloon van nu.
+    fn in_beeld(&self, id: u64, versie: u64, graphic: &Graphic, standpunt: &Option<String>, h: &Herkomst) -> GraphicInBeeld {
+        GraphicInBeeld {
+            id,
+            versie,
+            graphic: graphic.clone(),
+            standpunt: standpunt.clone(),
+            getoond: h.volgnummer,
+            sinds_ms: h.tijd_ms,
+            getoond_door: h.door.into(),
+            stijl: self.stijl.clone(),
+            sjabloon: self.sjabloon(&graphic.sjabloon_id()).map(Cow::into_owned),
+        }
+    }
+
+    /// Zet een Graphic in de Ether, als wissel: de camera gaat naar haar Standpunt (behalve als
+    /// de camera blijft staan) en de Stoelen krijgen haar kleuren.
+    fn zet_in_ether(&mut self, ether: GraphicInBeeld, h: &Herkomst) {
+        let letter = ether.standpunt();
+        if letter != camera::BLIJF {
+            self.kies_standpunt(&letter, false, h);
+        }
+        if let Some(k) = ether.stoelkleuren() {
+            self.stoelkleuren = k;
+            self.kleurovergang = ether.kleurovergang();
+        }
+        if let Some(id) = ether.graphic.stemming() {
+            self.stemmingen.in_ether(id, ether.sinds_ms);
+        }
+        self.ether = Some(ether);
+    }
+
     fn zet_klaar(&mut self, graphic: Graphic, standpunt: Option<String>, h: &Herkomst) {
         self.klaar = Some(KlaargezetteGraphic {
             id: h.volgnummer,
@@ -1125,8 +1173,10 @@ impl Stand {
     }
 
     /// Waar de camera staat bij dit Standpunt, aan het begin van deze Camerarit, of bij het shot
-    /// van deze Stoel ([`camera::stoelsleutel`]).
+    /// van deze Stoel ([`camera::stoelsleutel`]). Bij [`camera::BLIJF`]: die van het Standpunt van
+    /// de Ether.
     pub fn camerastand_van(&self, letter: &str) -> Option<Camerastand> {
+        let letter = if letter == camera::BLIJF { self.camera.standpunt.as_str() } else { letter };
         self.standpunt(letter)
             .map(|s| s.stand)
             .or_else(|| self.camerarit(letter).and_then(Camerarit::beginstand))
@@ -1135,7 +1185,8 @@ impl Stand {
             .or_else(|| (letter == camera::BOVEN_HET_PANEEL).then(camera::boven_het_paneel))
     }
 
-    /// Of er een Standpunt, Camerarit of Stoel met deze sleutel is (geen sleutel mag ook).
+    /// Of er een Standpunt, Camerarit of Stoel met deze sleutel is, of Aanschuiven of Camera
+    /// blijft staan (geen sleutel mag ook).
     fn controleer_standpunt(&self, letter: Option<&str>) -> Result<(), Weigering> {
         match letter {
             Some(l)
@@ -1143,6 +1194,7 @@ impl Stand {
                     && self.camerarit(l).is_none()
                     && camera::stoel_uit_sleutel(l).is_none()
                     && l != camera::AANSCHUIVEN
+                    && l != camera::BLIJF
                     && l != camera::BOVEN_HET_PANEEL
                     && camera::aanschuif_uit_sleutel(l).is_none() =>
             {

@@ -25,4 +25,4 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 ## Design
 
 - `PRODUCT.md`: product context for design work (users, laptop setup, fastest actions).
-- `DESIGN.md` and `.impeccable/design.json`: the visual system of the Regie dashboard, design "Omroepsoftware" (layout 1, multiviewer on top), chosen by the owner on 2026-11-22. It replaces the earlier design "Plenaire Zaal".
+- `DESIGN.md` and `.impeccable/design.json`: the visual system of the Regie dashboard, design "Studio", chosen by the owner on 2026-11-25. It replaces "Mengpaneel" and "Omroepsoftware" (and before them "Plenaire Zaal"), and keeps the layout of Omroepsoftware: multiviewer on top, lists below. The design itself lives in `dashboard/src/ontwerp.css`, the last CSS layer.

@@ -78,12 +78,31 @@ function Schil() {
   const onderdeel = ONDERDELEN.find((o) => o.id === actief);
   const Werkvlak = onderdeel?.Werkvlak;
 
+  // Een klik op een knop geeft hem geen focus: zo blijft de spatie daarna altijd Toon, en drukt hij
+  // niet nog eens de knop die je net met de muis gebruikte (zoals Wissen of Uit beeld).
+  useEffect(() => {
+    const geenFocus = (e: MouseEvent) => {
+      const el = e.target instanceof Element ? e.target.closest("button, [role=tab]") : null;
+      if (!el || (el as HTMLButtonElement).disabled) return;
+      e.preventDefault();
+      // De focus gaat ook weg van wat hem nog had. Een veld (zoals een Zetelaantal) rondt zo eerst af, zodat
+      // de laatste waarde vóór de klik binnenkomt (Opdrachten gaan op volgorde). En een knop waar je eerder
+      // met Tab op kwam (zoals Uit beeld) drukt Spatie daarna niet meer: Spatie is weer Take.
+      const actief = document.activeElement;
+      if (actief instanceof HTMLElement && doelVan(actief) !== "elders") actief.blur();
+    };
+    window.addEventListener("mousedown", geenFocus);
+    return () => window.removeEventListener("mousedown", geenFocus);
+  }, []);
+
   useEffect(() => {
     const toets = (e: KeyboardEvent) => {
       if (e.key === "Escape" && doelVan(e.target) === "tekstveld") {
         (e.target as HTMLElement).blur();
         return;
       }
+      // Te smal: het dashboard staat niet in beeld, dus de sneltoetsen ook niet.
+      if (window.matchMedia("(max-width: 899px)").matches) return;
       const actie = actieVoorToets({ key: e.key, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, doel: doelVan(e.target) });
       if (!actie || e.repeat) return;
       e.preventDefault();
@@ -108,6 +127,7 @@ function Schil() {
               onClick={() => setActief(o.id)}
             >
               {o.naam}
+              <TabTelling id={o.id} />
             </button>
           ))}
         </nav>
@@ -124,7 +144,38 @@ function Schil() {
       )}
       <Multiviewer />
       <main className="werkvlak">{Werkvlak && <Werkvlak kiesOnderdeel={setActief} />}</main>
+      <div className="te-smal" role="alert">
+        <h1 className="kop-regel">De Regie werkt op een laptop</h1>
+        <p>Dit scherm is te smal voor de multiviewer en de lijsten. Maak het venster breder, of open op een tablet of telefoon de tablet van de Presentator.</p>
+        <a className="knop knop-hoofd" href="/tablet">
+          Naar de tablet van de Presentator
+        </a>
+      </div>
     </div>
+  );
+}
+
+/** Open werk achter een tabblad: Stemmingen voor de uitzending die nog niet vastliggen, en in amber
+ * de Stemmingen waarvan de controle na de uitzending een verschil vond. */
+function TabTelling({ id }: { id: string }) {
+  const { stand } = useRegie();
+  if (id !== "stemmingen" || !stand) return null;
+  const lijst = stand.stand.stemmingen.lijst;
+  const open = lijst.filter((x) => x.voor_uitzending && !x.vastgelegd).length;
+  const controle = lijst.filter((x) => x.controle.status && x.controle.status !== "Gelijk" && !x.controle.afgehandeld).length;
+  return (
+    <>
+      {open > 0 && (
+        <span className="tab-telling" title={`${open} Stemmingen voor de uitzending liggen nog niet vast`}>
+          {open} open
+        </span>
+      )}
+      {controle > 0 && (
+        <span className="tab-telling tab-telling-let-op" title={`${controle} Stemmingen wijken af van de officiële uitslag`}>
+          {controle} verschil
+        </span>
+      )}
+    </>
   );
 }
 
@@ -141,9 +192,10 @@ function Status() {
   return (
     <div className="status">
       {punten.map((p) => (
-        <span key={p.naam} className="status-punt" title={p.status}>
+        <span key={p.naam} className={`status-punt status-${p.toon}`} title={p.status}>
           <span className={`punt punt-${p.toon}`} />
-          {p.naam}
+          {p.label}
+          {p.toon !== "goed" && <span className="status-tekst">{p.status.toLowerCase()}</span>}
         </span>
       ))}
       <time className="klok">

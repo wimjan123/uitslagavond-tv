@@ -1,0 +1,511 @@
+/* Ontwerp "Studio" (DESIGN.md): rustig en precies, in de geest van Linear. Bijna zwart, grijstinten,
+   dunne lichte lijnen, 6 tot 8px hoeken, één letter (Geist), kleine nette tekst. Kleur alleen als
+   bolletje of dunne lijn; de enige gekleurde knop is Take (rood) en klaarzetten (groen).
+   Dit bestand komt als laatste, zodat het boven de stijl van elk onderdeel staat. */
+
+:root {
+  --graphite-field: #08090a;
+  --graphite-ground: #0b0c0e;
+  --graphite-panel: #0f1012;
+  --graphite-raised: #17181b;
+  --graphite-divider: #18191c;
+  --graphite-line: #232428;
+  --selection-fill: #1b1c20;
+  --paper-ink: #eeeff1;
+  --slate-mute: #9fa2ab;
+  --steel-blue: #8d95f2;
+  --steel-ink: #0b0c0e;
+  --ether-red: #e5484d;
+  --ether-red-ink: #ffffff;
+  --ether-red-text: #ff6b6f;
+  --klaar-green: #2f9d68;
+  --klaar-green-ink: #ffffff;
+  --klaar-green-text: #4ccf8e;
+  --warn-amber: #e3a23b;
+  --warn-amber-ink: #1a1203;
+
+  /* Eigen tinten van dit ontwerp */
+  --vlak: rgb(255 255 255 / 0.035);
+  --vlak-hover: rgb(255 255 255 / 0.065);
+  --vlak-aan: rgb(255 255 255 / 0.1);
+  --rand: rgb(255 255 255 / 0.075);
+  --rand-sterk: rgb(255 255 255 / 0.13);
+  --tekst-3: #80838c;
+
+  font-family: "Geist Variable", "Geist", system-ui, sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
+  letter-spacing: -0.006em;
+  font-feature-settings: "tnum", "ss01";
+  -webkit-font-smoothing: antialiased;
+}
+button, input, select, kbd { font-family: inherit; letter-spacing: inherit; }
+::selection { background: rgb(141 149 242 / 0.35); }
+:focus-visible { outline: 2px solid var(--steel-blue); outline-offset: 1px; }
+
+/* Tekst */
+.label { font-size: 12px; font-weight: 500; color: var(--slate-mute); text-transform: none; letter-spacing: 0; }
+.kop-regel { font-size: 15px; font-weight: 600; letter-spacing: -0.012em; line-height: 1.3; }
+.zacht { font-size: 12px; color: var(--slate-mute); }
+.titel-cel { font-weight: 500; }
+
+kbd {
+  min-width: 18px;
+  padding: 1px 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--slate-mute);
+  background: var(--vlak);
+  border: 1px solid var(--rand);
+  border-radius: 4px;
+  line-height: 15px;
+}
+
+/* Knoppen: rustig, een dun randje, licht vlak. Aan = iets lichter, nooit een gekleurd blok. */
+.knop, .filter, .standpunt-toets, .camera-schakel, .stap, .tablet-knop, .nieuw-knop {
+  border-radius: 6px;
+  transition: background-color 120ms ease-out, border-color 120ms ease-out, color 120ms ease-out;
+}
+.knop {
+  height: 28px;
+  padding: 0 10px;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--paper-ink);
+  background: var(--vlak);
+  border: 1px solid var(--rand);
+  box-shadow: 0 1px 1px rgb(0 0 0 / 0.35);
+}
+.knop:hover:not(:disabled) { background: var(--vlak-hover); border-color: var(--rand-sterk); }
+.knop:disabled { opacity: 1; color: var(--tekst-3); background: transparent; border-color: var(--rand); box-shadow: none; }
+.knop .icoon { color: var(--slate-mute); }
+.knop[aria-pressed="true"], .actiebalk .knop[aria-pressed="true"] { color: var(--paper-ink); background: var(--vlak-aan); border-color: var(--rand-sterk); }
+.knop-stil { background: none; border-color: transparent; box-shadow: none; color: var(--slate-mute); }
+.knop-hoofd { color: #0b0c0e; background: var(--paper-ink); border-color: var(--paper-ink); }
+.knop-hoofd:hover:not(:disabled) { background: #fff; }
+.knop-hoofd:disabled { color: var(--tekst-3); background: transparent; border-color: var(--rand); }
+.knop-commit { color: #fff; background: var(--klaar-green); border-color: rgb(255 255 255 / 0.12); }
+.knop-commit:hover:not(:disabled) { background: #35ad74; border-color: rgb(255 255 255 / 0.2); }
+.knop-commit:disabled { color: var(--tekst-3); background: transparent; border-color: var(--rand); }
+.knop-commit kbd { color: rgb(255 255 255 / 0.8); background: rgb(0 0 0 / 0.15); border-color: rgb(255 255 255 / 0.15); }
+.actiebalk .knop-commit { height: 30px; padding: 0 12px; }
+.knop-gevaar:not(:disabled) { color: var(--ether-red-text); box-shadow: none; }
+.knop-gevaar:hover:not(:disabled) { background: rgb(229 72 77 / 0.1); border-color: rgb(229 72 77 / 0.35); }
+.knop-uit:not(:disabled) { box-shadow: none; }
+.knop-vraag, .knop-vraag:not(:disabled) { color: #fff; background: var(--ether-red); border-color: var(--ether-red); }
+.knop-reden { font-size: 12px; color: var(--slate-mute); }
+.knop-reden::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--warn-amber); vertical-align: 1px; }
+
+input, select {
+  height: 30px;
+  padding: 0 9px;
+  font-size: 13px;
+  font-weight: 400;
+  color: var(--paper-ink);
+  background: var(--vlak);
+  border: 1px solid var(--rand);
+  border-radius: 6px;
+  box-shadow: none;
+}
+input:hover, select:hover { border-color: var(--rand-sterk); }
+input:focus-visible, select:focus-visible { outline: none; border-color: var(--steel-blue); box-shadow: 0 0 0 3px rgb(141 149 242 / 0.2); }
+input::placeholder { color: var(--tekst-3); }
+
+/* Tabbladen: tekst, het actieve tabblad een licht vlakje */
+.tabstrook { height: 40px; padding: 0 8px; background: var(--graphite-ground); border-bottom: 1px solid var(--rand); }
+.schil { grid-template-rows: 40px auto auto minmax(0, 1fr); }
+.tabs { gap: 2px; align-items: center; }
+.tab { height: 28px; padding: 0 10px; font-size: 13px; font-weight: 500; color: var(--slate-mute); border: 0; border-radius: 6px; }
+.tab:hover:not(:disabled) { color: var(--paper-ink); background: var(--vlak); }
+.tab[aria-selected="true"] { color: var(--paper-ink); background: var(--vlak-aan); border: 0; }
+.tab-telling { height: 17px; padding: 0 5px; font-size: 11px; font-weight: 500; color: var(--slate-mute); background: var(--vlak); border: 1px solid var(--rand); border-radius: 4px; }
+.tab-telling-let-op { color: var(--warn-amber); background: rgb(227 162 59 / 0.1); border-color: rgb(227 162 59 / 0.3); }
+.status { gap: 14px; font-size: 12px; }
+.klok { font-size: 13px; font-weight: 500; color: var(--paper-ink); font-variant-numeric: tabular-nums; }
+.punt { width: 6px; height: 6px; }
+
+/* Multiviewer */
+.multiviewer { padding: 12px; gap: 12px; background: var(--graphite-ground); border-bottom: 1px solid var(--rand); }
+.monitor { border: 1px solid var(--rand); border-radius: 8px; overflow: hidden; background: var(--graphite-panel); }
+.monitor-beeld { background: #000; }
+/* Tally: alleen een dunne gekleurde rand rond het beeld en een bolletje bij het woord. */
+.monitor-klaar { border-color: rgb(47 157 104 / 0.55); }
+.monitor-ether { border-color: rgb(229 72 77 / 0.7); box-shadow: 0 0 0 1px rgb(229 72 77 / 0.25); }
+.monitor-fout { border-color: var(--ether-red); border-style: dashed; }
+.monitor-strook, .monitor-klaar .monitor-strook, .monitor-ether .monitor-strook {
+  padding: 7px 10px 8px;
+  gap: 1px;
+  background: var(--graphite-panel);
+  border-top: 1px solid var(--rand);
+}
+.monitor-label, .monitor-klaar .monitor-label, .monitor-ether .monitor-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--slate-mute);
+  text-transform: none;
+  letter-spacing: 0;
+}
+.monitor-label::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--tekst-3); }
+.monitor-klaar .monitor-label { color: var(--klaar-green-text); }
+.monitor-klaar .monitor-label::before { background: var(--klaar-green-text); }
+.monitor-ether .monitor-label { color: var(--ether-red-text); }
+.monitor-ether .monitor-label::before { background: var(--ether-red); box-shadow: 0 0 0 3px rgb(229 72 77 / 0.25); }
+.monitor-naam { font-weight: 500; color: var(--paper-ink); }
+.monitor-detail, .monitor-klaar .monitor-detail, .monitor-ether .monitor-detail,
+.monitor-rechts, .monitor-klaar .monitor-rechts, .monitor-ether .monitor-rechts { font-size: 12px; color: var(--slate-mute); }
+.let-op { color: var(--warn-amber); font-weight: 500; }
+.strook-knop { height: 20px; padding: 0 7px; font-size: 11.5px; font-weight: 500; color: var(--warn-amber); background: rgb(227 162 59 / 0.1); border: 1px solid rgb(227 162 59 / 0.35); border-radius: 5px; }
+.strook-knop kbd { color: inherit; background: none; border-color: rgb(227 162 59 / 0.35); }
+.strook-knop-rustig { color: var(--paper-ink); background: var(--vlak); border-color: var(--rand); }
+.strook-fout { padding: 1px 6px; font-weight: 500; color: #fff; background: var(--ether-red); border-radius: 4px; }
+
+/* De kolom met Take */
+.take { gap: 6px; }
+.toon {
+  height: auto;
+  min-height: 58px;
+  padding-block: 8px;
+  padding: 0 12px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: #fff;
+  background: var(--ether-red);
+  border: 1px solid rgb(255 255 255 / 0.14);
+  border-radius: 8px;
+  box-shadow: 0 1px 2px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.12);
+}
+.toon:hover:not(:disabled) { background: #ec5a5f; }
+.toon kbd { color: rgb(255 255 255 / 0.85); background: rgb(0 0 0 / 0.15); border-color: rgb(255 255 255 / 0.2); }
+.toon:disabled { color: var(--tekst-3); background: var(--vlak); border-color: var(--rand); box-shadow: none; }
+.toon:disabled kbd { color: var(--tekst-3); background: none; }
+.toon-reden { font-size: 12px; font-weight: 400; color: var(--slate-mute); }
+.toon-let-op { padding: 0; font-size: 12px; font-weight: 500; color: #fff; background: none; box-shadow: none; }
+.toon-let-op::before { content: ""; display: inline-block; width: 6px; height: 6px; margin-right: 6px; border-radius: 50%; background: var(--warn-amber); box-shadow: 0 0 0 2px rgb(0 0 0 / 0.25); vertical-align: 1px; }
+.knop-take { height: 30px; justify-content: flex-start; gap: 8px; }
+.knop-take .knop-woord { flex: 1; text-align: left; }
+.knop-take kbd { margin-left: auto; }
+.herstel { padding: 8px 9px 10px; gap: 6px; font-size: 12px; background: var(--graphite-raised); border: 1px solid var(--rand-sterk); border-radius: 8px; box-shadow: 0 6px 18px rgb(0 0 0 / 0.45); }
+.herstel-tekst { color: var(--warn-amber); font-weight: 500; }
+.herstel-wat { font-size: 12px; font-weight: 400; color: var(--paper-ink); }
+.herstel-knop { height: 26px; justify-content: center; color: var(--paper-ink); background: var(--vlak-hover); border-color: var(--rand-sterk); }
+.herstel-knop kbd { border-color: var(--rand-sterk); }
+.herstel-tijd { height: 2px; background: var(--warn-amber); border-radius: 2px; }
+.take-typen { padding: 6px 8px; font-size: 12px; color: var(--slate-mute); background: var(--vlak); border: 1px solid var(--rand); border-radius: 6px; }
+
+/* Camera */
+.camera-kop .monitor-label::before { display: none; }
+/* De lettertoetsen sturen direct de Live-camera: dezelfde rode stip als onder Live. */
+.camera-live { display: inline-flex; align-items: center; gap: 5px; margin-left: 6px; font-weight: 500; color: var(--ether-red-text); }
+.camera-live::before { content: ""; width: 6px; height: 6px; border-radius: 50%; background: var(--ether-red); }
+.plattegrond, .camera .plattegrond { background: var(--graphite-panel); border: 1px solid var(--rand); border-radius: 8px; }
+.standpunt-toets, .camera-schakel {
+  font-size: 12px;
+  color: var(--paper-ink);
+  background: var(--vlak);
+  border: 1px solid var(--rand);
+  box-shadow: none;
+}
+.standpunt-toets:hover:not(:disabled), .camera-schakel:hover:not(:disabled) { background: var(--vlak-hover); }
+.standpunt-toets[aria-pressed="true"], .camera-schakel[aria-pressed="true"] { color: var(--paper-ink); background: var(--vlak-aan); border-color: var(--rand-sterk); box-shadow: inset 2px 0 0 var(--ether-red); }
+.camera .standpunt-toets { font-size: 12px; }
+.camera .rit-toetsen .standpunt-toets { font-size: 12px; }
+.standpunt-rit { border-style: dashed; border-color: var(--rand-sterk); }
+.standpunt-duur { color: var(--tekst-3); font-size: 11px; }
+.camera-schakel.toets-oefenen[aria-pressed="true"] { color: var(--warn-amber); background: rgb(227 162 59 / 0.12); border-color: rgb(227 162 59 / 0.4); box-shadow: none; }
+.camera-schakel.toets-oefenen[aria-pressed="true"] kbd { color: inherit; }
+
+/* Werkbalk en filters */
+.werkbalk { min-height: 40px; padding: 6px 12px; gap: 8px; background: var(--graphite-ground); border-bottom: 1px solid var(--rand); }
+.filter { height: 26px; padding: 0 9px; font-size: 13px; font-weight: 500; color: var(--slate-mute); }
+.filter:hover:not(:disabled) { color: var(--paper-ink); background: var(--vlak); }
+.filter[aria-pressed="true"] { color: var(--paper-ink); background: var(--vlak-aan); }
+.filter-telling, .telling-let-op { font-size: 11px; font-weight: 500; color: var(--slate-mute); background: var(--vlak); border: 1px solid var(--rand); border-radius: 4px; }
+.segment { gap: 2px; padding: 2px; background: var(--vlak); border: 1px solid var(--rand); border-radius: 7px; }
+.segment button { height: 24px; min-width: 0; padding: 0 10px; font-size: 12.5px; font-weight: 500; color: var(--slate-mute); background: none; border: 0; border-radius: 5px; }
+.segment button + button { border-left: 0; }
+.segment button[aria-pressed="true"]:not(.segment-voor):not(.segment-tegen) { color: var(--paper-ink); background: var(--vlak-aan); box-shadow: 0 1px 1px rgb(0 0 0 / 0.3); }
+.segment .segment-voor[aria-pressed="true"] { color: #fff; background: var(--klaar-green); }
+.segment .segment-tegen[aria-pressed="true"] { color: #fff; background: var(--ether-red); }
+.kant .segment button { height: 28px; min-width: 76px; font-size: 13px; }
+
+/* Tabellen: lijsten zoals in Linear, geen koppen in hoofdletters, rustige lijnen */
+.tabel th { height: 32px; padding: 0 10px; font-size: 12px; font-weight: 500; color: var(--tekst-3); background: var(--graphite-ground); border-bottom: 1px solid var(--rand); text-transform: none; letter-spacing: 0; }
+.tabel td { border-bottom: 1px solid var(--graphite-divider); }
+.tabel tbody tr:hover { background: var(--vlak); }
+.tabel tr.gekozen { background: var(--vlak-aan); box-shadow: none; }
+
+/* Stempels: een bolletje en een woord */
+.stempel, .stempel-live, .stempel-klaar {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: 0;
+  padding: 0;
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--slate-mute);
+  background: none;
+  border: 0;
+}
+.stempel::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: var(--tekst-3); }
+.stempel-live { color: var(--ether-red-text); }
+.stempel-live::before { background: var(--ether-red); box-shadow: 0 0 0 3px rgb(229 72 77 / 0.2); }
+.stempel-klaar { color: var(--klaar-green-text); }
+.stempel-klaar::before { background: var(--klaar-green-text); }
+.slotknop .stempel::before { display: none; }
+.presets-tabel tr.rij-live, .motielijst tr.rij-live { background: rgb(229 72 77 / 0.06); }
+.presets-tabel tr.rij-klaar, .motielijst tr.rij-klaar { background: rgb(47 157 104 / 0.06); }
+.toets-kap { width: 22px; height: 22px; font-size: 11.5px; font-weight: 500; font-family: inherit; color: var(--slate-mute); background: var(--vlak); border: 1px solid var(--rand); border-radius: 5px; }
+.schets { border-radius: 4px; outline-color: var(--rand); }
+.tablet-knop { height: 26px; width: 30px; padding: 0; justify-content: center; color: var(--tekst-3); background: none; border: 1px solid transparent; }
+.tablet-knop { width: auto; padding: 0 8px; gap: 5px; font-size: 12px; }
+.tablet-knop:hover:not(:disabled) { color: var(--paper-ink); background: var(--vlak); }
+.tablet-knop[aria-pressed="true"] { color: var(--steel-blue); background: rgb(141 149 242 / 0.12); border-color: rgb(141 149 242 / 0.3); }
+
+/* Stemmingen */
+.fractie-toetsen { gap: 6px; padding: 8px; border-width: 1px; border-radius: 10px; }
+.tik-voor { border-color: rgb(47 157 104 / 0.45); }
+.tik-tegen { border-color: rgb(229 72 77 / 0.45); }
+.fractie-toets {
+  padding: 5px 8px 6px 10px;
+  color: var(--paper-ink);
+  background: var(--vlak);
+  border: 1px solid var(--rand);
+  border-radius: 7px;
+  box-shadow: inset 3px 0 0 -1px var(--partij);
+}
+.fractie-toets:hover:not(:disabled) { background: var(--vlak-hover); }
+.fractie-voor { background: rgb(47 157 104 / 0.1); border-color: rgb(47 157 104 / 0.4); }
+.fractie-tegen { background: rgb(229 72 77 / 0.08); border-color: rgb(229 72 77 / 0.35); }
+.toets-stem { font-size: 11px; font-weight: 500; letter-spacing: 0; text-transform: none; }
+.toets-zetels { font-size: 13px; font-weight: 500; }
+.toets-volg { font-size: 11px; color: var(--tekst-3); }
+.uitkomst-woord { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; text-transform: none; }
+.voorzitter { background: var(--vlak); border: 1px solid var(--rand); border-radius: 8px; }
+.actiebalk { padding: 10px 14px; background: var(--graphite-ground); border-top: 1px solid var(--rand); }
+.actiebalk-scheiding { background: var(--rand); }
+
+/* Coalitie */
+.boog-partij { background: var(--vlak); border: 1px solid var(--rand); border-radius: 8px; box-shadow: none; }
+.boog-partij:hover:not(:disabled) { background: var(--vlak-hover); border-color: var(--rand-sterk); }
+.boog-partij[aria-pressed="true"] { color: var(--paper-ink); background: var(--vlak-aan); border-color: rgb(255 255 255 / 0.4); box-shadow: inset 0 -3px 0 var(--partij); }
+.boog-partij[aria-pressed="true"] .boog-zetels { color: var(--paper-ink); }
+.boog-vink { color: #0b0c0e; background: var(--paper-ink); border-radius: 50%; width: 16px; height: 16px; }
+.coalitie-boog { border-radius: 12px; }
+.coalitie-live { border-color: rgb(229 72 77 / 0.45); }
+.coalitie-live-regel { font-weight: 500; font-size: 12px; }
+
+/* Panelen en velden */
+.paneel-detail { gap: 16px; padding: 16px 18px; }
+.veld { gap: 6px; }
+.werkvlak-inhoud.coalitie > aside, .coalitie-zijkant { border-left: 1px solid var(--rand); }
+.lijst { border-right: 1px solid var(--rand); }
+.storing { font-weight: 500; }
+.take-melding, .presets-melding { color: var(--warn-amber-ink); background: var(--warn-amber); border-radius: 6px; font-weight: 500; }
+.invoermelding, .systeem { font-size: 13px; }
+details > summary { cursor: pointer; }
+
+/* Take tijdens typen: klikken werkt, Spatie typt in het veld. Alleen de toetskap wordt een amber Esc. */
+.toon .kbd-let-op { color: var(--warn-amber-ink); background: var(--warn-amber); border-color: var(--warn-amber); }
+.toon-typen { font-size: 12px; font-weight: 500; color: #fff; text-align: left; }
+/* Partijkleur als bolletje voor de naam, geen streep. */
+.fractie-toets { box-shadow: none; }
+.toets-naam { display: inline-flex; align-items: center; gap: 6px; }
+.toets-naam::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--partij); }
+/* Presets: één regel per cel */
+.presets-tabel td { height: 44px; }
+.gegevens-regel { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+.gegevens-regel > div { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.preset-nummer { display: inline-grid; place-items: center; width: 22px; font-size: 12px; color: var(--tekst-3); }
+.presets-tabel tbody tr:first-child td { border-top: 0; }
+.herstel-knop { padding: 0 6px; gap: 6px; }
+.herstel-knop kbd { padding: 0 3px; font-size: 10.5px; }
+
+/* Live coalitie met oude cijfers: wat de cijfers van nu zeggen, en vol amber als de meerderheid omslaat. */
+.coalitie-nu { margin: 0; padding: 5px 10px; font-size: 12.5px; color: var(--warn-amber); border: 1px solid rgb(227 162 59 / 0.35); border-radius: 6px; }
+.coalitie-nu strong { font-weight: 600; }
+.coalitie-omslag { color: var(--warn-amber-ink); background: var(--warn-amber); border-color: var(--warn-amber); }
+.coalitie-omslag .zacht { color: inherit; opacity: 0.75; }
+
+/* De naam van een Preset is een knop (Tab en Enter), maar oogt als tekst. */
+.preset-titel { padding: 0; font: inherit; font-weight: 500; color: inherit; background: none; border: 0; cursor: pointer; }
+.preset-titel:focus-visible { outline: 2px solid var(--steel-blue); outline-offset: 2px; border-radius: 3px; }
+
+/* In lijsten is een Partij een stip in de partijkleur: de korte naam staat er al naast, dus geen chip
+   met onleesbare minitekst. De boog van de Coalitiebouwer en de kop van een Partij houden hun tegel. */
+.partij-cel .logo-tegel-tekst, .kol-logo .logo-tegel-tekst, .coalitie-lijst .logo-tegel-tekst {
+  width: 8px; min-width: 8px; height: 8px; padding: 0; font-size: 0; border-radius: 50%; box-shadow: none;
+}
+
+/* Broadcastlaag rond Preview, Live en Take (ronde 5): Studio blijft rustig, maar de tally moet je vanuit
+   je ooghoek zien. Een dikke rand in de tallykleur (zonder dat de indeling verschuift) en een vol label. */
+.monitor-klaar { border-color: var(--klaar-green); box-shadow: 0 0 0 2px var(--klaar-green); }
+.monitor-ether { border-color: var(--ether-red); box-shadow: 0 0 0 2px var(--ether-red); }
+.monitor-klaar .monitor-label, .monitor-ether .monitor-label {
+  padding: 2px 7px; font-size: 12px; font-weight: 600; color: #fff; border-radius: 4px;
+}
+.monitor-klaar .monitor-label { background: var(--klaar-green); }
+.monitor-ether .monitor-label { background: var(--ether-red); }
+.monitor-klaar .monitor-label::before, .monitor-ether .monitor-label::before { display: none; }
+.monitor-label { font-size: 12.5px; }
+/* Oude cijfers: overal hetzelfde amber vlak, op de monitor die het betreft. */
+.strook-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; font-size: 11.5px; font-weight: 500; color: var(--warn-amber); background: rgb(227 162 59 / 0.12); border: 1px solid rgb(227 162 59 / 0.45); border-radius: 5px; }
+.strook-chip kbd { color: inherit; background: none; border-color: rgb(227 162 59 / 0.45); }
+.strook-knop { border-color: rgb(227 162 59 / 0.45); background: rgb(227 162 59 / 0.12); }
+/* In Take: leesbaar op rood, een donker vakje met amber tekst. */
+.toon-let-op { align-self: flex-start; padding: 1px 6px; font-size: 12px; font-weight: 600; color: #ffd27a; background: rgb(0 0 0 / 0.38); border-radius: 4px; }
+.toon-let-op::before { display: none; }
+/* Herstel: de seconden als getal en Terug in beeld als witte hoofdknop. */
+.herstel { position: relative; }
+.herstel-sec { position: absolute; top: 8px; right: 9px; font-size: 12px; font-weight: 600; color: var(--warn-amber); font-variant-numeric: tabular-nums; }
+.herstel-wat { padding-right: 34px; }
+.herstel-knop { color: var(--graphite-field); background: var(--paper-ink); border-color: var(--paper-ink); font-weight: 600; }
+.herstel-knop:hover:not(:disabled) { background: #fff; }
+.herstel-knop kbd { color: inherit; border-color: rgb(0 0 0 / 0.25); background: none; }
+/* Vormgeving: de balk met Opslaan blijft onderin staan terwijl het formulier eronder scrolt. */
+.stijl-actiebalk { position: sticky; bottom: 0; z-index: 2; background: var(--graphite-ground); border-top: 1px solid var(--rand); }
+
+/* Stemmingen: Voor en Tegen in één blik, ook bij een gedicteerde stemming. */
+.fractie-voor { background: rgb(47 157 104 / 0.14); border-color: rgb(47 157 104 / 0.7); }
+/* Tegen: een rode rand en het woord, zonder rode vulling, zodat vol rood alleen Live en Take blijft. */
+.fractie-tegen { background: var(--vlak); border-color: rgb(229 72 77 / 0.65); }
+.fractie-voor .toets-stem { color: var(--klaar-green-text); }
+.fractie-tegen .toets-stem { color: var(--ether-red-text); }
+.toets-stem { font-size: 12.5px; font-weight: 600; }
+.fractie-toets .toets-naam { display: flex; align-items: flex-start; gap: 6px; min-width: 0; overflow: visible; -webkit-line-clamp: unset; }
+.fractie-toets .toets-naam::before { margin-top: 4px; }
+.toets-naam-tekst { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-width: 0; line-height: 1.2; overflow-wrap: normal; hyphens: auto; }
+
+/* Gevulde vlakken met witte tekst halen 4,5:1: een iets donkerder rood en groen dan de tally-rand. */
+:root { --ether-vul: #c93a40; --ether-vul-hover: #d6444a; --klaar-vul: #1f7a4f; --klaar-vul-hover: #258a5a; }
+.toon { background: var(--ether-vul); }
+.toon:hover:not(:disabled) { background: var(--ether-vul-hover); }
+.monitor-ether .monitor-label, .segment .segment-tegen[aria-pressed="true"] { background: var(--ether-vul); }
+.monitor-klaar .monitor-label, .segment .segment-voor[aria-pressed="true"] { background: var(--klaar-vul); }
+.knop-commit { background: var(--klaar-vul); }
+.knop-commit:hover:not(:disabled) { background: var(--klaar-vul-hover); }
+.tablet .stempel-live { color: #fff; background: var(--ether-vul); border-color: var(--ether-vul); }
+.tablet .stempel-klaar { color: #fff; background: var(--klaar-vul); border-color: var(--klaar-vul); }
+.tablet .tablet-klaarzetten { color: #fff; background: var(--klaar-vul); border-color: var(--klaar-vul); }
+/* Op een live (rode) rij: wit omlijnd, want groen op rood is onder studiolicht niet te lezen. */
+.tablet .tablet-opnieuw { color: #fff; background: rgb(0 0 0 / 0.25); border: 2px solid rgb(255 255 255 / 0.7); }
+
+/* Camera bij Take: drie keuzes naast elkaar, de lijst pas bij Kies. */
+.camera-keuze { display: grid; gap: 6px; justify-items: start; }
+.camera-keuze select { width: 100%; }
+/* De schets van een Preset is klein en gebruikt de donkere kleuren van de uitzending: lichter, zodat je
+   de vorm (balk, boog, kaart) in één blik herkent. */
+.kol-beeld .schets { filter: brightness(1.7) saturate(1.15); }
+/* De kolom met Take past ook met herstel erin binnen de hoogte van de monitoren. */
+.knop-take { height: 28px; }
+.take { gap: 5px; }
+.herstel { padding: 7px 8px 9px; gap: 5px; }
+.herstel-knop { justify-content: space-between; padding: 0 6px; font-size: 12.5px; }
+.herstel-knop kbd { padding: 0 3px; font-size: 10px; }
+
+/* Tijdens typen gaan de toetsen naar het veld: geen toetskappen in de kolom met Take. */
+.take-typt kbd { display: none; }
+/* Coalitieboog: de korte naam leesbaar, de partijkleur als streep bovenaan. */
+.boog-partij { box-shadow: inset 0 3px 0 var(--partij); padding-top: 9px; }
+.boog-partij[aria-pressed="true"] { box-shadow: inset 0 3px 0 var(--partij), inset 0 -3px 0 var(--partij); }
+.boog-naam { max-width: 100%; overflow: hidden; font-size: 11.5px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; text-overflow: ellipsis; color: var(--paper-ink); }
+.tablet .boog-naam { font-size: 14px; }
+.tablet .boog-partij { padding-top: 11px; }
+/* Cijfers: een gewijzigd getal dat nog niet bewaard is. */
+.zetelvak-plek { position: relative; display: inline-block; }
+.zetelvak-hint { position: absolute; top: calc(100% + 4px); right: 0; z-index: 5; display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; font-size: 11.5px; white-space: nowrap; color: var(--paper-ink); background: var(--graphite-raised); border: 1px solid var(--rand-sterk); border-radius: 6px; box-shadow: 0 4px 12px rgb(0 0 0 / 0.45); }
+
+/* De uitkomst van een Stemming: Aangenomen groen, Verworpen neutraal wit (rood is voor Live en Take). */
+.uitkomst-woord.verworpen { color: var(--paper-ink); }
+/* Vormgeving: de laatste velden scrollen voorbij de vaste Opslaan-balk. */
+.stijl-velden { padding-bottom: 56px; }
+/* Live coalitie met oudere cijfers: de teller zelf waarschuwt. */
+.boog-oud .boog-totaal { color: var(--warn-amber); }
+.boog-oud .zacht { color: var(--warn-amber); }
+.tablet .coalitie-live-regel { padding-inline: 12px; }
+
+/* Tijdens typen: geen toetskappen in de multiviewer, want letters gaan naar het veld. */
+[data-typt] .multiviewer kbd { display: none; }
+/* Cameraritten: een eigen kopje, want één letter start een rit die tot 50 seconden live loopt. */
+.rit-kop { margin-top: 2px; font-size: 11.5px; font-weight: 500; color: var(--slate-mute); }
+.standpunt-duur { font-size: 12px; color: var(--slate-mute); }
+/* Stemmingen: een besluit dat nog niet vastligt, neutraal. */
+.uitkomst-woord.uitkomst-tussen { color: var(--paper-ink); }
+/* Het camerablok blijft met het kopje Cameraritten binnen de hoogte van de monitoren. */
+.camera { gap: 4px; }
+.camera .standpunt-toets { height: 30px; }
+.camera .rit-toetsen .standpunt-toets { height: 29px; }
+.rit-kop { margin-top: 0; line-height: 1.1; }
+/* Het getal bij de meerderheidsstreep op de zetelbalk. */
+.zetelbalk-76 { position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--paper-ink); }
+/* Tablet: een tik voelt meteen, nog voor de server antwoordt. */
+.tablet .knop:active:not(:disabled), .tablet .boog-partij:active:not(:disabled) { transform: scale(0.97); filter: brightness(1.2); }
+.tablet .boog-partij:active:not(:disabled) { transform: translate(-50%, -50%) scale(0.97); }
+.tablet .boog-raster .boog-partij:active:not(:disabled) { transform: scale(0.97); }
+:root { --tekst-3: #8e919a; }
+
+/* Take heeft een vaste hoogte, zodat de knoppen eronder nooit verschuiven. */
+.toon { height: 58px; min-height: 0; padding-block: 0; }
+.toon-typt { padding: 1px 6px; font-size: 11.5px; font-weight: 600; color: var(--warn-amber-ink); background: var(--warn-amber); border-radius: 4px; }
+/* De tabletschakelaar is neutraal: kleur blijft voor tally en Take. */
+.tablet-knop[aria-pressed="true"] { color: var(--paper-ink); background: var(--vlak-aan); border-color: var(--rand-sterk); }
+/* "was live" als stempel, zoals Live en Klaar, maar grijs. */
+.stempel-was { color: var(--slate-mute); font-weight: 400; }
+/* Wat je tijdens de uitzending leest, is minstens 12 px. */
+.toets-volg, .strook-chip, .strook-knop, .rit-kop, .zetelbalk-76, .toon-let-op, .boog-naam { font-size: 12px; }
+.coalitie-zijkant .coalitie-nu { align-self: stretch; }
+
+/* Ronde 7 */
+/* Het herstelblok hangt onderin de kolom met Take: het duwt nooit de lijst eronder omlaag. */
+.take { position: relative; align-self: stretch; }
+.take > .herstel { position: absolute; left: 0; right: 0; bottom: 0; }
+.strook-knop-terug { color: var(--graphite-field); background: var(--paper-ink); border-color: var(--paper-ink); }
+.strook-knop-terug:hover { background: #fff; }
+/* Take tijdens typen: donkerder rood, want Spatie werkt dan niet; klikken wel. */
+.toon.toon-typen-stand { background: #8f2b30; }
+.toon.toon-typen-stand:hover:not(:disabled) { background: var(--ether-vul); }
+/* Uitgeschakelde knoppen zie je meteen als uit. */
+.knop:disabled, .knop-take:disabled, .knop-hoofd:disabled { opacity: 0.4; border-color: transparent; background: transparent; }
+.knop:disabled kbd, .knop:disabled svg { opacity: 0.6; }
+/* 12 px als ondergrens voor wat je tijdens de uitzending leest. */
+kbd, .toets-kap, .standpunt-duur, .tab-telling, .toon-typt, .boog-naam, .herstel-knop kbd { font-size: 12px; }
+.punt { width: 8px; height: 8px; }
+/* Coalitieboog: breed genoeg voor GL-PvdA. */
+.boog-partij { width: 64px; padding-inline: 3px; }
+.boog-partij[aria-pressed="true"] { background: color-mix(in srgb, var(--partij) 26%, var(--graphite-panel)); border-color: color-mix(in srgb, var(--partij) 70%, white 10%); }
+/* De gevaarlijkste zin op het scherm: elke klik is meteen live. */
+.coalitie-live-regel { font-size: 13px; font-weight: 600; color: var(--ether-red-text); }
+.coalitie-nu.coalitie-omslag { color: var(--warn-amber); background: rgb(227 162 59 / 0.12); border-color: var(--warn-amber); }
+.boog-doel { font-size: 0.45em; font-weight: 500; color: var(--slate-mute); }
+/* Cameraritten bewegen tot 50 seconden live: een rode stippelrand. */
+.camera .rit-toetsen .standpunt-toets { border-style: dashed; border-color: rgb(229 72 77 / 0.5); }
+.rit-kop { color: var(--ether-red-text); }
+/* Tijdens typen: toetskappen onzichtbaar maar op hun plek, zodat de namen niet verschuiven. */
+[data-typt] .multiviewer kbd { display: inline-flex; visibility: hidden; }
+/* Lange Fractienamen: afbreken met koppelteken, en anders toch binnen de tegel. */
+.toets-naam-tekst { word-break: break-word; hyphens: auto; }
+.tablet-knop:not([aria-pressed="true"]) { opacity: 0.55; }
+.tablet .tablet-klaarzetten { flex-direction: column; gap: 2px; }
+.tablet-vervangt { font-size: 12px; font-weight: 500; opacity: 0.85; }
+.tablet .toets-kap { font-size: 16px; font-weight: 700; }
+.ster:not(.ster-aan) { color: var(--tekst-3); }
+.ster-aan { color: var(--paper-ink); }
+.tablet-knop { white-space: nowrap; }
+/* De kolom met de tabletschakelaar past "Op tablet" helemaal; de camerakolom levert in. */
+.presets-tabel .kol-tablet { width: 112px; }
+.presets-tabel .kol-camera { width: 226px; }
+/* Geen verzonnen koppelteken in een eigennaam (ChristenUnie): lange namen lopen over twee regels. */
+.toets-naam-tekst { hyphens: manual; }
+/* Fractietegel: "Tegen" boven bepaalt niet de breedte van de Zetelkolom, zodat de naam de ruimte krijgt. */
+.fractie-toets .toets-volg { grid-row: 1; grid-column: 1 / -1; justify-self: start; }
+.fractie-toets .toets-stem { grid-row: 1; grid-column: 1 / -1; justify-self: end; }
+.fractie-toets .toets-naam { grid-row: 2; grid-column: 1; }
+.fractie-toets .toets-zetels { grid-row: 2; grid-column: 2; }

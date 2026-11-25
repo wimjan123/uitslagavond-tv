@@ -6,9 +6,9 @@ export { toetsVan };
 
 /** Kleur uit geeft de Stoelen in de Ether direct hun eigen leer terug, los van de Graphic. Opbouw
  * overslaan kleurt de Partijen die nog niet aan de beurt waren meteen mee. */
-export type TakeActie = "Toon" | "Bijwerken" | "UitBeeld" | "KleurUit" | "SlaOpbouwOver";
+export type TakeActie = "Toon" | "Bijwerken" | "UitBeeld" | "KleurUit" | "SlaOpbouwOver" | "Ververs";
 
-/** Stuur de camera van de Ether naar het Standpunt met deze toets; met Shift knipt hij meteen. */
+/** Stuur de Live-camera naar het Standpunt met deze toets; met Shift knipt hij meteen. */
 export interface StandpuntActie {
   soort: "Standpunt";
   toets: string;
@@ -16,7 +16,7 @@ export interface StandpuntActie {
 }
 
 /**
- * Zet de Vrije camera aan of uit (de gamepad stuurt dan de camera van de Ether), Oefenen aan of uit
+ * Zet de Vrije camera aan of uit (de gamepad stuurt dan de Live-camera), Oefenen aan of uit
  * (de gamepad stuurt alleen het Voorbeeld), of start of stopt een opname (alleen tijdens Oefenen).
  */
 export type CameraActie = "VrijeCamera" | "Oefenen" | "Opnemen";
@@ -27,7 +27,10 @@ export interface PresetActie {
   nummer: number;
 }
 
-export type Actie = TakeActie | CameraActie | StandpuntActie | PresetActie;
+/** Zet terug wat Uit beeld of een wisactie net weghaalde (Ctrl+Z), zolang dat nog kan. */
+export type HerstelActie = "Herstel";
+
+export type Actie = TakeActie | CameraActie | StandpuntActie | PresetActie | HerstelActie;
 
 export interface Toets {
   key: string;
@@ -46,6 +49,7 @@ const TOETSEN: Record<string, TakeActie | CameraActie> = {
   x: "UitBeeld",
   z: "KleurUit",
   c: "SlaOpbouwOver",
+  n: "Ververs",
   v: "VrijeCamera",
   o: "Oefenen",
   r: "Opnemen",
@@ -64,7 +68,9 @@ export function standpuntVoorToets<T extends { letter: string; toets?: string; v
 }
 
 export function actieVoorToets(t: Toets): Actie | null {
-  if (t.ctrlKey || t.metaKey || t.altKey || t.doel === "tekstveld") return null;
+  if (t.doel === "tekstveld") return null;
+  if ((t.ctrlKey || t.metaKey) && !t.altKey && t.key.toLowerCase() === "z") return "Herstel";
+  if (t.ctrlKey || t.metaKey || t.altKey) return null;
   if (t.key === " " && t.doel === "knop") return null;
   const k = t.key.toLowerCase();
   if (STANDPUNT_TOETSEN.includes(k)) return { soort: "Standpunt", toets: k.toUpperCase(), knip: !!t.shiftKey };

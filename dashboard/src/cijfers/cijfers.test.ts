@@ -63,6 +63,7 @@ test("kop van de vergelijkingskolom: het jaartal uit de naam, anders de naam", (
 test("verdeel: de eerste helft links, de rest rechts, in dezelfde volgorde", () => {
   assert.deepEqual(verdeel([1, 2, 3, 4, 5]), [[1, 2, 3], [4, 5]]);
   assert.deepEqual(verdeel([]), [[], []]);
+  assert.deepEqual(verdeel([1, 2, 3, 4, 5, 6, 7], 3), [[1, 2, 3], [4, 5, 6], [7]]);
 });
 
 test("eigen wijziging: het vakje toont de eigen waarde tot de Stand van het antwoord er is", () => {

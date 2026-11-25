@@ -2147,7 +2147,7 @@ fn zetelverdeling() -> Sjabloon {
             },
             programmabug(),
             Blok {
-                plek: plek(96, 236, 1728, 136),
+                plek: plek(96, 250, 1728, 136),
                 soort: Bloksoort::Partijlabels {
                     letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                     naamletter: Letterkeuze::Stijl(Stijlletter::Tekst),
@@ -2158,7 +2158,7 @@ fn zetelverdeling() -> Sjabloon {
                 animatie: animatie(Erin::Vervagen, Eruit::Vervagen, 0),
             },
             Blok {
-                plek: plek(96, 760, 1728, 150),
+                plek: plek(96, 850, 1728, 150),
                 soort: Bloksoort::Opbouwlabel {
                     letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                     naamletter: Letterkeuze::Stijl(Stijlletter::Kop),
@@ -2193,17 +2193,19 @@ fn persoonskaart() -> Sjabloon {
     };
     let veld = |v: &str| Tekstbron::Veld(v.into());
     let mut blokken = vec![
-        // 0: het zijpaneel, bovenaan een verloop van Achtergrond naar Vlak
+        // 0: het zijpaneel, effen (de Zaal schijnt er niet doorheen), een verloop van Achtergrond
+        // naar Vlak over de hele hoogte: achter de schouders van het portret blijft het iets
+        // lichter dan een donker pak (council ronde 5)
         Blok {
             plek: plek(1166, 0, 754, 1080),
             soort: vlak_met(
-                95,
+                100,
                 Some(Verloop {
                     naar: Kleurkeuze::Stijl(Stijlkleur::Vlak),
-                    naar_dekking: 97,
+                    naar_dekking: 100,
                     richting: 180,
                     van: 0,
-                    tot: 55,
+                    tot: 100,
                 }),
                 0,
                 None,
@@ -2222,9 +2224,11 @@ fn persoonskaart() -> Sjabloon {
     ];
     blokken.extend([
         // 2: de foto, of de voorletters in de kopletter op de partijkleur; zo breed als de tekst.
-        // De Renderer maakt een portret vrijstaand: het paneel loopt achter het hoofd door.
+        // De Renderer maakt een portret vrijstaand: het paneel loopt achter het hoofd door, en de
+        // foto staat met een rechte onderkant op het onderste vlak (y 640), zoals achter een
+        // desk, in plaats van weg te vloeien (council ronde 5).
         Blok {
-            plek: plek(1214, 150, 610, 480),
+            plek: plek(1214, 150, 610, 490),
             soort: Bloksoort::FotoKamerlid {
                 hoek: 0,
                 letter: Letterkeuze::Stijl(Stijlletter::Kop),
@@ -2286,25 +2290,6 @@ fn persoonskaart() -> Sjabloon {
             Stijlkleur::Tekst,
             false,
         ),
-        // de onderkant van de foto loopt over in het paneel, zodat hij er niet op geplakt lijkt
-        Blok {
-            plek: plek(1166, 450, 754, 180),
-            soort: vlak_met(
-                0,
-                Some(Verloop {
-                    naar: Kleurkeuze::Stijl(Stijlkleur::Vlak),
-                    naar_dekking: 100,
-                    richting: 180,
-                    van: 0,
-                    tot: 100,
-                }),
-                0,
-                None,
-                None,
-            ),
-            kleur: Kleurkeuze::Stijl(Stijlkleur::Vlak),
-            animatie: animatie(Erin::Vervagen, Eruit::Vervagen, 260),
-        },
         // het programmalogo
         programmabug(),
     ]);
@@ -2359,15 +2344,16 @@ fn stemmingskop(x: i32, y: i32, kicker_tekst: &str) -> Vec<Blok> {
 /// Stoelen in hun stem.
 fn uitslag_stemming() -> Sjabloon {
     // onder de balk is ruimte voor drie rijen labels van 30 px
-    let (x, y) = (96, 532);
+    let (x, y) = (96, 512);
     let erin = animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0);
     let mut blokken = vec![
-        paneel(plek(x, y, 1728, 474)),
+        paneel(plek(x, y, 1728, 494)),
     ];
     blokken.extend(stemmingskop(x, y, "STEMMING"));
     blokken.extend([
         Blok {
-            plek: plek(x + 48, y + 186, 1632, 72),
+            // boven de balk staat het drempelgetal bij de streep
+            plek: plek(x + 48, y + 206, 1632, 72),
             soort: Bloksoort::Stemmingsbalk {
                 letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                 tekstletter: Letterkeuze::Stijl(Stijlletter::Tekst),
@@ -2376,7 +2362,7 @@ fn uitslag_stemming() -> Sjabloon {
             animatie: erin,
         },
         Blok {
-            plek: plek(x + 48, y + 282, 1632, 170),
+            plek: plek(x + 48, y + 302, 1632, 170),
             soort: Bloksoort::Fractielijst {
                 letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                 tekstletter: Letterkeuze::Stijl(Stijlletter::Tekst),
@@ -2587,19 +2573,19 @@ fn uitslag_per_partij() -> Sjabloon {
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken: vec![
-            paneel(plek(96, 120, 1330, 890)),
+            paneel(plek(96, 120, 1728, 890)),
             streepje,
             kicker_tekst,
             paneeltekst(plek(148, 196, 820, 108), Tekstbron::Setnaam, Stijlletter::Kop, 92, Stijlkleur::Hoofd, Uitlijning::Links),
-            meerderheid(plek(774, 254, 600, 42)),
+            meerderheid(plek(1172, 254, 600, 42)),
             Blok {
-                plek: plek(148, 314, 1226, 2),
+                plek: plek(148, 314, 1624, 2),
                 soort: Bloksoort::Lijn { dekking: 55 },
                 kleur: Kleurkeuze::Stijl(Stijlkleur::Tekst),
                 animatie: animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0),
             },
             Blok {
-                plek: plek(96, 330, 1278, 672),
+                plek: plek(96, 330, 1676, 672),
                 soort: Bloksoort::Uitslaggrafiek {
                     letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                     naamletter: Letterkeuze::Stijl(Stijlletter::Tekst),
@@ -2629,19 +2615,19 @@ fn winst_en_verlies() -> Sjabloon {
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken: vec![
-            paneel(plek(96, 120, 1330, 890)),
+            paneel(plek(96, 120, 1728, 890)),
             streepje,
             kicker_tekst,
             paneeltekst(plek(148, 196, 820, 108), Tekstbron::Setnaam, Stijlletter::Kop, 92, Stijlkleur::Hoofd, Uitlijning::Links),
-            paneeltekst(plek(774, 254, 600, 42), Tekstbron::ZetelsTegenover, Stijlletter::Tekst, 30, Stijlkleur::Hoofd, Uitlijning::Rechts),
+            paneeltekst(plek(1172, 254, 600, 42), Tekstbron::ZetelsTegenover, Stijlletter::Tekst, 30, Stijlkleur::Hoofd, Uitlijning::Rechts),
             Blok {
-                plek: plek(148, 314, 1226, 2),
+                plek: plek(148, 314, 1624, 2),
                 soort: Bloksoort::Lijn { dekking: 55 },
                 kleur: Kleurkeuze::Stijl(Stijlkleur::Tekst),
                 animatie: animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0),
             },
             Blok {
-                plek: plek(148, 330, 1226, 672),
+                plek: plek(148, 330, 1624, 672),
                 soort: Bloksoort::WinstEnVerliesgrafiek {
                     letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                     naamletter: Letterkeuze::Stijl(Stijlletter::Tekst),

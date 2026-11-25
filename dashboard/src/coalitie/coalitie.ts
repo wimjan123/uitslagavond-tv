@@ -29,7 +29,8 @@ export function telling(zetels: Record<string, number>, partijen: string[]): num
 
 /** De regel onder de teller in het dashboard (DESIGN.md, Coalitiebouwer Arc). */
 export function regel(zetels: number): string {
-  return zetels >= MEERDERHEID ? "meerderheid" : `nog ${MEERDERHEID - zetels} nodig voor ${MEERDERHEID}`;
+  const nog = MEERDERHEID - zetels;
+  return nog <= 0 ? "meerderheid" : `nog ${nog} ${nog === 1 ? "Zetel" : "Zetels"} tot een meerderheid`;
 }
 
 /** Een Partij aantikken: erbij als ze er niet in zat, anders eraf. */
@@ -86,4 +87,20 @@ export function boog(n: number, straal: number): { x: number; y: number }[] {
     const rond = (v: number) => (Math.abs(v) < 1e-9 ? 0 : v);
     return { x: rond(straal * Math.cos(hoek)), y: rond(-straal * Math.sin(hoek)) };
   });
+}
+
+/** Een coalitie in Live met haar uitgezonden Zetels en die met de cijfers van nu uit haar eigen set
+ * (niet uit de set die de Regie voor een kopie kiest); `null` zonder coalitie in Live of zonder
+ * bewaarde cijfers. */
+export function nuVanLive(s: Stand): { live: number; nu: number } | null {
+  const g = alsCoalitie(s.ether?.graphic);
+  if (!g?.cijfers) return null;
+  return { live: telling(g.cijfers.set.zetels, g.partijen), nu: telling(zetelsVan(s, g.set), g.partijen) };
+}
+
+/** Of de cijfers van nu de live coalitie over of onder de meerderheid zetten. Dan mag Update haar niet
+ * stil in Live bijwerken: zo'n omslag is nieuws en moet eerst in Preview te zien zijn. */
+export function meerderheidSlaatOm(s: Stand): boolean {
+  const n = nuVanLive(s);
+  return !!n && n.live >= MEERDERHEID !== n.nu >= MEERDERHEID;
 }
