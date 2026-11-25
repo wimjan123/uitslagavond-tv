@@ -381,7 +381,7 @@ const ONSCHERP_S: f32 = 0.5;
 /// stonden achter de stemmingstabellen grote groene en rode vlekken (gemiddeld RGB 23, 40, 32
 /// tegen 5, 4, 4 achter Uitslag per partij, council-ronde 5).
 const ONSCHERP_VERZADIGING: f32 = 0.12;
-const ONSCHERP_STOPS: f32 = 1.5;
+const ONSCHERP_STOPS: f32 = 2.5;
 
 /// De kleurcorrectie van de Zaal achter Zaal donker, bij onscherpte `f` (0 tot 1).
 fn kleurcorrectie_achter_donker(f: f32) -> bevy::render::view::ColorGrading {

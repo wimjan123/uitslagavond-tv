@@ -55,6 +55,7 @@ impl Plugin for ZaalPlugin {
             .init_resource::<Opbouwstand>()
             .init_resource::<Zaaldimmer>()
             .init_resource::<Uitlichting>()
+            .init_resource::<Titelsterkte>()
             .add_systems(
                 Update,
                 (
@@ -73,7 +74,7 @@ impl Plugin for ZaalPlugin {
                     brightness: crate::beeld::BEELD.omgeving,
                     affects_lightmapped_meshes: false,
                 })
-                .add_systems(Startup, (laad.after(crate::beeld::bouw), zet_lijn_bij_76))
+                .add_systems(Startup, (laad.after(crate::beeld::bouw), zet_lijn_bij_76, zet_titelbundel))
                 .add_systems(Update, (stel_materialen_bij, spots_stralen.before(dim_zaal), meld_klaar, toon_lijn_bij_76));
         }
     }
@@ -903,10 +904,10 @@ const OPBOUWLICHT_RAND: f32 = 1.5;
 /// De sterkte op de top van de flits en daarna, in lumen. Met 4500 en daarna de helft was de
 /// kring op het tapijt niet te meten (council-ronde 5): nu is het tapijt onder het blok minstens
 /// een kwart lichter dan ernaast.
-const OPBOUWLICHT_TOP: f32 = 20000.0;
+const OPBOUWLICHT_TOP: f32 = 14000.0;
 const OPBOUWLICHT_BLIJFT: f32 = 0.65;
 /// Hoeveel van de partijkleur in het licht zit; de rest is warm wit.
-const OPBOUWLICHT_KLEUR: f32 = 0.35;
+const OPBOUWLICHT_KLEUR: f32 = 0.2;
 
 /// Hoe fel de lichtkring is (0 tot 1) op `t` seconden in een stap van `per_stap` seconden: hij
 /// komt op met de flits, zakt naar [`OPBOUWLICHT_BLIJFT`] en dooft vlak voor de volgende stap.
@@ -1039,6 +1040,7 @@ fn zet_sleutellicht(
     mut commands: Commands,
     nabijheid: Option<Res<crate::lens::Nabijheid>>,
     uitlichting: Res<Uitlichting>,
+    titel: Res<Titelsterkte>,
     camera: Query<(&Transform, &Projection), (With<crate::beeld::HoofdCamera>, Without<Sleutellicht>)>,
     mut licht: Query<(&mut SpotLight, &mut Transform, &mut Visibility), With<Sleutellicht>>,
     leer: Query<&MeshMaterial3d<StandardMaterial>, With<StoelLeer>>,
@@ -1089,7 +1091,7 @@ fn zet_sleutellicht(
     zicht.set_if_neq(if nabij > 0.0 { Visibility::Inherited } else { Visibility::Hidden });
     // het gebakken licht op het leer en op de rest van de Zaal, ook van materialen die er later
     // bij komen (een nieuwe kleur, een Stoel midden in de golf)
-    let leer_gebakken = 1.0 - (1.0 - SLEUTEL_GEBAKKEN) * nabij;
+    let leer_gebakken = (1.0 - (1.0 - SLEUTEL_GEBAKKEN) * nabij) * (1.0 - (1.0 - TITEL_LEER) * kleurgolf::zacht(titel.0));
     let zaal_gebakken = 1.0 - (1.0 - ZAAL_GEBAKKEN_NABIJ) * nabij;
     let nieuw = *vorig != Some(nabij);
     *vorig = Some(nabij);
@@ -1123,31 +1125,138 @@ fn zet_sleutellicht(
     }
 }
 
-/// Bij de Titelkaart een gericht zijlicht op de middelste Stoelen, schuin van links voor, zoals
-/// een studiolamp: het midden van de Zaal licht op en de rest valt iets terug (council-ronde 4:
-/// het totaalbeeld onder de Titelkaart was overal even licht).
+/// Bij de Titelkaart een gerichte lamp van boven op de middelste Stoelen, zoals een studiolamp:
+/// het midden van de Zaal licht op en de rest valt terug (council-ronde 4: het totaalbeeld onder
+/// de Titelkaart was overal even licht). Samen met de lichtbundel ([`Titelbundel`]) het punt van
+/// aandacht van het eerste beeld (council-ronde 5).
 #[derive(Component)]
 struct Titellicht;
 
-/// Waar de lamp hangt (onder het plafond, links voor) en waar hij op richt, in meter.
-const TITELLICHT_PLEK: Vec3 = Vec3::new(-5.5, 4.6, 1.2);
-const TITELLICHT_DOEL: Vec3 = Vec3::new(0.0, 0.9, -4.6);
+/// Hoe ver het licht van de Titelkaart aan is: 0 uit, 1 helemaal.
+#[derive(Resource, Default)]
+struct Titelsterkte(f32);
+
+/// Bij de Titelkaart houdt het leer van de Stoelen dit deel van zijn gebakken licht: alleen de
+/// middelste Stoelen in de lamp zijn licht, de rest van de boog valt terug.
+const TITEL_LEER: f32 = 0.35;
+
+/// Waar de lamp hangt (net onder het plafond, voor de middelste Stoelen, waar ook de lichtbundel
+/// [`Titelbundel`] valt) en waar hij op richt, in meter.
+const TITELLICHT_PLEK: Vec3 = Vec3::new(-1.0, 4.8, -2.3);
+const TITELLICHT_DOEL: Vec3 = Vec3::new(0.0, 0.9, -4.9);
 /// De sterkte in lumen, de halve kegel in radialen en hoe lang hij erover doet om aan of uit te
 /// gaan, in seconden.
-const TITELLICHT_LUMEN: f32 = 6000.0;
+const TITELLICHT_LUMEN: f32 = 9000.0;
 /// Bij de Titelkaart houdt de rest van de Zaal (niet het leer van de Stoelen) dit deel van zijn
 /// licht, zodat de Stoelen in het zijlicht het lichtst zijn en de tribune zachter.
-const TITEL_ZAALLICHT: f32 = 0.6;
-const TITELLICHT_KEGEL: f32 = 0.42;
+const TITEL_ZAALLICHT: f32 = 0.4;
+const TITELLICHT_KEGEL: f32 = 0.5;
 const TITELLICHT_S: f32 = 0.8;
 
+/// De lichtbundel van de Titelkaart: een zachte baan licht van boven het beeld recht omlaag naar
+/// de middelste Stoelen, als in een studio met wat nevel. Zo heeft het eerste beeld een punt van
+/// aandacht en oogt het niet als de eerste Zetelverdeling (council-ronde 5). Het is een vlak
+/// langs de as van de bundel dat naar de camera draait, met een zacht verloop over de breedte.
+#[derive(Component)]
+struct Titelbundel;
+
+/// Van waar naar waar de bundel loopt, in meter, en hoe breed hij boven en onder is.
+const BUNDEL_BOVEN: Vec3 = Vec3::new(0.0, 11.5, -5.4);
+const BUNDEL_ONDER: Vec3 = Vec3::new(0.0, 1.1, -4.7);
+const BUNDEL_BREED_BOVEN: f32 = 1.6;
+const BUNDEL_BREED_ONDER: f32 = 4.0;
+/// Hoe fel de bundel is (lineair, opgeteld bij wat erachter staat) op zijn felste plek.
+const BUNDEL_LICHT: f32 = 0.36;
+
+/// Het verloop van de bundel als beeld: wit, met de dekking in de alfa. Over de breedte zacht
+/// (een klok), in de lengte van boven naar onder iets sterker, en onderaan zacht uitlopend op de
+/// Stoelen.
+fn bundel_beeld() -> Image {
+    use bevy::asset::RenderAssetUsages;
+    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+    let (b, h) = (64usize, 256usize);
+    let mut data = Vec::with_capacity(b * h * 4);
+    for y in 0..h {
+        // v: 0 boven, 1 onder
+        let v = y as f32 / (h - 1) as f32;
+        let lengte = (0.25 + 0.75 * v) * kleurgolf::zacht((v / 0.25).min(1.0)) * (1.0 - kleurgolf::zacht(((v - 0.82) / 0.18).clamp(0.0, 1.0)) * 0.7);
+        for x in 0..b {
+            let u = x as f32 / (b - 1) as f32 * 2.0 - 1.0;
+            let breedte = (-(u * u) * 4.5).exp() * (1.0 - u * u);
+            let a = (lengte * breedte).clamp(0.0, 1.0);
+            data.extend([255, 255, 255, (a * 255.0).round() as u8]);
+        }
+    }
+    Image::new(
+        Extent3d { width: b as u32, height: h as u32, depth_or_array_layers: 1 },
+        TextureDimension::D2,
+        data,
+        TextureFormat::Rgba8Unorm,
+        RenderAssetUsages::RENDER_WORLD,
+    )
+}
+
+/// Het vlak van de bundel in zijn eigen assen: y langs de as van onder (0) naar boven, x opzij.
+fn bundel_vlak() -> Mesh {
+    use bevy::asset::RenderAssetUsages;
+    use bevy::mesh::{Indices, PrimitiveTopology};
+    let lengte = BUNDEL_BOVEN.distance(BUNDEL_ONDER);
+    let (o, b) = (BUNDEL_BREED_ONDER / 2.0, BUNDEL_BREED_BOVEN / 2.0);
+    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
+        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![[-b, lengte, 0.0], [b, lengte, 0.0], [o, 0.0, 0.0], [-o, 0.0, 0.0]])
+        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 0.0, 1.0]; 4])
+        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
+        .with_inserted_indices(Indices::U32(vec![0, 2, 1, 0, 3, 2]))
+}
+
+/// Waar het vlak van de bundel staat als de camera hier is: onderaan de bundel, met y langs de as
+/// en het vlak naar de camera gedraaid.
+fn bundelstand(camera: Vec3) -> Transform {
+    let as_ = (BUNDEL_BOVEN - BUNDEL_ONDER).normalize();
+    let naar = camera - (BUNDEL_BOVEN + BUNDEL_ONDER) / 2.0;
+    let opzij = as_.cross(naar).normalize_or(Vec3::X);
+    let voor = opzij.cross(as_);
+    Transform::from_translation(BUNDEL_ONDER).with_rotation(Quat::from_mat3(&Mat3::from_cols(opzij, as_, voor)))
+}
+
+fn zet_titelbundel(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materialen: ResMut<Assets<StandardMaterial>>,
+    mut beelden: ResMut<Assets<Image>>,
+) {
+    commands.spawn((
+        Titelbundel,
+        Mesh3d(meshes.add(bundel_vlak())),
+        MeshMaterial3d(materialen.add(StandardMaterial {
+            base_color: Color::linear_rgba(1.0, 0.93, 0.8, 0.0),
+            base_color_texture: Some(beelden.add(bundel_beeld())),
+            unlit: true,
+            alpha_mode: AlphaMode::Add,
+            double_sided: true,
+            cull_mode: None,
+            fog_enabled: false,
+            ..default()
+        })),
+        Transform::IDENTITY,
+        Visibility::Hidden,
+        bevy::light::NotShadowCaster,
+        bevy::light::NotShadowReceiver,
+    ));
+}
+
+#[allow(clippy::type_complexity)]
 fn zet_titellicht(
     mut commands: Commands,
     standen: Res<Standen>,
     tijd: Res<Time>,
     mut licht: Query<(&mut SpotLight, &mut Visibility), With<Titellicht>>,
-    mut sterkte: Local<f32>,
+    mut bundel: Query<(&mut Transform, &mut Visibility, &MeshMaterial3d<StandardMaterial>), (With<Titelbundel>, Without<Titellicht>)>,
+    camera: Query<&Transform, (With<crate::beeld::HoofdCamera>, Without<Titelbundel>)>,
+    mut materialen: ResMut<Assets<StandardMaterial>>,
+    mut sterkte: ResMut<Titelsterkte>,
 ) {
+    let sterkte = &mut sterkte.0;
     let Ok((mut l, mut zicht)) = licht.single_mut() else {
         commands.spawn((
             Titellicht,
@@ -1177,7 +1286,23 @@ fn zet_titellicht(
     if l.intensity != lumen {
         l.intensity = lumen;
     }
-    zicht.set_if_neq(if *sterkte > 0.0 { Visibility::Inherited } else { Visibility::Hidden });
+    let te_zien = if *sterkte > 0.0 { Visibility::Inherited } else { Visibility::Hidden };
+    zicht.set_if_neq(te_zien);
+    for (mut plek, mut z, m) in &mut bundel {
+        z.set_if_neq(te_zien);
+        if let Some(c) = camera.iter().next() {
+            let nieuw = bundelstand(c.translation);
+            if *plek != nieuw {
+                *plek = nieuw;
+            }
+        }
+        let kleur = Color::linear_rgba(1.0, 0.93, 0.8, BUNDEL_LICHT * kleurgolf::zacht(*sterkte));
+        if materialen.get(&m.0).is_some_and(|m| m.base_color != kleur)
+            && let Some(mut m) = materialen.get_mut(&m.0)
+        {
+            m.base_color = kleur;
+        }
+    }
 }
 
 /// Hoe licht de rest van de Zaal is (alles behalve het leer van de Stoelen): 1 zoals gebakken,
@@ -1410,10 +1535,12 @@ const LIJN_76_NA_STIL: f32 = 0.25;
 const STIL_M_PER_S: f32 = 0.15;
 const STIL_RAD_PER_S: f32 = 0.05;
 /// Hoe fel de lijn straalt in Accent: iets boven de drempel van de gloed, zodat hij leest als licht.
-const LIJN_76_LICHT: f32 = 1.6;
-/// Zoveel van de kleur van lijn en getal is wit: Accent zelf stond met 1,36:1 tegen het tapijt
-/// (council-ronde 5), lichter haalt hij 3:1 en houdt hij zijn tint.
-const LIJN_76_WIT: f32 = 0.5;
+const LIJN_76_LICHT: f32 = 2.1;
+/// Lijn en getal hebben de tint van Accent, maar minstens deze lichtheid en hoogstens deze
+/// kleurigheid (Oklch): Accent zelf stond met 1,36:1 tegen het tapijt (council-ronde 5), zo licht
+/// haalt hij 3:1 en blijft hij roze in plaats van wit.
+const LIJN_76_L: f32 = 0.86;
+const LIJN_76_C: f32 = 0.11;
 /// De donkere rand onder de lijn en om het getal: zo breed (meter) en zo dicht, zodat ze ook
 /// tegen een lichte plek in het tapijt los staan.
 const LIJN_76_RAND_BREEDTE: f32 = 0.26;
@@ -1615,7 +1742,11 @@ fn zet_lijn_bij_76(
 
 /// De kleur van lijn en getal (lineair, boven 1 voor de gloed) bij deze kleur Accent.
 fn lijn_76_kleur(accent: Kleur) -> LinearRgba {
-    LinearRgba::from(Color::srgb_u8(accent.r, accent.g, accent.b)).mix(&LinearRgba::WHITE, LIJN_76_WIT) * LIJN_76_LICHT
+    let mut c = Oklcha::from(Srgba::rgb_u8(accent.r, accent.g, accent.b));
+    c.lightness = c.lightness.max(LIJN_76_L);
+    c.chroma = c.chroma.min(LIJN_76_C);
+    let l = LinearRgba::from(c);
+    LinearRgba::rgb(l.red.max(0.0), l.green.max(0.0), l.blue.max(0.0)) * LIJN_76_LICHT
 }
 
 /// Of de camera tussen twee beelden stilstond (of heel langzaam schoof).
