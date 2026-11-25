@@ -307,11 +307,14 @@ pub fn ververs_vaste_standpunten(standpunten: &mut [Standpunt]) {
 
 /// Hoe ver de camera van een Stoel staat bij het shot van de Persoonskaart, in meter langs de
 /// vloer, en hoeveel graden opzij van recht voor de Stoel.
-const SHOT_AFSTAND: f32 = 3.2;
+const SHOT_AFSTAND: f32 = 3.4;
 const SHOT_OPZIJ: f32 = 28.0;
-/// Hoe hoog boven de rugleuning de camera staat, en waar hij naar kijkt (het hoofd van wie er zit).
-const SHOT_HOOGTE: f32 = 0.95;
-const SHOT_HOOFD: f32 = 0.1;
+/// Hoe hoog boven de rugleuning de camera staat, en waar hij naar kijkt (onder de bovenkant van de
+/// rugleuning). Van 0,95 m hoog, gericht op het hoofd, vulde het onscherpe bureaublad voor de Stoel
+/// ongeveer 40 procent van de linkerhelft (council-ronde 7): van hoger kijkt de camera over het
+/// blad heen op de rugleuning met het wapen.
+const SHOT_HOOGTE: f32 = 1.6;
+const SHOT_HOOFD: f32 = -0.2;
 /// Verticale beeldhoek van het shot, in graden: krap op de Stoel, met zijn buren half in beeld
 /// (council-ronde 4; met 34 graden was de Stoel klein tussen veel bureaus).
 const SHOT_BEELDHOEK: f32 = 26.0;
