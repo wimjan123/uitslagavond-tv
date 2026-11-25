@@ -357,7 +357,7 @@ input:focus-visible { outline-offset: 0; }
 .eigen-persoon-form .knoppen,
 .eigen-persoon-form p { grid-column: 1 / -1; }
 
-.systeem { display: flex; flex-direction: column; gap: 18px; padding: 12px 14px; }
+.systeem { display: flex; flex-direction: column; gap: 18px; padding: 12px 14px 32px; }
 .blok, .paneel { display: flex; flex-direction: column; gap: 8px; max-width: 720px; }
 
 /* Camerablok in de multiviewer-rij (DESIGN.md: Floor Plan, Standpunt Keys) */
@@ -462,3 +462,17 @@ input:focus-visible { outline-offset: 0; }
   border: 1px solid var(--graphite-line);
   border-radius: 2px;
 }
+
+/* Slot: een vaste stempel met de toestand, en een knop met wat hij doet. */
+.slotknop { display: inline-flex; align-items: center; gap: 6px; }
+.slotknop .stempel { display: inline-flex; align-items: center; gap: 4px; margin-left: 0; height: 24px; padding: 0 7px; }
+.stempel-slot { color: var(--warn-amber-ink); background: var(--warn-amber); border-color: var(--warn-amber); }
+.knop-gevaar:not(:disabled) { color: var(--ether-red-text); border-color: color-mix(in srgb, var(--ether-red) 55%, var(--graphite-line)); }
+.knop-gevaar:hover:not(:disabled) { border-color: var(--ether-red-text); }
+
+/* Maken: het formulier met rechts een schets van wat je typt. */
+.maken-met-schets { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 8px 24px; }
+.maken-met-schets > .paneel-detail { flex: 1 1 460px; }
+.maken-schets { display: flex; flex-direction: column; gap: 6px; width: 360px; margin: 12px 14px; }
+.maken-schets .schets { width: 100%; }
+.knop-reden { align-self: center; font-size: 12px; color: var(--warn-amber); }

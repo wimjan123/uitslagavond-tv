@@ -5,3 +5,5 @@
 .invoermelding .bestand { font-family: ui-monospace, "SF Mono", Menlo, monospace; font-size: 12px; }
 .invoermelding .let-op { color: var(--warn-amber); }
 .invoermelding .let-op .label { color: var(--warn-amber); }
+.invoermelding .tijdelijk summary { cursor: pointer; color: var(--slate-mute); }
+.invoermelding .tijdelijk p { margin-top: 4px; color: var(--slate-mute); }

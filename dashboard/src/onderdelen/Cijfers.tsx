@@ -16,6 +16,7 @@ import type { Cijfers as CijferStand } from "../typen/Cijfers";
 import type { Cijferset } from "../typen/Cijferset";
 import type { Partij } from "../typen/Partij";
 import type { Soort } from "../typen/Soort";
+import { Slotknop } from "./Slotknop";
 import { Werkbalk } from "./Werkbalk";
 import "./cijfers.css";
 
@@ -287,13 +288,11 @@ function SetInvoer({
           <span className={`set-totaal ${t !== ZETELS ? "let-op" : ""}`}>
             {t} van {ZETELS} Zetels
           </span>
-          <button
-            className={`knop ${set.vergrendeld ? "knop-hoofd" : ""}`}
+          <Slotknop
+            op={set.vergrendeld}
             disabled={regie.staat !== "verbonden"}
-            onClick={() => void regie.stuur({ soort: set.vergrendeld ? "OntgrendelSet" : "VergrendelSet", set: set.id }, BIJ)}
-          >
-            <Slot open={!set.vergrendeld} /> {set.vergrendeld ? "Vergrendeld" : "Vergrendel"}
-          </button>
+            wissel={() => void regie.stuur({ soort: set.vergrendeld ? "OntgrendelSet" : "VergrendelSet", set: set.id }, BIJ)}
+          />
         </div>
       </div>
       <Zetelbalk rijen={alle} />
@@ -328,7 +327,7 @@ function SetInvoer({
         </button>
         <span className="zacht">
           {set.vergrendeld
-            ? "Vergrendeld: ontgrendel de set om cijfers te wijzigen."
+            ? "Op slot: kies Ontgrendel rechtsboven om cijfers te wijzigen."
             : kop
               ? `Verschil tegen ${cijfers.sets.find((s) => s.id === cijfers.vergelijk_met)?.label}, met de Voorgangers opgeteld.`
               : "Kies bovenin een set om mee te vergelijken."}
@@ -365,15 +364,22 @@ function PartijRij({ rij, volgorde, dicht, zet }: { rij: Rij; volgorde: number; 
         </span>
       </td>
       <td className="kol-nu">
-        <span className="stapper">
-          <button className="stap" aria-label={`${p.kort} min 1`} disabled={dicht || waarde <= 0} onClick={() => zet(waarde - 1)}>
-            <Min />
-          </button>
-          <ZetelVak partij={p} waarde={waarde} volgorde={volgorde} dicht={dicht} zet={zet} />
-          <button className="stap" aria-label={`${p.kort} plus 1`} disabled={dicht || waarde >= ZETELS} onClick={() => zet(waarde + 1)}>
-            <Plus />
-          </button>
-        </span>
+        {dicht ? (
+          // Op slot: alleen het getal, zonder knoppen die lijken te werken.
+          <span className="stapper stapper-dicht" title="Op slot: ontgrendel de set om te wijzigen">
+            {waarde}
+          </span>
+        ) : (
+          <span className="stapper">
+            <button className="stap" aria-label={`${p.kort} min 1`} disabled={waarde <= 0} onClick={() => zet(waarde - 1)}>
+              <Min />
+            </button>
+            <ZetelVak partij={p} waarde={waarde} volgorde={volgorde} dicht={dicht} zet={zet} />
+            <button className="stap" aria-label={`${p.kort} plus 1`} disabled={waarde >= ZETELS} onClick={() => zet(waarde + 1)}>
+              <Plus />
+            </button>
+          </span>
+        )}
       </td>
       <td className="kol-getal zacht-getal">{rij.eerder ?? ""}</td>
       <td className="kol-getal kol-verschil">

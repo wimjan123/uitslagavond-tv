@@ -1,7 +1,7 @@
 /* De Coalitiebouwer (DESIGN.md, Coalitiebouwer Arc). */
 .werkvlak-inhoud.coalitie { display: grid; grid-template-columns: 1fr 340px; overflow: hidden; }
 .werkvlak-inhoud.coalitie > * { min-height: 0; overflow: auto; }
-.coalitie-boog { display: flex; flex-direction: column; align-items: center; gap: 18px; padding: 40px 20px 24px; }
+.coalitie-boog { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 16px 20px 20px; }
 .boog { position: relative; flex-shrink: 0; }
 .boog-partij {
   position: absolute;

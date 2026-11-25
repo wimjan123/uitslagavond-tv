@@ -15,7 +15,10 @@ export function Invoermelding({ cijfers }: { cijfers: Cijfers | undefined }) {
       ) : (
         <>
           <p>
-            Binnen om <strong>{m.ontvangen}</strong> uit <span className="bestand">{m.bestand}</span>
+            Binnen om <strong>{m.ontvangen}</strong> uit{" "}
+            <span className="bestand" title={m.bestand}>
+              {m.bestand.split(/[\\/]/).pop()}
+            </span>
           </p>
           <p>
             {m.sets_binnen.length > 0 ? <>Nieuw of gewijzigd: {m.sets_binnen.join(", ")}</> : "Geen nieuwe cijfers"}
@@ -43,7 +46,14 @@ export function Invoermelding({ cijfers }: { cijfers: Cijfers | undefined }) {
           )}
         </>
       )}
-      {zonderKleur.length > 0 && <p className="let-op">Tijdelijke kleur: {zonderKleur.join(", ")}</p>}
+      {zonderKleur.length > 0 && (
+        <details className="tijdelijk">
+          <summary>
+            {zonderKleur.length} Partijen met een tijdelijke kleur
+          </summary>
+          <p>{zonderKleur.join(", ")}</p>
+        </details>
+      )}
       {zonderLogo > 0 && <p className="stil">{zonderLogo} Partijen zonder logo: de korte naam staat op die plek</p>}
     </section>
   );

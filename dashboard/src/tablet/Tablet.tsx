@@ -2,7 +2,7 @@
 // Presets en Coalitiebouwer. Een tik zet een Preset klaar; de Regie drukt daarna op Toon. In de
 // Coalitiebouwer werkt elke aangetikte Partij de Coalitie in beeld direct bij. De tablet meldt zich
 // als Werkplek van de soort Tablet; de server weigert alles buiten klaarzetten en de Coalitiebouwer.
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { Aanmelden } from "../App";
 import { bouwer, wissel } from "../coalitie/coalitie";
 import { graphicTekst, sjabloonNaam } from "../graphic";
@@ -12,6 +12,7 @@ import { Schets } from "../presets/Schets";
 import { filterPresets, statusVan } from "../presets/presets";
 import { RegieBron, useRegie } from "../regie/regie";
 import type { Toegang } from "../regie/regie";
+import type { Graphic } from "../typen/Graphic";
 import type { Preset } from "../typen/Preset";
 import type { Stand } from "../typen/Stand";
 import "./tablet.css";
@@ -88,6 +89,7 @@ function Tablet() {
           {regie.melding.tekst}
         </p>
       )}
+      {s && <NuInBeeld stand={s} />}
       <main className="tablet-vlak">{s && (tab === "presets" ? <Presets stand={s} /> : <Coalitiebouwer stand={s} />)}</main>
       <nav className="tablet-tabs" role="tablist" aria-label="Tabbladen">
         <button role="tab" className="tablet-tab" aria-selected={tab === "presets"} onClick={() => setTab("presets")}>
@@ -97,6 +99,23 @@ function Tablet() {
           Coalitiebouwer
         </button>
       </nav>
+    </div>
+  );
+}
+
+/** Wat nu in beeld is en wat klaarstaat, ook als de Regie het zelf klaarzette. */
+function NuInBeeld({ stand: s }: { stand: Stand }) {
+  const tekst = (g: Graphic) => `${sjabloonNaam(g, s.sjablonen)} · ${graphicTekst(g)}`;
+  return (
+    <div className="tablet-nu">
+      <span className="tablet-nu-deel">
+        <span className="stempel stempel-live">In beeld</span>
+        <span className="een-regel">{s.ether ? tekst(s.ether.graphic) : <span className="zacht">niets</span>}</span>
+      </span>
+      <span className="tablet-nu-deel">
+        <span className="stempel stempel-klaar">Klaar</span>
+        <span className="een-regel">{s.klaar ? tekst(s.klaar.graphic) : <span className="zacht">niets</span>}</span>
+      </span>
     </div>
   );
 }
@@ -131,12 +150,12 @@ function Rij({ preset: p, stand: s }: { preset: Preset; stand: Stand }) {
         <div className="zacht een-regel">{graphicTekst(p.graphic)}</div>
       </div>
       <button
-        className="knop tablet-klaarzetten"
+        className={`knop tablet-klaarzetten${status.live && !status.klaar ? " tablet-opnieuw" : ""}`}
         // Staat hij al klaar, dan zou een tweede tik de Regie alleen een nieuwe versie geven.
         disabled={regie.staat !== "verbonden" || status.klaar}
         onClick={() => void regie.stuur({ soort: "ZetPresetKlaar", nummer: p.nummer }, TABLET)}
       >
-        {status.klaar ? "Staat klaar" : "Klaarzetten"}
+        {status.klaar ? "Staat klaar" : status.live ? "Opnieuw klaarzetten" : "Klaarzetten"}
       </button>
     </article>
   );
@@ -165,9 +184,16 @@ function Coalitiebouwer({ stand: s }: { stand: Stand }) {
   const b = bouwer(s, "", []);
   const { inBeeld } = b;
   if (!inBeeld) {
+    const coalities = filterPresets(s.presets, "Coalitiebouwer", true);
     return (
-      <section className="tablet-leeg">
-        Er staat geen Coalitie klaar of in beeld. Zet een Preset met een Coalitie klaar, of vraag het de Regie.
+      <section className="tablet-presets">
+        <p className="tablet-uitleg zacht">
+          Er staat geen Coalitie klaar of in beeld.{" "}
+          {coalities.length > 0 ? "Zet er een klaar; daarna tik je hier Partijen aan en af." : "Vraag de Regie een Coalitie op de tablet te zetten."}
+        </p>
+        {coalities.map((p) => (
+          <Rij key={p.nummer} preset={p} stand={s} />
+        ))}
       </section>
     );
   }
@@ -188,9 +214,29 @@ function Coalitiebouwer({ stand: s }: { stand: Stand }) {
         leeg="Geen Zetels in de set van deze Coalitie."
         maat={maat}
       />
-      <button className="knop tablet-wis" disabled={regie.staat !== "verbonden" || b.partijen.length === 0} onClick={() => stuur([])}>
-        Wis coalitie
-      </button>
+      <WisKnop inEther={inEther} disabled={regie.staat !== "verbonden" || b.partijen.length === 0} wis={() => stuur([])} />
     </section>
+  );
+}
+
+/** Wis coalitie; in de Ether pas na een tweede tik binnen vier seconden, want dan verdwijnt alles uit beeld. */
+function WisKnop({ inEther, disabled, wis }: { inEther: boolean; disabled: boolean; wis(): void }) {
+  const [vraag, setVraag] = useState(false);
+  const klok = useRef<number>(undefined);
+  useEffect(() => () => window.clearTimeout(klok.current), []);
+  const tik = () => {
+    if (!inEther || vraag) {
+      window.clearTimeout(klok.current);
+      setVraag(false);
+      wis();
+      return;
+    }
+    setVraag(true);
+    klok.current = window.setTimeout(() => setVraag(false), 4000);
+  };
+  return (
+    <button className={`knop tablet-wis${vraag ? " tablet-wis-vraag" : ""}`} disabled={disabled} onClick={tik}>
+      {vraag ? "Tik nog eens: wis alle Partijen uit de Ether" : "Wis coalitie"}
+    </button>
   );
 }

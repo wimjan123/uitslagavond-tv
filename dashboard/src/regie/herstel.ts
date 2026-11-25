@@ -18,7 +18,7 @@ export interface Herstel {
 }
 
 let huidig: Herstel | null = null;
-let klok: number | undefined;
+let klok: ReturnType<typeof setTimeout> | undefined;
 const luisteraars = new Set<() => void>();
 
 function meld() {
@@ -27,14 +27,14 @@ function meld() {
 
 /** Biedt herstel aan voor de handeling die net gebeurde; een nieuw aanbod vervangt het vorige. */
 export function biedHerstel(tekst: string, knop: string, doe: () => void, nu = Date.now()): void {
-  window.clearTimeout(klok);
+  globalThis.clearTimeout(klok);
   huidig = { tekst, knop, doe, tot: nu + HERSTEL_DUUR };
-  klok = window.setTimeout(vergeetHerstel, HERSTEL_DUUR);
+  klok = globalThis.setTimeout(vergeetHerstel, HERSTEL_DUUR);
   meld();
 }
 
 export function vergeetHerstel(): void {
-  window.clearTimeout(klok);
+  globalThis.clearTimeout(klok);
   huidig = null;
   meld();
 }

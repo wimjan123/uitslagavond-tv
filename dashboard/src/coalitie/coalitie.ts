@@ -29,7 +29,8 @@ export function telling(zetels: Record<string, number>, partijen: string[]): num
 
 /** De regel onder de teller in het dashboard (DESIGN.md, Coalitiebouwer Arc). */
 export function regel(zetels: number): string {
-  return zetels >= MEERDERHEID ? "meerderheid" : `nog ${MEERDERHEID - zetels} nodig voor ${MEERDERHEID}`;
+  const nog = MEERDERHEID - zetels;
+  return nog <= 0 ? "meerderheid" : `nog ${nog} ${nog === 1 ? "Zetel" : "Zetels"} tot een meerderheid`;
 }
 
 /** Een Partij aantikken: erbij als ze er niet in zat, anders eraf. */

@@ -5,6 +5,7 @@ import { useState } from "react";
 import { HUIDIGE_KAMER, MEERDERHEID, boog, bouwer, coalitieInBeeld, regel, wissel } from "../coalitie/coalitie";
 import type { Bouwer } from "../coalitie/coalitie";
 import { LogoTegel } from "../LogoTegel";
+import { biedHerstel } from "../regie/herstel";
 import { useRegie } from "../regie/regie";
 import type { Graphic } from "../typen/Graphic";
 import { TakeHint, Werkbalk } from "./Werkbalk";
@@ -48,8 +49,14 @@ export function Coalitie() {
     else setEigen(nieuw);
   };
   const wis = () => {
-    if (inBeeld) void regie.stuur({ soort: "ZetCoalitie", partijen: [] }, COALITIE);
-    else setEigen([]);
+    const voor = partijen;
+    if (inBeeld) {
+      void regie.stuur({ soort: "ZetCoalitie", partijen: [] }, COALITIE);
+      biedHerstel(inEther ? "Coalitie gewist, ook in de Ether" : "Coalitie gewist", "Zet coalitie terug", () => void regie.stuur({ soort: "ZetCoalitie", partijen: voor }, COALITIE));
+    } else {
+      setEigen([]);
+      biedHerstel("Coalitie gewist", "Zet coalitie terug", () => setEigen(voor));
+    }
   };
   const zetKlaar = () => {
     const graphic: Graphic = { sjabloon, set, partijen };
@@ -115,8 +122,13 @@ export function Coalitie() {
             <button className="knop knop-hoofd" disabled={!verbonden || !set} onClick={zetKlaar}>
               Zet klaar als {SJABLONEN.find((x) => x.id === sjabloon)?.naam}
             </button>
-            <button className="knop" disabled={partijen.length === 0 || (!verbonden && !!inBeeld)} onClick={wis}>
-              Wis coalitie
+            <button
+              className="knop knop-gevaar"
+              disabled={partijen.length === 0 || (!verbonden && !!inBeeld)}
+              title={inEther ? "Haalt alle Partijen uit de coalitie in de Ether. Daarna kun je ze 10 seconden terugzetten." : "Haalt alle Partijen uit de coalitie"}
+              onClick={wis}
+            >
+              {inEther ? "Wis coalitie in de Ether" : "Wis coalitie"}
             </button>
           </div>
           {melding && (

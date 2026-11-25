@@ -43,9 +43,9 @@ test("de huidige Kamer telt de Zetels van elke Fractie bij haar Partij", () => {
   assert.deepEqual(zetelsVan(stand(), HUIDIGE_KAMER), { d66: 26, vvd: 23 });
 });
 
-test("onder de teller: nog N nodig voor 76, of meerderheid", () => {
-  assert.equal(regel(75), "nog 1 nodig voor 76");
-  assert.equal(regel(0), "nog 76 nodig voor 76");
+test("onder de teller: nog N Zetels tot een meerderheid, of meerderheid", () => {
+  assert.equal(regel(75), "nog 1 Zetel tot een meerderheid");
+  assert.equal(regel(0), "nog 76 Zetels tot een meerderheid");
   assert.equal(regel(76), "meerderheid");
   assert.equal(regel(120), "meerderheid");
 });

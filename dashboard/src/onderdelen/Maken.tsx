@@ -10,6 +10,7 @@ import type { Graphic } from "../typen/Graphic";
 import type { Indeling } from "../typen/Indeling";
 import type { Sjabloon } from "../typen/Sjabloon";
 import { benodigd, geldendSjabloon, standaardVan } from "../vormgeving/sjablonen";
+import { Schets } from "../presets/Schets";
 import { Persoonskaart } from "./Persoonskaart";
 import { TakeHint, Werkbalk } from "./Werkbalk";
 
@@ -152,6 +153,7 @@ function Titelkaart() {
   };
 
   return (
+    <div className="maken-met-schets">
     <form className="paneel-detail" onSubmit={zetKlaar}>
       <header>
         <h3 className="kop-regel">Titelkaart</h3>
@@ -164,7 +166,7 @@ function Titelkaart() {
             {kop.length}/{MAX_KOP}
           </span>
         </span>
-        <input value={kop} maxLength={MAX_KOP} onChange={(e) => setKop(e.target.value)} placeholder="De Uitslagavond" />
+        <input value={kop} maxLength={MAX_KOP} onChange={(e) => setKop(e.target.value)} placeholder="bijv. De Uitslagavond" />
       </label>
       <label className="veld">
         <span className="veld-kop">
@@ -173,7 +175,7 @@ function Titelkaart() {
             {regel.length}/{MAX_REGEL}
           </span>
         </span>
-        <input value={regel} maxLength={MAX_REGEL} onChange={(e) => setRegel(e.target.value)} placeholder="Live vanuit Den Haag" />
+        <input value={regel} maxLength={MAX_REGEL} onChange={(e) => setRegel(e.target.value)} placeholder="bijv. Live vanuit Den Haag" />
       </label>
       <label className="veld">
         <span className="veld-kop">
@@ -199,12 +201,25 @@ function Titelkaart() {
         <button className="knop knop-hoofd" type="submit" disabled={!verbonden || !graphic.kop}>
           Zet klaar
         </button>
-        <button className="knop" type="button" disabled={!verbonden || !klaarIsTitelkaart || !graphic.kop || zelfde} onClick={wijzig}>
+        <button
+          className="knop"
+          type="button"
+          disabled={!verbonden || !klaarIsTitelkaart || !graphic.kop || zelfde}
+          title={klaarIsTitelkaart ? "Past de Titelkaart in het Voorbeeld aan" : "Kan als er een Titelkaart klaarstaat"}
+          onClick={wijzig}
+        >
           Wijzig klaargezette
         </button>
-        <button className="knop knop-stil" type="button" disabled={!klaarIsTitelkaart || zelfde} onClick={neemOver}>
+        <button
+          className="knop knop-stil"
+          type="button"
+          disabled={!klaarIsTitelkaart || zelfde}
+          title={klaarIsTitelkaart ? "Haalt kop en regel uit de Titelkaart die klaarstaat" : "Kan als er een Titelkaart klaarstaat"}
+          onClick={neemOver}
+        >
           Neem over uit Voorbeeld
         </button>
+        {!graphic.kop && <span className="knop-reden">Vul eerst een kop in</span>}
       </div>
       <p className="zacht">
         Zet klaar maakt een nieuwe Graphic. Wijzig klaargezette past de Graphic in het Voorbeeld aan; staat die al in de Ether,
@@ -216,6 +231,14 @@ function Titelkaart() {
         </p>
       )}
     </form>
+    <figure className="maken-schets">
+      <figcaption className="label">Schets</figcaption>
+      {regie.stand && (
+        <Schets graphic={{ sjabloon: "Titelkaart", kop: kop.trim() || "Kop", regel: regel.trim() }} kleuren={regie.stand.stand.stijl.kleuren} />
+      )}
+      <p className="zacht">Ongeveer zo; het Voorbeeld toont na Zet klaar het echte beeld.</p>
+    </figure>
+    </div>
   );
 }
 

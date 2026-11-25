@@ -137,3 +137,4 @@
 .vinkje { display: inline-flex; align-items: center; gap: 8px; font-weight: 550; }
 .voorgangers td { height: 32px; }
 .voorgangers .kol-actie { width: 100px; text-align: right; }
+.stapper-dicht { justify-content: center; min-width: 96px; font-weight: 650; color: var(--paper-ink); }
