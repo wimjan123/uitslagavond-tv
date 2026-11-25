@@ -123,7 +123,7 @@ export function nieuwBlok(soort: Bloksoort["blok"]): Blok {
     case "Lijn":
       return { plek: { x: 140, y: 880, breedte: 1000, hoogte: 3 }, soort: { blok: "Lijn", dekking: 100 }, kleur: { Stijl: "Tekst" }, animatie: { erin: "Opbouwen", eruit: "Vervagen", start_na_ms: 200 } };
     case "Programmalogo":
-      return { plek: { x: 1448, y: 46, breedte: 400, hoogte: 131 }, soort: { blok: "Programmalogo", letter: kop, dekking: 90 }, kleur: { Stijl: "Tekst" }, animatie: vervagen() };
+      return { plek: { x: 1424, y: 46, breedte: 400, hoogte: 131 }, soort: { blok: "Programmalogo", letter: kop, dekking: 90 }, kleur: { Stijl: "Tekst" }, animatie: vervagen() };
     default:
       // de grote Blokken komen met hun vaste Sjabloon; een kopie van zo'n Blok kan wel
       throw new Error(`${soort} is geen gewoon Blok`);
