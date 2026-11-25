@@ -64,6 +64,7 @@ fn de_tablet_mag_niets_buiten_klaarzetten_en_de_coalitiebouwer() {
     p.doe(&regie(), Opdracht::Toon { versie: None }).unwrap();
     let verboden = [
         Opdracht::UitBeeld,
+        Opdracht::TerugInBeeld { graphic: Graphic::Titelkaart { kop: "Oud".into(), regel: String::new() }, standpunt: None },
         Opdracht::Bijwerken,
         Opdracht::KiesStandpunt { letter: "A".into(), knip: false },
         Opdracht::ZetVrijeCamera { aan: true },

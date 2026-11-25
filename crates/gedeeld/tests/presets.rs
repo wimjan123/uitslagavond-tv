@@ -212,6 +212,33 @@ fn een_gewijzigde_graphic_is_de_preset_niet_meer() {
 }
 
 #[test]
+fn bewaren_wat_klaar_of_live_staat_geeft_meteen_de_stempels() {
+    let mut p = Proef::nieuw();
+    let preset = |p: &Proef, n: u16| p.stand.presets.iter().find(|x| x.nummer == n).unwrap().clone();
+    p.doe(Opdracht::ZetKlaar { graphic: titelkaart("Een"), standpunt: Some("D".into()) }).unwrap();
+    p.bewaar_klaar();
+    assert!(p.stand.preset_staat_klaar(&preset(&p, 1)), "Klaar");
+    assert!(!p.stand.preset_in_beeld(&preset(&p, 1)));
+
+    p.doe(Opdracht::Toon { versie: None }).unwrap();
+    p.bewaar_klaar();
+    let twee = preset(&p, 2);
+    assert!(p.stand.preset_staat_klaar(&twee), "Klaar");
+    assert!(p.stand.preset_in_beeld(&twee), "Live");
+    assert_eq!(twee.laatst_live_ms, Some(p.stand.ether.as_ref().unwrap().sinds_ms));
+
+    // Een ander Standpunt of een gewijzigde Graphic is niet wat klaar of live staat.
+    p.doe(Opdracht::BewaarPreset { graphic: titelkaart("Een"), standpunt: None }).unwrap();
+    assert!(!p.stand.preset_staat_klaar(&preset(&p, 3)));
+    assert!(!p.stand.preset_in_beeld(&preset(&p, 3)));
+    let id = p.stand.klaar.as_ref().unwrap().id;
+    p.doe(Opdracht::WijzigKlaar { id, graphic: titelkaart("Een, gewijzigd"), standpunt: Some("D".into()) }).unwrap();
+    p.bewaar_klaar();
+    assert!(!p.stand.preset_staat_klaar(&preset(&p, 4)), "na een wijziging is de Graphic geen Preset meer");
+    assert!(!p.stand.preset_in_beeld(&preset(&p, 4)));
+}
+
+#[test]
 fn op_de_tablet_zetten_en_eraf_halen() {
     let mut p = Proef::nieuw();
     p.doe(Opdracht::BewaarPreset { graphic: titelkaart("Een"), standpunt: None }).unwrap();
