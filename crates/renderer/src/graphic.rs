@@ -371,8 +371,9 @@ fn voer_overgang(
 }
 
 /// De grootste onscherpte van de Zaal achter een Sjabloon met de achtergrond Zaal donker, in
-/// pixels van het 1080p-beeld.
-const ONSCHERP_PX: f32 = 22.0;
+/// pixels van het 1080p-beeld. Met 22 bleven de Stoelen achter een stemmingstabel te scherp
+/// (council-ronde 4).
+const ONSCHERP_PX: f32 = 40.0;
 /// Hoe lang de Zaal erover doet om onscherp of weer scherp te worden, in seconden.
 const ONSCHERP_S: f32 = 0.5;
 
@@ -419,15 +420,18 @@ fn maak_onscherp(
         }
         let Ok(mut camera) = commands.get_entity(camera.entity()) else { continue };
         if nu.0 > 0.0 {
-            camera.insert(DepthOfField {
-                mode: DepthOfFieldMode::Gaussian,
-                focal_distance: 0.2,
-                aperture_f_stops: 0.5,
-                max_circle_of_confusion_diameter: ONSCHERP_PX * zacht_uit(nu.0),
-                ..default()
-            });
+            camera.insert((
+                DepthOfField {
+                    mode: DepthOfFieldMode::Gaussian,
+                    focal_distance: 0.2,
+                    aperture_f_stops: 0.5,
+                    max_circle_of_confusion_diameter: ONSCHERP_PX * zacht_uit(nu.0),
+                    ..default()
+                },
+                crate::lens::ZaalOnscherp,
+            ));
         } else {
-            camera.remove::<DepthOfField>();
+            camera.remove::<(DepthOfField, crate::lens::ZaalOnscherp)>();
         }
     }
 }

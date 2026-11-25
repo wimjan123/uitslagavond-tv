@@ -907,9 +907,10 @@ pub enum Achtergrond {
 }
 
 /// De dekking in procent van het zwarte vlak over de Zaal achter een Sjabloon met
-/// [`Achtergrond::ZaalDonker`]. De Renderer mengt lineair, dus 80 procent zwart laat de Zaal er
-/// ongeveer half zo licht uitzien.
-pub const DONKER: u8 = 80;
+/// [`Achtergrond::ZaalDonker`]. De Renderer mengt lineair, dus 88 procent zwart laat de Zaal er
+/// ongeveer een derde zo licht uitzien. Met 80 bleven felle Stoelen achter het paneel te
+/// opvallend (council-ronde 4).
+pub const DONKER: u8 = 88;
 
 /// Wat de Stoelen doen bij een Graphic van een Sjabloon.
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, Default, PartialEq, Eq)]
@@ -2581,7 +2582,8 @@ fn uitslag_per_partij() -> Sjabloon {
         naam: "Uitslag per Partij".into(),
         groep: "Uitslagavond".into(),
         snelheid: 100,
-        achtergrond: Achtergrond::Zaal,
+        // het paneel beslaat het grootste deel van het beeld: de Zaal ernaast donker en onscherp
+        achtergrond: Achtergrond::ZaalDonker,
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken: vec![
@@ -2622,7 +2624,8 @@ fn winst_en_verlies() -> Sjabloon {
         naam: "Winst en verlies".into(),
         groep: "Uitslagavond".into(),
         snelheid: 100,
-        achtergrond: Achtergrond::Zaal,
+        // het paneel beslaat het grootste deel van het beeld: de Zaal ernaast donker en onscherp
+        achtergrond: Achtergrond::ZaalDonker,
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken: vec![

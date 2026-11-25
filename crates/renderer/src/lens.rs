@@ -21,6 +21,13 @@ impl Plugin for LensPlugin {
     }
 }
 
+/// Op de camera zolang de Zaal achter een Sjabloon met de achtergrond Zaal donker onscherp is
+/// (`graphic.rs`). Die onscherpte gaat voor: de lens laat de scherptediepte dan staan. Zonder
+/// dit haalde de lens hem bij een wijd shot elk beeld weer weg, zodat de Zaal achter de
+/// Stemmingen en de Uitslag per Partij scherp bleef (gevonden in council-ronde 5).
+#[derive(Component)]
+pub struct ZaalOnscherp;
+
 /// Hoe dichtbij de camera is (0 tot 1): 0 bij een wijd shot, 1 bij een close-up in de Zaal. Ook
 /// de kleur van het leer hangt ervan af (zie `zaal.rs`): de kalibratie geldt voor het
 /// totaalbeeld, en van dichtbij staat een Stoel recht in het licht.
@@ -32,15 +39,15 @@ pub struct Nabijheid(pub f32);
 const VANAF_GRADEN: f32 = 46.0;
 const HELEMAAL_GRADEN: f32 = 40.0;
 /// Het diafragma bij een volle close-up: een groot diafragma geeft weinig scherptediepte. Met de
-/// sensor van Bevy (Super 35) en de lens van de Persoonskaart is een Stoel twee rijen verder zo'n
-/// 10 pixels onscherp, en het bureau ervoor zo'n 8.
-const DIAFRAGMA: f32 = 0.7;
+/// sensor van Bevy (Super 35) en de lens van Partij uitgelicht zijn de rijen voor en achter het
+/// blok merkbaar zacht; met 0,7 zag je in ronde 4 bijna geen scherptediepte.
+const DIAFRAGMA: f32 = 0.25;
 /// Bij een volle close-up is de occlusie sterker en dichter bij: contactschaduw onder bureaus en
 /// Stoelen, die in een wijd shot te zwaar zou zijn.
 const OCCLUSIE_EXTRA: f32 = 0.3;
 const OCCLUSIE_STRAAL_DICHTBIJ: f32 = 0.35;
 /// Nooit onscherper dan dit, in pixels.
-const MEESTE_ONSCHERPTE: f32 = 14.0;
+const MEESTE_ONSCHERPTE: f32 = 20.0;
 /// Alleen in de Zaal: onder het plafond.
 const ONDER_Y: f32 = 5.0;
 
@@ -83,12 +90,15 @@ pub fn scherp_op(camera: &Transform, beeldhoek: f32, uitgelicht: Option<usize>) 
 
 fn stel_scherpte_bij(
     mut commands: Commands,
-    mut camera: Query<(Entity, &Transform, &Projection, Option<&DepthOfField>, Option<&mut crate::occlusie::Occlusie>), With<HoofdCamera>>,
+    mut camera: Query<
+        (Entity, &Transform, &Projection, Option<&DepthOfField>, Option<&mut crate::occlusie::Occlusie>, Has<ZaalOnscherp>),
+        With<HoofdCamera>,
+    >,
     uitlichting: Res<crate::zaal::Uitlichting>,
     mut nabijheid: ResMut<Nabijheid>,
 ) {
     let b = &crate::beeld::BEELD;
-    for (e, plek, projectie, nu, occlusie) in &mut camera {
+    for (e, plek, projectie, nu, occlusie, zaal_onscherp) in &mut camera {
         let Projection::Perspective(p) = projectie else { continue };
         let s = sterkte(p.fov, plek.translation.y);
         nabijheid.set_if_neq(Nabijheid(s));
@@ -97,6 +107,9 @@ fn stel_scherpte_bij(
             if o.sterkte != sterk || o.straal != straal {
                 (o.sterkte, o.straal) = (sterk, straal);
             }
+        }
+        if zaal_onscherp {
+            continue;
         }
         let afstand = (s > 0.0).then(|| scherp_op(plek, p.fov, uitlichting.stoel)).flatten();
         match afstand {
@@ -140,6 +153,24 @@ mod tests {
         assert_eq!(sterkte(shot.beeldhoek, shot.positie[1]), 1.0, "de Persoonskaart helemaal");
         let half = sterkte(43.0_f32.to_radians(), 2.0);
         assert!(half > 0.3 && half < 0.7, "tijdens de rit komt hij vloeiend op: {half}");
+    }
+
+    #[test]
+    fn de_onscherpte_achter_zaal_donker_blijft_staan_bij_een_wijd_shot() {
+        let mut app = App::new();
+        app.add_plugins(MinimalPlugins).add_plugins(LensPlugin).init_resource::<crate::zaal::Uitlichting>();
+        let a = gedeeld::camera::Standpunt::vaste()[0].stand;
+        let projectie = Projection::Perspective(PerspectiveProjection { fov: a.beeldhoek, ..default() });
+        let dof = DepthOfField { focal_distance: 0.2, ..default() };
+        let donker = app
+            .world_mut()
+            .spawn((HoofdCamera, crate::camera::transform(&a), projectie.clone(), dof.clone(), ZaalOnscherp))
+            .id();
+        let gewoon = app.world_mut().spawn((HoofdCamera, crate::camera::transform(&a), projectie, dof)).id();
+        app.update();
+        app.update();
+        assert!(app.world().get::<DepthOfField>(donker).is_some(), "achter Zaal donker blijft de Zaal onscherp");
+        assert!(app.world().get::<DepthOfField>(gewoon).is_none(), "zonder: een wijd shot is scherp");
     }
 
     #[test]

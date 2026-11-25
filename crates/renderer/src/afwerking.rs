@@ -26,6 +26,8 @@ pub struct Afwerking {
     pub glans: Option<f32>,
     /// Contrast van de kleurtextuur rond haar gemiddelde (1 is zoals het model).
     pub contrast: f32,
+    /// Hoe vaak de texturen herhalen (1 is zoals het model): hoger is een fijner patroon.
+    pub fijner: f32,
 }
 
 const GEWOON: Afwerking = Afwerking {
@@ -34,15 +36,29 @@ const GEWOON: Afwerking = Afwerking {
     ruwheid: None,
     glans: None,
     contrast: 1.0,
+    fijner: 1.0,
 };
 
-/// Fineer en perenhout: een kwart minder oranje, iets donkerder en mat gelakt in plaats van
-/// plastic glans.
+/// Fineer en perenhout: een kwart minder oranje, iets donkerder, zijdeglans gelakt (een smalle
+/// glans op de randen van de bladen, geen plastic) en met een fijnere nerf. Met de grove nerf en
+/// mat lak lazen de bureaus in een close-up als egale vlakken (council-ronde 4).
 pub const HOUT: Afwerking = Afwerking {
     verzadiging: 0.62,
     kleur: [0.86, 0.86, 0.86],
-    ruwheid: Some(0.62),
-    glans: Some(0.3),
+    ruwheid: Some(0.48),
+    glans: Some(0.42),
+    fijner: 1.8,
+    ..GEWOON
+};
+
+/// Het leer in de bureaubladen: donkerder en grijzer dan het hout eromheen, met een zachte
+/// glans, zodat blad en rand van elkaar verschillen (council-ronde 4: hout en bekleding waren
+/// één egale kleur).
+pub const BLADLEER: Afwerking = Afwerking {
+    verzadiging: 0.45,
+    kleur: [0.5, 0.5, 0.52],
+    ruwheid: Some(0.55),
+    glans: Some(0.35),
     ..GEWOON
 };
 
@@ -53,10 +69,11 @@ pub const STOF: Afwerking = Afwerking {
     ..GEWOON
 };
 
-/// Het tapijt: het vlekkenpatroon met minder dan de helft van het contrast, en donkerder.
+/// Het tapijt: het vlekkenpatroon met wat minder contrast, en donkerder. Met minder dan de helft
+/// van het contrast las het als een vlakke game-vloer (council-ronde 4).
 pub const TAPIJT: Afwerking = Afwerking {
-    kleur: [0.74, 0.76, 0.78],
-    contrast: 0.4,
+    kleur: [0.72, 0.74, 0.76],
+    contrast: 0.65,
     ..GEWOON
 };
 
@@ -71,8 +88,8 @@ pub const PLAFOND: Afwerking = Afwerking {
 /// van de Kamerbanken het lichtste deel is en niet het balkon erboven (council-ronde 3). Daar
 /// staat geen informatie, en bovenin komen de Graphics.
 pub const TRIBUNE: Afwerking = Afwerking {
-    verzadiging: 0.8,
-    kleur: [0.42, 0.43, 0.45],
+    verzadiging: 0.75,
+    kleur: [0.32, 0.33, 0.35],
     ..GEWOON
 };
 
@@ -86,14 +103,15 @@ pub const WAND: Afwerking = Afwerking {
 pub fn afwerking(materiaal: &str) -> Option<Afwerking> {
     Some(match materiaal {
         "perenhout" | "perenhout_blad" | "middenvak_blad" | "middenvak_paneel"
-        | "middenvak_katheder" | "desk_leer" | "balies_kastje" | "balies_kader" | "balies_kap"
+        | "middenvak_katheder" | "balies_kastje" | "balies_kader" | "balies_kap"
         | "balies_bladrand" => HOUT,
+        "desk_leer" => BLADLEER,
         m if m.starts_with("balies_fineer_") => HOUT,
         "stoel_leer" | "stoel_bies" | "stoel_naad" | "balies_leer" => STOF,
         "tapijt" => TAPIJT,
         "plafond" | "daklicht_plafond" => PLAFOND,
         "tribune_band" | "tribune_stof" | "tribune_stof_zij" | "tribune_achter" | "tribune_kop"
-        | "tribune_trede" | "tribune_tapijt" => TRIBUNE,
+        | "tribune_trede" | "tribune_tapijt" | "tribune_frame" | "tribune_lamel" | "tribune_rooster" => TRIBUNE,
         "wand" => WAND,
         _ => return None,
     })
@@ -123,6 +141,10 @@ impl Afwerking {
         }
         if let Some(g) = self.glans {
             m.reflectance = g;
+        }
+        if self.fijner != 1.0 {
+            // na een textuurtransform uit het model, zodat zijn herhaling blijft
+            m.uv_transform = bevy::math::Affine2::from_scale(Vec2::splat(self.fijner)) * m.uv_transform;
         }
     }
 }

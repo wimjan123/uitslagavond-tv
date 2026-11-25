@@ -38,9 +38,9 @@ const STOEL_LEER: &str = "stoel_leer";
 const STOEL_WAPEN: &str = "stoel_wapen";
 const WAPEN_STRAALT: LinearRgba = LinearRgba::rgb(0.22, 0.22, 0.21);
 /// Het groene bordje van de nooduitgang: in het model zo fel dat het in een close-up de aandacht
-/// trekt (council-ronde 3). Dit deel van zijn licht blijft over.
+/// trekt (council-ronde 3), en met een groene gloed bij de deur (ronde 4). Dit deel van zijn licht blijft over.
 const NOODUITGANG: &str = "nooduitgang";
-const NOODUITGANG_LICHT: f32 = 0.2;
+const NOODUITGANG_LICHT: f32 = 0.03;
 
 pub struct ZaalPlugin {
     /// Map met de bestanden uit `zaal/maak.sh`; `None` voor een Renderer zonder Zaal.
@@ -59,7 +59,7 @@ impl Plugin for ZaalPlugin {
                 Update,
                 (
                     stel_stof_en_hout_bij,
-                    ((herken_stoelen, kleur_stoelen, licht_stoel_op).chain(), dim_zaal, geef_stoelen_licht),
+                    ((herken_stoelen, kleur_stoelen, licht_stoel_op, verlicht_de_opbouw, zet_sleutellicht, zet_titellicht).chain(), dim_zaal, geef_stoelen_licht),
                 )
                     .chain()
                     .after(Afgewerkt),
@@ -471,7 +471,7 @@ impl Golf {
                 }
             }
             Overgangsvorm::Opbouw => {
-                let wacht = Some(OPBOUW_WACHTKLEUR);
+                let wacht = leeg_leer();
                 match self.opbouw.deel(i, self.tijd) {
                     Opbouwdeel::Donker(f) if f <= 0.0 => Stoelstand::Wacht,
                     // zonder kleur gaat hij meteen naar zijn eigen leer
@@ -479,16 +479,16 @@ impl Golf {
                     Opbouwdeel::Donker(f) if naar.is_none() => meng(van, van_straalt, None, f),
                     // donker zonder straling
                     Opbouwdeel::Donker(f) => {
-                        Stoelstand::Onderweg(van.mix(&lineair(wacht), f), van_straalt.mix(&LinearRgba::BLACK, f))
+                        Stoelstand::Onderweg(van.mix(&wacht, f), van_straalt.mix(&LinearRgba::BLACK, f))
                     }
                     Opbouwdeel::Oplichten(f) => {
                         let (g, d) = (self.opbouw.gloed(i, self.tijd), self.opbouw.gedimd(i, self.tijd));
                         if f >= 1.0 && g <= 0.0 && d <= 0.0 {
                             return Stoelstand::Klaar;
                         }
-                        // eerst de kleur, dan gedimd naar grijs, dan de flits van de stap
+                        // eerst de kleur, dan gedimd naar middengrijs, dan de flits van de stap
                         let gedimd = naar.map_or(lineair(None), gedimd_leer);
-                        let leer = lineair(wacht)
+                        let leer = wacht
                             .mix(&lineair(naar), f)
                             .mix(&gedimd, d)
                             .mix(&lineair(Some(Kleur { r: 255, g: 255, b: 255 })), GLOED_LICHT * g);
@@ -541,7 +541,10 @@ const STOEL_UIT: Kleur = Kleur { r: 0x4c, g: 0x4f, b: 0x55 };
 /// Van dichtbij ([`crate::lens::Nabijheid`] 1, Partij uitgelicht en de Persoonskaart) staat een
 /// Stoel recht in het licht en is er minder nodig: zonder dat werd D66-groen neonlimoen. Daar is
 /// het licht keer `nabij_licht`, de extra kleurigheid keer `nabij_kleur` en de straling keer
-/// `nabij_straalt`, gemeten bij D66, CDA en PVV; daartussen vloeiend.
+/// `nabij_straalt`, gemeten bij D66, CDA en PVV; daartussen vloeiend. Van dichtbij straalt het
+/// leer niet: met straling leek een gekleurde Stoel in een close-up zelf licht te geven, zonder
+/// verloop van licht naar schaduw over de rugleuning (council-ronde 4). De kleur komt daar alleen
+/// uit het leer en het licht.
 #[derive(Clone, Copy, Debug)]
 struct Kalibratie {
     licht: f32,
@@ -566,10 +569,10 @@ const KALIBRATIE: Kalibratie = Kalibratie {
     kleur_l: 3.1,
     kleur_c: -1.5,
     albedo: 0.6,
-    straalt: 0.15,
-    nabij_licht: 0.88,
+    straalt: 0.11,
+    nabij_licht: 0.78,
     nabij_kleur: 0.25,
-    nabij_straalt: 0.35,
+    nabij_straalt: 0.0,
 };
 
 /// De kalibratie, of voor het meten (`scripts/kleurmeting/`) een andere uit
@@ -629,8 +632,15 @@ fn gekalibreerd(k: Kleur, nabij: f32) -> LinearRgba {
     let (licht, kleur) = kalibratie_per_kleur().get(&k).copied().unwrap_or_else(|| factoren(k));
     let licht = licht * (1.0 - (1.0 - kal.nabij_licht) * nabij);
     let kleur = 1.0 + (kleur - 1.0) * (1.0 - (1.0 - kal.nabij_kleur) * nabij);
-    in_oklab(k, licht, kleur)
+    let vol = 1.0 - (1.0 - BREED_VERZADIGING) * (1.0 - nabij) - (1.0 - NABIJ_VERZADIGING) * nabij;
+    in_oklab(k, licht, kleur * vol)
 }
+
+/// In een wijd shot is de kleur van het leer iets minder vol dan de kalibratie zegt: met de volle
+/// kleur lazen de Stoelen als snoepkleurig (council-ronde 4). Van dichtbij geldt dit niet.
+const BREED_VERZADIGING: f32 = 0.88;
+/// Van dichtbij: zoveel van de kleurigheid van het leer.
+const NABIJ_VERZADIGING: f32 = 0.8;
 
 /// De kleur van het leer bij een kleur uit de Stand (lineair), in het totaalbeeld.
 #[cfg(test)]
@@ -656,17 +666,30 @@ fn straling_bij(k: Kleur, kracht: f32, nabij: f32) -> LinearRgba {
     gekalibreerd(k, nabij) * ((kal.straalt + kracht * KLEUR_STRAALT) * (1.0 - (1.0 - kal.nabij_straalt) * nabij))
 }
 
-/// Bij de Opbouw: een Partij na haar stap wordt grijs en donker, met nog een kwart van haar kleur
-/// in beeld (council-ronde 3: met de tint erin waren kleine stappen als JA21 en BBB niet te
-/// vinden). Een donkere kleur verliest in beeld minder van zijn kleurigheid dan een volle, dus het
-/// leer krijgt minder dan een kwart mee.
-const GEDIMD_KLEUR: f32 = 0.12;
-const GEDIMD_LICHT: f32 = 0.5;
+/// Bij de Opbouw staan de Stoelen op drie lichtheden: leeg (nog niet aan de beurt) donker, "al
+/// geweest" middengrijs met een zweem van de partijkleur, en de Partij die aan de beurt is vol in
+/// haar kleur. Met "al geweest" donker leken gedimde donkere Partijen (PVV, JA21) op lege Stoelen
+/// en was de actieve Partij niet meteen te vinden (council-ronde 4). Het grijs is voor elke Partij
+/// even licht (Oklab-lichtheid [`GEDIMD_L`]), met [`GEDIMD_ZWEEM`] van haar kleurigheid, nooit
+/// meer dan [`GEDIMD_HOOGSTE_C`].
+const GEDIMD_L: f32 = 0.56;
+const GEDIMD_ZWEEM: f32 = 0.22;
+const GEDIMD_HOOGSTE_C: f32 = 0.03;
+/// De lege Stoelen in de Opbouw: de wachtkleur uit de Stand, met de lichtheid keer dit (Oklab),
+/// zodat leeg duidelijk donkerder is dan "al geweest".
+const LEEG_LICHT: f32 = 0.72;
 
 /// Het leer van een gedimde Partij in de Opbouw (lineair).
 fn gedimd_leer(k: Kleur) -> LinearRgba {
-    let (licht, kleur) = factoren(k);
-    in_oklab(k, licht * GEDIMD_LICHT, kleur * GEDIMD_KLEUR) * kalibratie().albedo
+    let c = Oklcha::from(Srgba::rgb_u8(k.r, k.g, k.b));
+    let grijs = Oklcha::new(GEDIMD_L, (c.chroma * GEDIMD_ZWEEM).min(GEDIMD_HOOGSTE_C), c.hue, 1.0);
+    let l = LinearRgba::from(grijs);
+    LinearRgba::rgb(l.red.max(0.0), l.green.max(0.0), l.blue.max(0.0)) * kalibratie().albedo
+}
+
+/// Het leer van een lege Stoel in de Opbouw (lineair).
+fn leeg_leer() -> LinearRgba {
+    in_oklab(OPBOUW_WACHTKLEUR, LEEG_LICHT, 1.0) * kalibratie().albedo
 }
 
 /// Hoe fel het leer bij Kleurkracht 100 extra straalt in zijn eigen kleur. Laag, anders leest
@@ -862,6 +885,218 @@ fn kleur_stoelen(
     }
 }
 
+/// De lichtkring onder de Partij die in de Opbouw aan de beurt is: een spot recht boven haar
+/// blok, die met de flits van de stap opkomt en daarna zacht blijft branden. Zo vind je ook een
+/// klein blok achterin (BBB, vier Stoelen) en een donkere Partij naast een gedimde (JA21 naast
+/// PVV) meteen (council-ronde 4). Hij geeft licht op het gebakken tapijt en de banken rond het
+/// blok, dus het leest als een vloergloed, niet als een label.
+#[derive(Component)]
+struct Opbouwlicht;
+
+/// Zo hoog boven de rugleuningen hangt de spot, in meter.
+const OPBOUWLICHT_HOOGTE: f32 = 3.2;
+/// Zo ver buiten de buitenste Stoel van het blok reikt de kring, in meter.
+const OPBOUWLICHT_RAND: f32 = 0.9;
+/// De sterkte op de top van de flits en daarna, in lumen.
+const OPBOUWLICHT_TOP: f32 = 4500.0;
+const OPBOUWLICHT_BLIJFT: f32 = 0.5;
+/// Hoeveel van de partijkleur in het licht zit; de rest is warm wit.
+const OPBOUWLICHT_KLEUR: f32 = 0.35;
+
+/// Hoe fel de lichtkring is (0 tot 1) op `t` seconden in een stap van `per_stap` seconden: hij
+/// komt op met de flits, zakt naar [`OPBOUWLICHT_BLIJFT`] en dooft vlak voor de volgende stap.
+pub fn opbouwlicht_sterkte(t: f32, per_stap: f32) -> f32 {
+    let per_stap = per_stap.max(1e-3);
+    let x = t / per_stap;
+    let op = kleurgolf::zacht((x / 0.2).clamp(0.0, 1.0));
+    let zakt = 1.0 - (1.0 - OPBOUWLICHT_BLIJFT) * kleurgolf::zacht(((x - 0.2) / 0.3).clamp(0.0, 1.0));
+    let uit = 1.0 - kleurgolf::zacht(((x - 0.88) / 0.12).clamp(0.0, 1.0));
+    op * zakt * uit
+}
+
+/// Waar de spot boven een blok Stoelen hangt en hoe wijd zijn kegel is (halve hoek).
+fn opbouwlicht_plek(stoelen: &[usize]) -> Option<(Vec3, f32)> {
+    let plekken: Vec<Vec3> = stoelen.iter().filter_map(|&i| gedeeld::zaalkaart::STOELPLEKKEN.get(i)).map(|p| Vec3::from(*p)).collect();
+    if plekken.is_empty() {
+        return None;
+    }
+    let midden = plekken.iter().copied().sum::<Vec3>() / plekken.len() as f32;
+    let straal = plekken.iter().map(|p| p.with_y(0.0).distance(midden.with_y(0.0))).fold(0.0, f32::max) + OPBOUWLICHT_RAND;
+    Some((midden + Vec3::Y * OPBOUWLICHT_HOOGTE, (straal / OPBOUWLICHT_HOOGTE).atan()))
+}
+
+fn verlicht_de_opbouw(
+    mut commands: Commands,
+    golf: Res<Golf>,
+    mut licht: Query<(&mut SpotLight, &mut Transform, &mut Visibility), With<Opbouwlicht>>,
+) {
+    let Ok((mut spot, mut plek, mut zicht)) = licht.single_mut() else {
+        commands.spawn((
+            Opbouwlicht,
+            SpotLight {
+                intensity: 0.0,
+                range: 12.0,
+                shadow_maps_enabled: false,
+                affects_lightmapped_mesh_diffuse: true,
+                ..default()
+            },
+            Transform::IDENTITY,
+            Visibility::Hidden,
+        ));
+        return;
+    };
+    let stap = (golf.bezig && golf.vorm == Overgangsvorm::Opbouw).then(|| golf.opbouw.stap(golf.tijd)).flatten();
+    let Some((k, t)) = stap else {
+        zicht.set_if_neq(Visibility::Hidden);
+        return;
+    };
+    let blok: Vec<usize> = (0..golf.opbouw.stap_van.len()).filter(|&i| golf.opbouw.stap_van[i] == Some(k)).collect();
+    let Some((positie, halve_hoek)) = opbouwlicht_plek(&blok) else { return };
+    let kleur = golf.opbouw.stappen[k];
+    let warm = LinearRgba::rgb(1.0, 0.93, 0.82);
+    let eigen = LinearRgba::from(Srgba::rgb_u8(kleur.r, kleur.g, kleur.b));
+    let eigen = eigen * (1.0 / helderheid(eigen).max(0.05)).min(4.0);
+    *plek = Transform::from_translation(positie).looking_to(Vec3::NEG_Y, Vec3::Z);
+    spot.color = warm.mix(&eigen, OPBOUWLICHT_KLEUR).into();
+    spot.outer_angle = halve_hoek.min(1.3);
+    spot.inner_angle = spot.outer_angle * 0.55;
+    spot.intensity = OPBOUWLICHT_TOP * opbouwlicht_sterkte(t, golf.opbouw.per_stap);
+    zicht.set_if_neq(Visibility::Inherited);
+}
+
+/// Het sleutellicht van een close-up: schuin van boven en opzij van de camera, zoals een lamp in
+/// een studio. Het gebakken licht in de Zaal komt van alle kanten tegelijk, dus van dichtbij was
+/// een Stoel één egale kleur en leek hij zelf licht te geven (council-ronde 4). Met dit licht en
+/// minder gebakken licht op het leer loopt een Stoel van licht naar schaduw. Het komt op met de nabijheid van de camera ([`crate::lens::Nabijheid`]);
+/// in een wijd shot is het uit.
+#[derive(Component)]
+struct Sleutellicht;
+
+/// De verlichtingssterkte van het sleutellicht bij een volle close-up.
+const SLEUTEL_LUX: f32 = 5.0;
+/// Waar het vandaan komt, gezien vanaf de camera: zoveel graden naar links en omhoog.
+const SLEUTEL_OPZIJ: f32 = 40.0;
+const SLEUTEL_OMHOOG: f32 = 45.0;
+/// Hoeveel van het gebakken licht het leer van de Stoelen bij een volle close-up houdt.
+const SLEUTEL_GEBAKKEN: f32 = 0.5;
+
+/// De richting van het sleutellicht (waar het heen schijnt) bij een camera met deze stand.
+fn sleutelrichting(camera: &Transform) -> Vec3 {
+    let vooruit = camera.forward().as_vec3().with_y(0.0).normalize_or(Vec3::NEG_Z);
+    let draai = Quat::from_rotation_y(SLEUTEL_OPZIJ.to_radians());
+    let vlak = draai * vooruit;
+    let (s, c) = SLEUTEL_OMHOOG.to_radians().sin_cos();
+    (vlak * c - Vec3::Y * s).normalize()
+}
+
+#[allow(clippy::type_complexity)]
+fn zet_sleutellicht(
+    mut commands: Commands,
+    nabijheid: Option<Res<crate::lens::Nabijheid>>,
+    camera: Query<&Transform, (With<crate::beeld::HoofdCamera>, Without<Sleutellicht>)>,
+    mut licht: Query<(&mut DirectionalLight, &mut Transform), With<Sleutellicht>>,
+    leer: Query<&MeshMaterial3d<StandardMaterial>, With<StoelLeer>>,
+    mut materialen: ResMut<Assets<StandardMaterial>>,
+    mut vorig: Local<Option<f32>>,
+) {
+    let nabij = nabijheid.map_or(0.0, |n| n.0);
+    let Ok((mut l, mut plek)) = licht.single_mut() else {
+        commands.spawn((
+            Sleutellicht,
+            DirectionalLight {
+                illuminance: 0.0,
+                color: Color::linear_rgb(1.0, 0.95, 0.88),
+                // zonder schaduw: het plafond en het dak liggen tussen de Stoelen en elke
+                // richting van boven, en zouden alles in de schaduw zetten
+                shadow_maps_enabled: false,
+                affects_lightmapped_mesh_diffuse: true,
+                ..default()
+            },
+            Transform::IDENTITY,
+        ));
+        return;
+    };
+    if let Some(c) = camera.iter().next() {
+        let doel = Transform::IDENTITY.looking_to(sleutelrichting(c), Vec3::Y);
+        if plek.rotation != doel.rotation {
+            plek.rotation = doel.rotation;
+        }
+    }
+    let lux = SLEUTEL_LUX * nabij;
+    if l.illuminance != lux {
+        l.illuminance = lux;
+    }
+    // het gebakken licht op het leer, ook van materialen die er later bij komen (een nieuwe
+    // kleur, een Stoel midden in de golf)
+    let gebakken = 1.0 - (1.0 - SLEUTEL_GEBAKKEN) * nabij;
+    let nieuw = *vorig != Some(gebakken);
+    *vorig = Some(gebakken);
+    for m in &leer {
+        if materialen.get(&m.0).is_some_and(|m| m.lightmap_exposure != gebakken || nieuw)
+            && let Some(mut m) = materialen.get_mut(&m.0)
+        {
+            m.lightmap_exposure = gebakken;
+        }
+    }
+}
+
+/// Bij de Titelkaart een gericht zijlicht op de middelste Stoelen, schuin van links voor, zoals
+/// een studiolamp: het midden van de Zaal licht op en de rest valt iets terug (council-ronde 4:
+/// het totaalbeeld onder de Titelkaart was overal even licht).
+#[derive(Component)]
+struct Titellicht;
+
+/// Waar de lamp hangt (onder het plafond, links voor) en waar hij op richt, in meter.
+const TITELLICHT_PLEK: Vec3 = Vec3::new(-5.5, 4.6, 1.2);
+const TITELLICHT_DOEL: Vec3 = Vec3::new(0.0, 0.9, -4.6);
+/// De sterkte in lumen, de halve kegel in radialen en hoe lang hij erover doet om aan of uit te
+/// gaan, in seconden.
+const TITELLICHT_LUMEN: f32 = 6000.0;
+/// Bij de Titelkaart houdt de rest van de Zaal (niet het leer van de Stoelen) dit deel van zijn
+/// licht, zodat de Stoelen in het zijlicht het lichtst zijn en de tribune zachter.
+const TITEL_ZAALLICHT: f32 = 0.6;
+const TITELLICHT_KEGEL: f32 = 0.42;
+const TITELLICHT_S: f32 = 0.8;
+
+fn zet_titellicht(
+    mut commands: Commands,
+    standen: Res<Standen>,
+    tijd: Res<Time>,
+    mut licht: Query<(&mut SpotLight, &mut Visibility), With<Titellicht>>,
+    mut sterkte: Local<f32>,
+) {
+    let Ok((mut l, mut zicht)) = licht.single_mut() else {
+        commands.spawn((
+            Titellicht,
+            SpotLight {
+                intensity: 0.0,
+                color: Color::linear_rgb(1.0, 0.94, 0.85),
+                range: 14.0,
+                outer_angle: TITELLICHT_KEGEL,
+                inner_angle: TITELLICHT_KEGEL * 0.5,
+                shadow_maps_enabled: true,
+                affects_lightmapped_mesh_diffuse: true,
+                ..default()
+            },
+            Transform::from_translation(TITELLICHT_PLEK).looking_at(TITELLICHT_DOEL, Vec3::Y),
+            Visibility::Hidden,
+        ));
+        return;
+    };
+    let titel = standen
+        .huidig
+        .as_ref()
+        .and_then(|s| s.stand.ether.as_ref())
+        .is_some_and(|e| matches!(e.graphic, gedeeld::Graphic::Titelkaart { .. }));
+    let stap = tijd.delta_secs() / TITELLICHT_S;
+    *sterkte = if titel { (*sterkte + stap).min(1.0) } else { (*sterkte - stap).max(0.0) };
+    let lumen = TITELLICHT_LUMEN * kleurgolf::zacht(*sterkte);
+    if l.intensity != lumen {
+        l.intensity = lumen;
+    }
+    zicht.set_if_neq(if *sterkte > 0.0 { Visibility::Inherited } else { Visibility::Hidden });
+}
+
 /// Hoe licht de rest van de Zaal is (alles behalve het leer van de Stoelen): 1 zoals gebakken,
 /// lager zolang er Stoelen gekleurd zijn, naar de Kleurkracht. Het licht verandert mee met de
 /// Kleurovergang.
@@ -929,8 +1164,8 @@ fn dim_zaal(
     nieuw: Query<(), Added<GltfMaterialName>>,
     mut licht: ParamSet<(
         Query<(Entity, &mut PointLight)>,
-        Query<(Entity, &mut SpotLight)>,
-        Query<(Entity, &mut DirectionalLight)>,
+        Query<(Entity, &mut SpotLight), (Without<Opbouwlicht>, Without<Titellicht>)>,
+        Query<(Entity, &mut DirectionalLight), Without<Sleutellicht>>,
         Query<(Entity, &mut EnvironmentMapLight)>,
         Query<(), Or<(Added<PointLight>, Added<SpotLight>, Added<DirectionalLight>, Added<EnvironmentMapLight>)>>,
     )>,
@@ -940,7 +1175,12 @@ fn dim_zaal(
 ) {
     if standen.is_changed() {
         let gekleurd = standen.huidig.as_ref().is_some_and(|s| !s.stand.stoelkleuren.is_empty());
-        let doel = zaallicht(gekleurd, kleurkracht(&standen));
+        let titel = standen
+            .huidig
+            .as_ref()
+            .and_then(|s| s.stand.ether.as_ref())
+            .is_some_and(|e| matches!(e.graphic, gedeeld::Graphic::Titelkaart { .. }));
+        let doel = zaallicht(gekleurd, kleurkracht(&standen)) * if titel { TITEL_ZAALLICHT } else { 1.0 };
         let neutraal = if gekleurd { 1.0 } else { 0.0 };
         if !d.begonnen {
             (d.van, d.naar, d.nu) = (doel, doel, doel);
@@ -1062,9 +1302,13 @@ struct LijnBij76 {
 /// Breedte van de lijn bij 76, in meter: smal, zodat hij leest als een lijn en niet als een strook
 /// (council-ronde 3).
 const LIJN_76_BREEDTE: f32 = 0.1;
-/// Het getal 76 klein op de vloer aan het voeteind van de lijn: zo hoog (meter), en zo ver voor
-/// het begin van de lijn.
-const GETAL_76_HOOGTE: f32 = 0.6;
+/// Het getal 76 op de vloer aan het voeteind van de lijn: zo lang in de diepte (meter), zo breed
+/// als de letters bij deze hoogte zouden zijn keer [`GETAL_76_BREDER`], en zo ver voor het begin
+/// van de lijn. Uitgerekt in de diepte, want vanaf Standpunt A kijk je schuin op de vloer: met
+/// 0,6 m was het getal 15 px hoog in beeld en lag het plat (council-ronde 4).
+const GETAL_76_HOOGTE: f32 = 1.7;
+const GETAL_76_LETTER: f32 = 0.75;
+const GETAL_76_BREDER: f32 = 1.15;
 const GETAL_76_VOOR_LIJN: f32 = 0.12;
 /// Zo lang groeit de lijn van voor naar achter, of krimpt hij weer, bij snelheid 100.
 const LIJN_76_GROEIT: f32 = 0.6;
@@ -1164,7 +1408,7 @@ fn getal_76_vlak(lijn: &[Vec3], verhouding: f32) -> Mesh {
     use bevy::mesh::{Indices, PrimitiveTopology};
     let langs = (lijn[1] - lijn[0]).with_y(0.0).normalize_or(Vec3::NEG_Z);
     let rechts = langs.cross(Vec3::Y);
-    let (h, b) = (GETAL_76_HOOGTE, GETAL_76_HOOGTE * verhouding);
+    let (h, b) = (GETAL_76_HOOGTE, GETAL_76_LETTER * verhouding * GETAL_76_BREDER);
     let midden = lijn[0] - langs * (GETAL_76_VOOR_LIJN + h / 2.0);
     let hoek = |x: f32, y: f32| (midden + rechts * (x * b / 2.0) + langs * (y * h / 2.0)).to_array();
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
@@ -1343,7 +1587,8 @@ fn partijkleur(stand: &gedeeld::Stand, graphic: &gedeeld::Graphic) -> Option<Kle
 /// Tussen gekleurde Stoelen licht hij boven zijn buren uit.
 fn uitgelicht(leer: LinearRgba, straalt: LinearRgba, partij: Option<Kleur>, kracht: f32, nabij: f32, sterkte: f32) -> (LinearRgba, LinearRgba) {
     let eigen = partij.map_or(leer * (1.0 / kalibratie().albedo), |k| gekalibreerd(k, nabij)).with_alpha(1.0);
-    let gewoon = partij.map_or(eigen * (kalibratie().straalt * kalibratie().nabij_straalt), |k| straling_bij(k, kracht, nabij));
+    let kal = kalibratie();
+    let gewoon = partij.map_or(eigen * (kal.straalt * (1.0 - (1.0 - kal.nabij_straalt) * nabij)), |k| straling_bij(k, kracht, nabij));
     let naar = partij.map_or(leer, |k| leer_bij(k, nabij));
     let straling = if straalt == LinearRgba::BLACK { gewoon } else { gewoon + eigen * UITGELICHT_EXTRA };
     (leer.mix(&naar, sterkte), straalt.mix(&straling, sterkte))
@@ -1882,14 +2127,14 @@ mod tests {
         wacht(&mut app, 0.74);
         assert!(app.world().resource::<Opbouwstand>().bezig);
         assert_eq!(stap(&app), None, "eerst worden de Stoelen donker");
-        let wachtkleur = lin(OPBOUW_WACHTKLEUR);
+        let wachtkleur = Srgba::from(leeg_leer());
         let bijna = |l: &Srgba| (l.red - wachtkleur.red).abs().max((l.green - wachtkleur.green).abs()) < 0.01;
         assert!(leerkleuren(&mut app).iter().all(bijna), "alle 150 (bijna) in de wachtkleur");
 
         // de grootste Partij (nu rood, 110) eerst en flitst kort op; de rest wacht donker
         wacht(&mut app, 0.36);
         assert_eq!(stap(&app), Some(rood));
-        assert_eq!(tel(&mut app, OPBOUW_WACHTKLEUR), 40);
+        assert_eq!(leerkleuren(&mut app).iter().filter(|l| ongeveer(**l, wachtkleur)).count(), 40);
         assert_eq!(tel(&mut app, rood), 0, "rood flitst, lichter dan zijn eigen kleur");
         // midden in de stap staat rood in zijn eigen kleur
         wacht(&mut app, 0.4);
@@ -1903,6 +2148,12 @@ mod tests {
         let vol = Srgba::from(leer_in_de_zaal(rood));
         assert!(grijs < 0.3 * (vol.red - vol.green).abs(), "gedimd is bijna grijs: {gedimd:?} tegen {vol:?}");
         assert!(gedimd.red + gedimd.green + gedimd.blue < vol.red + vol.green + vol.blue, "en donkerder");
+        // drie lichtheden: leeg donker, al geweest middengrijs, aan de beurt vol
+        let licht = |l: Srgba| helderheid(LinearRgba::from(l));
+        assert!(licht(gedimd) > 2.0 * licht(wachtkleur), "al geweest is veel lichter dan leeg: {gedimd:?} {wachtkleur:?}");
+        let blauw: Kleur = "#0e3a8c".parse().unwrap();
+        let (b, r) = (licht(Srgba::from(gedimd_leer(blauw))), licht(gedimd));
+        assert!((b - r).abs() < 0.1 * r, "elke Partij even licht gedimd, ook een donkere: {b} {r}");
         // na de laatste stap komt alles tegelijk terug in zijn eigen kleur
         wacht(&mut app, 1.5);
         assert_eq!(tel(&mut app, rood), 110);
@@ -2109,6 +2360,25 @@ mod tests {
                 e.red + e.green + e.blue
             })
             .collect()
+    }
+
+    #[test]
+    fn de_lichtkring_flitst_met_de_stap_blijft_zacht_branden_en_staat_boven_het_blok() {
+        let per_stap = 1.5;
+        assert_eq!(opbouwlicht_sterkte(0.0, per_stap), 0.0, "begint uit");
+        let top = (0..30).map(|i| opbouwlicht_sterkte(i as f32 * 0.05, per_stap)).fold(0.0, f32::max);
+        assert!(top > 0.95, "flitst op: {top}");
+        let midden = opbouwlicht_sterkte(0.9, per_stap);
+        assert!((midden - OPBOUWLICHT_BLIJFT).abs() < 0.05, "brandt zacht: {midden}");
+        assert!(opbouwlicht_sterkte(per_stap, per_stap) < 1e-3, "uit voor de volgende stap");
+        // een klein blok van vier: een smalle kring recht erboven
+        let vier: Vec<usize> = stoelen_van_links_naar_rechts().into_iter().take(4).collect();
+        let (plek, hoek) = opbouwlicht_plek(&vier).unwrap();
+        let midden = vier.iter().map(|&i| Vec3::from(gedeeld::zaalkaart::STOELPLEKKEN[i])).sum::<Vec3>() / 4.0;
+        assert!(plek.with_y(0.0).distance(midden.with_y(0.0)) < 1e-3 && plek.y > midden.y + 2.0);
+        assert!(hoek < 1.0, "smal: {hoek}");
+        let alle: Vec<usize> = (0..AANTAL_STOELEN).collect();
+        assert!(opbouwlicht_plek(&alle).unwrap().1 > hoek);
     }
 
     #[test]

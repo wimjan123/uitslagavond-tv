@@ -72,7 +72,7 @@ const VLOER_OVERGANG: f32 = 1.0;
 ///   schampt (ronde 4: met A op 12,5 m achter het midden zakt die route bij de voorwand tot
 ///   ongeveer 4,5 m).
 const STUDIO_HELLING_VAN: f32 = 0.0;
-const STUDIO_HOOGTE: f32 = 11.0;
+const STUDIO_HOOGTE: f32 = 14.0;
 const STUDIO_DIEPTE: f32 = 14.0;
 const STUDIO_VLOER: f32 = 4.0;
 
