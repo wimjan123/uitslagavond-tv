@@ -62,6 +62,19 @@ fn op(left: f32, top: f32, width: Val, height: Val) -> Node {
     }
 }
 
+/// De lettergrootte van het drempelgetal boven de Stemmingsbalk.
+const DREMPEL_LETTER: f32 = 30.0;
+
+/// De meerderheid van de uitgebrachte stemmen (de helft plus een, naar beneden afgerond) en waar
+/// die op de balk ligt, als deel van de breedte. Geen stemmen: geen drempel.
+fn drempel(voor: u16, tegen: u16) -> Option<(u16, f32)> {
+    let n = voor + tegen;
+    (n > 0).then(|| {
+        let m = n / 2 + 1;
+        (m, f32::from(m) / f32::from(n))
+    })
+}
+
 /// Waar voor overgaat in tegen, als deel van de breedte.
 fn wissel(voor: u16, tegen: u16) -> f32 {
     let totaal = f32::from(voor) + f32::from(tegen);
@@ -129,8 +142,9 @@ pub fn bouw(
                 commands.spawn((ChildOf(binnen), op(links, 0.0, Val::Px((b - links).round()), Val::Px(h)), gekleurd(kleur(STEM_TEGEN), dekking)));
             }
             let letters = (letter.as_str(), tekstletter.as_str());
-            // de getallen 50 en de woorden 34 pixels bij een balk van 72 hoog
-            let maten = ((h * 50.0 / 72.0).round(), (h * 34.0 / 72.0).round());
+            // de getallen 50 en de woorden 40 pixels bij een balk van 72 hoog (council ronde 5:
+            // "voor" en "tegen" waren met 34 te klein naast het getal)
+            let maten = ((h * 50.0 / 72.0).round(), (h * 40.0 / 72.0).round());
             let label = |commands: &mut Commands, rechts: bool| {
                 let mut n = op(22.0, 0.0, Val::Auto, Val::Px(h));
                 if rechts {
@@ -151,9 +165,18 @@ pub fn bouw(
                 let r = commands.spawn((ChildOf(l), rij(12.0))).id();
                 getal_en_woord(commands, bestanden, r, &tegen.to_string(), "tegen", letters, maten, op_stem(STEM_TEGEN, tk), dekking);
             }
-            // de lijn bij 76, 8 breed, 14 pixels boven en onder de balk uit
-            let x = b * 76.0 / gedeeld::cijfers::ZETELS as f32;
-            commands.spawn((ChildOf(binnen), op(x - 4.0, -14.0, Val::Px(8.0), Val::Px(h + 28.0)), gekleurd(blokkleur, dekking)));
+            // De drempel: een meerderheid van de uitgebrachte stemmen, op dezelfde schaal als de
+            // balk (bij 150 stemmen 76). Een streep van 8 breed, 14 pixels boven en onder de balk
+            // uit, met het getal erboven in Accent, zoals bij de Zetelbalk (council ronde 5).
+            if let Some((drempel, deel)) = drempel(*voor, *tegen) {
+                let x = (b * deel).round();
+                commands.spawn((ChildOf(binnen), op(x - 4.0, -14.0, Val::Px(8.0), Val::Px(h + 28.0)), gekleurd(blokkleur, dekking)));
+                let vak = commands
+                    .spawn((ChildOf(binnen), Node { justify_content: JustifyContent::Center, ..op(x - 60.0, -14.0 - DREMPEL_LETTER - 6.0, Val::Px(120.0), Val::Px(DREMPEL_LETTER + 6.0)) }))
+                    .id();
+                let t = tekst_deel(commands, bestanden, vak, &drempel.to_string(), letters.0, DREMPEL_LETTER, blokkleur, Uitlijning::Midden, dekking);
+                commands.entity(t).insert(TextLayout::no_wrap());
+            }
         }
         Inhoud::Uitkomst {
             tekst,
@@ -257,7 +280,7 @@ pub fn bouw(
                     ))
                     .id();
                 let r = commands.spawn((ChildOf(kop), rij(12.0))).id();
-                getal_en_woord(commands, bestanden, r, &aantal.to_string(), woord, (letter, tekstletter), (50.0, 34.0), op_stem(achter, tk), dekking);
+                getal_en_woord(commands, bestanden, r, &aantal.to_string(), woord, (letter, tekstletter), (50.0, 40.0), op_stem(achter, tk), dekking);
                 let raster = commands
                     .spawn((
                         ChildOf(kolom),
@@ -576,6 +599,15 @@ pub fn pas_in(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn de_drempel_is_een_meerderheid_van_de_uitgebrachte_stemmen() {
+        assert_eq!(drempel(81, 69), Some((76, 76.0 / 150.0)));
+        // niet iedereen stemde: 140 stemmen, meerderheid 71
+        assert_eq!(drempel(70, 70).map(|d| d.0), Some(71));
+        assert_eq!(drempel(101, 0).map(|d| d.0), Some(51));
+        assert_eq!(drempel(0, 0), None);
+    }
 
     #[test]
     fn de_labels_staan_altijd_onder_hun_eigen_kant_van_de_balk() {
