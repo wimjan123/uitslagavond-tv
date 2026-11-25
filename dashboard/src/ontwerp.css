@@ -381,3 +381,30 @@ details > summary { cursor: pointer; }
 .toets-stem { font-size: 12.5px; font-weight: 600; }
 .fractie-toets .toets-naam { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; line-height: 1.2; }
 .fractie-toets .toets-naam::before { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+
+/* Gevulde vlakken met witte tekst halen 4,5:1: een iets donkerder rood en groen dan de tally-rand. */
+:root { --ether-vul: #c93a40; --ether-vul-hover: #d6444a; --klaar-vul: #1f7a4f; --klaar-vul-hover: #258a5a; }
+.toon { background: var(--ether-vul); }
+.toon:hover:not(:disabled) { background: var(--ether-vul-hover); }
+.monitor-ether .monitor-label, .segment .segment-tegen[aria-pressed="true"] { background: var(--ether-vul); }
+.monitor-klaar .monitor-label, .segment .segment-voor[aria-pressed="true"] { background: var(--klaar-vul); }
+.knop-commit { background: var(--klaar-vul); }
+.knop-commit:hover:not(:disabled) { background: var(--klaar-vul-hover); }
+.tablet .stempel-live { color: #fff; background: var(--ether-vul); border-color: var(--ether-vul); }
+.tablet .stempel-klaar { color: #fff; background: var(--klaar-vul); border-color: var(--klaar-vul); }
+.tablet .tablet-klaarzetten { color: #fff; background: var(--klaar-vul); border-color: var(--klaar-vul); }
+/* Op een live (rode) rij: wit omlijnd, want groen op rood is onder studiolicht niet te lezen. */
+.tablet .tablet-opnieuw { color: #fff; background: rgb(0 0 0 / 0.25); border: 2px solid rgb(255 255 255 / 0.7); }
+
+/* Camera bij Take: drie keuzes naast elkaar, de lijst pas bij Kies. */
+.camera-keuze { display: grid; gap: 6px; justify-items: start; }
+.camera-keuze select { width: 100%; }
+/* De schets van een Preset is klein en gebruikt de donkere kleuren van de uitzending: lichter, zodat je
+   de vorm (balk, boog, kaart) in één blik herkent. */
+.kol-beeld .schets { filter: brightness(1.7) saturate(1.15); }
+/* De kolom met Take past ook met herstel erin binnen de hoogte van de monitoren. */
+.knop-take { height: 28px; }
+.take { gap: 5px; }
+.herstel { padding: 7px 8px 9px; gap: 5px; }
+.herstel-knop { justify-content: space-between; padding: 0 6px; font-size: 12.5px; }
+.herstel-knop kbd { padding: 0 3px; font-size: 10px; }

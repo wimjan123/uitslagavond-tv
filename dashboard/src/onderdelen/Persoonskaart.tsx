@@ -1,6 +1,7 @@
 // Maken > Persoonskaart: een Kamerlid of een eigen persoon kiezen (zoeken op naam, of klikken op
 // zijn Stoel in de plattegrond bovenin), de vrije regel en de extra gegevens, en de eigen personen
 // en eigen foto's beheren. De server vult de gegevens bij klaarzetten in.
+import { CameraKeuze } from "./CameraKeuze";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { kandidaten, opStoel, standpuntVoor, waarschuwingen, zoek } from "../persoonskaart/persoonskaart";
@@ -149,26 +150,12 @@ export function Persoonskaart({ uitleg }: { uitleg: string }) {
             Maak standaard
           </button>
         </fieldset>
-        <label className="veld">
-          <span className="veld-kop">
-            <span className="label">Standpunt</span>
-            <span className="zacht">Camera bij Take</span>
-          </span>
-          <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
-            <option value="">Van het Sjabloon ({sjabloonTekst})</option>
-            {(["Standpunt", "Camerarit"] as const).map((soort) => (
-              <optgroup key={soort} label={soort === "Standpunt" ? "Standpunten" : "Cameraritten"}>
-                {keuzes
-                  .filter((k) => k.soort === soort)
-                  .map((k) => (
-                    <option key={k.letter} value={k.letter}>
-                      {k.tekst}
-                    </option>
-                  ))}
-              </optgroup>
-            ))}
-          </select>
-        </label>
+        <CameraKeuze
+          waarde={standpunt}
+          zet={setStandpunt}
+          standaard={sjabloonTekst}
+          opties={keuzes.map((k) => ({ waarde: k.letter, tekst: k.tekst, soort: k.soort }))}
+        />
         <div className="knoppen">
           <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
             Zet klaar

@@ -164,9 +164,9 @@ function Take() {
             <span>Take</span>
             {typen ? <kbd className="kbd-let-op">Esc</kbd> : <kbd>Spatie</kbd>}
           </span>
-          {oud && <span className="toon-let-op">oude cijfers (N)</span>}
+          {oud && <span className="toon-let-op" title="Wat klaarstaat heeft niet de cijfers van nu. N zet de cijfers van nu erin.">oude cijfers (N)</span>}
           {!kanToon && verbonden && <span className="toon-reden">{s?.klaar ? "staat al live" : "niets klaar"}</span>}
-          {typen && kanToon && <span className="toon-typen">je typt: Spatie werkt na Esc</span>}
+          {typen && kanToon && <span className="toon-typen">Esc voor sneltoetsen</span>}
         </button>
       </span>
       <span

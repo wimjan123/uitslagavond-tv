@@ -436,8 +436,8 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
                   onClick={() => zetel(tik(sg, f.id, kant))}
                   title={`${f.naam}: ${f.zetels} Zetels`}
                 >
-                  <span className="toets-volg" title={volg >= 0 ? `Als ${volg + 1}e getikt` : undefined}>
-                    {volg >= 0 ? `${volg + 1}e` : ""}
+                  <span className="toets-volg" title={volg >= 0 ? `Als ${volg + 1}e geklikt: zo staat de Fractie in de zin van de Voorzitter` : undefined}>
+                    {volg >= 0 ? `als ${volg + 1}e` : ""}
                   </span>
                   <span className="toets-stem">{st ? st.stem : ""}</span>
                   <span className="toets-naam">{f.afkorting}</span>

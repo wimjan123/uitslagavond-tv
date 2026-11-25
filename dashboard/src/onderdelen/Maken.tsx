@@ -4,13 +4,14 @@
 import { useState } from "react";
 import type { FormEvent } from "react";
 import { sjabloonId, standaardStandpunt } from "../graphic";
-import { BLIJF, BLIJF_NAAM, cameraKeuzes } from "../regie/camerarit";
+import { cameraKeuzes } from "../regie/camerarit";
 import { useRegie } from "../regie/regie";
 import type { Graphic } from "../typen/Graphic";
 import type { Indeling } from "../typen/Indeling";
 import type { Sjabloon } from "../typen/Sjabloon";
 import { benodigd, geldendSjabloon, standaardVan } from "../vormgeving/sjablonen";
 import { Schets } from "../presets/Schets";
+import { CameraKeuze } from "./CameraKeuze";
 import { Persoonskaart } from "./Persoonskaart";
 import { Werkbalk } from "./Werkbalk";
 
@@ -176,26 +177,12 @@ function Titelkaart() {
         </span>
         <input value={regel} maxLength={MAX_REGEL} onChange={(e) => setRegel(e.target.value)} placeholder="bijv. Live vanuit Den Haag" />
       </label>
-      <label className="veld">
-        <span className="veld-kop">
-          <span className="label">Standpunt</span>
-          <span className="zacht">Camera bij Take</span>
-        </span>
-        <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
-          <option value="">Van het Sjabloon{standaard ? ` (${standaard.tekst})` : ""}</option>
-          {(["Standpunt", "Camerarit"] as const).map((soort) => (
-            <optgroup key={soort} label={soort === "Standpunt" ? "Standpunten" : "Cameraritten"}>
-              {keuzes
-                .filter((k) => k.soort === soort)
-                .map((k) => (
-                  <option key={k.letter} value={k.letter}>
-                    {k.tekst}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-        </select>
-      </label>
+      <CameraKeuze
+        waarde={standpunt}
+        zet={setStandpunt}
+        standaard={standaard?.tekst ?? null}
+        opties={keuzes.map((k) => ({ waarde: k.letter, tekst: k.tekst, soort: k.soort }))}
+      />
       <div className="knoppen">
         <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic.kop}>
           Zet klaar
@@ -320,21 +307,12 @@ function Zetelverdeling() {
           <input type="checkbox" checked={zetels} onChange={(e) => setZetels(e.target.checked)} /> Zetels
         </label>
       </fieldset>
-      <label className="veld">
-        <span className="veld-kop">
-          <span className="label">Standpunt</span>
-          <span className="zacht">Camera bij Take</span>
-        </span>
-        <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
-          <option value="">Van het Sjabloon{standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}</option>
-          <option value={BLIJF}>{BLIJF_NAAM}</option>
-          {standpunten.map((p) => (
-            <option key={p.letter} value={p.letter}>
-              {p.letter} {p.naam}
-            </option>
-          ))}
-        </select>
-      </label>
+      <CameraKeuze
+        waarde={standpunt}
+        zet={setStandpunt}
+        standaard={standaard ? `${standaard.letter} · ${standaard.naam}` : null}
+        opties={standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} · ${p.naam}` }))}
+      />
       <div className="knoppen">
         <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
           Zet klaar
@@ -459,21 +437,12 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
           ))}
         </select>
       </label>
-      <label className="veld">
-        <span className="veld-kop">
-          <span className="label">Standpunt</span>
-          <span className="zacht">Camera bij Take</span>
-        </span>
-        <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
-          <option value="">Van het Sjabloon{standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}</option>
-          <option value={BLIJF}>{BLIJF_NAAM}</option>
-          {standpunten.map((p) => (
-            <option key={p.letter} value={p.letter}>
-              {p.letter} {p.naam}
-            </option>
-          ))}
-        </select>
-      </label>
+      <CameraKeuze
+        waarde={standpunt}
+        zet={setStandpunt}
+        standaard={standaard ? `${standaard.letter} · ${standaard.naam}` : null}
+        opties={standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} · ${p.naam}` }))}
+      />
       <div className="knoppen">
         <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
           Zet klaar
@@ -554,16 +523,11 @@ function useCijferformulier() {
     const verbonden = regie.staat === "verbonden";
     return (
       <>
-        <Keuze
-          label="Standpunt"
-          uitleg="Camera bij Take"
+        <CameraKeuze
           waarde={standpunt}
           zet={setStandpunt}
-          opties={[
-            { waarde: "", tekst: `Van het Sjabloon${standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}` },
-            { waarde: BLIJF, tekst: BLIJF_NAAM },
-            ...standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} ${p.naam}` })),
-          ]}
+          standaard={standaard ? `${standaard.letter} · ${standaard.naam}` : null}
+          opties={standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} · ${p.naam}` }))}
         />
         <div className="knoppen">
           <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>

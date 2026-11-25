@@ -6,6 +6,7 @@ import type { CSSProperties } from "react";
 import { HUIDIGE_KAMER, MEERDERHEID, boog, bouwer, coalitieInBeeld, regel, telling, wissel, zetelsVan } from "../coalitie/coalitie";
 import type { Bouwer } from "../coalitie/coalitie";
 import { LogoTegel } from "../LogoTegel";
+import { HerstelKnop } from "../multiviewer/vakken";
 import { Vink } from "../iconen";
 import { biedHerstel } from "../regie/herstel";
 import { useRegie } from "../regie/regie";
@@ -154,7 +155,7 @@ export function Coalitie() {
               onClick={zetKlaar}
             >
               {inEther
-                ? `Kopie klaarzetten · ${setNaam} van nu · ${s ? telling(zetelsVan(s, set), partijen) : 0} Zetels`
+                ? `Kopie met cijfers van nu · ${s ? telling(zetelsVan(s, set), partijen) : 0} Zetels`
                 : `Zet klaar · ${setNaam} · ${s ? telling(zetelsVan(s, set), partijen) : 0} Zetels`}
             </button>
             {partijen.length === 0 && <span className="knop-reden">Kies eerst Partijen</span>}
@@ -174,6 +175,8 @@ export function Coalitie() {
               {melding}
             </p>
           )}
+          {/* Een misklik op de live boog: het terugzetten staat ook hier, naast de klik, niet alleen bij Take. */}
+          {inEther && <HerstelKnop />}
         </aside>
       </div>
     </>
