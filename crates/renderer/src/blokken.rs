@@ -103,8 +103,11 @@ pub struct Randkleur(pub Color);
 
 /// Ruimte tussen de kaartjes van Partijlabels, en om de rij heen.
 const KAARTJE_TUSSEN: f32 = 6.0;
-/// De band in de partijkleur bovenaan een kaartje.
-const KAARTJE_BAND: f32 = 14.0;
+/// Het kleurteken bovenaan een kaartje: een balkje in de partijkleur, even breed op elk kaartje
+/// (hooguit het kaartje min 12 px), midden boven het getal. Een band over het hele kaartje werd
+/// bij een lange naam breder en las als een tweede grafiek (council ronde 4).
+const KAARTJE_BAND: f32 = 12.0;
+const KAARTJE_TEKEN: f32 = 56.0;
 
 /// De breedte van elk kaartje van Partijlabels in `ruimte`: naar wat erop moet (de naam of het
 /// getal, het breedste), zodat een lange naam als GL-PvdA niet kleiner hoeft dan de rest. Hele
@@ -159,17 +162,9 @@ pub fn leesbaar_op(k: Kleur) -> Color {
     }
 }
 
-/// Of donkere letters op deze kleur beter te lezen zijn dan witte.
+/// Of donkere letters op deze kleur beter te lezen zijn dan witte ([`gedeeld::sjabloon::tekst_op`]).
 pub fn is_licht(k: Kleur) -> bool {
-    let lin = |c: u8| {
-        let c = f32::from(c) / 255.0;
-        if c <= 0.04045 {
-            c / 12.92
-        } else {
-            ((c + 0.055) / 1.055).powf(2.4)
-        }
-    };
-    0.2126 * lin(k.r) + 0.7152 * lin(k.g) + 0.0722 * lin(k.b) > 0.4
+    gedeeld::sjabloon::luminantie(k) > gedeeld::sjabloon::LICHT_VANAF
 }
 
 /// De knoop van een Blok op zijn plek, met de inhoud erin.
@@ -1031,13 +1026,25 @@ pub fn bouw_inhoud(
                 border_radius: BorderRadius::all(Val::Px(f32::from(*hoek))),
                 ..midden
             };
-            commands.entity(binnen).insert(foto_node.clone());
             if let Some(beeld) = foto
                 .as_deref()
                 .and_then(|f| beeld_of_wacht(commands, bestanden, knoop, f))
             {
-                beeld_deel(commands, binnen, beeld, beelden, b, h, true, dekking, 1.0);
+                // Een portret staat vrijstaand op het paneel (`crate::vrijstaand`): even hoog als
+                // het vlak tot [`PORTRET_ZICHTBAAR`] van de foto, in het midden, en nooit breder
+                // dan het vlak. Zo zijn hoofd en schouders te zien; de onderkant valt weg in het
+                // verloop eronder.
+                commands.entity(binnen).insert(Node { align_items: AlignItems::FlexStart, ..foto_node.clone() });
+                let (bw, bh) = beelden.get(&beeld).map_or((b, h), |i| (i.width() as f32, i.height() as f32));
+                let schaal = (h / (bh * PORTRET_ZICHTBAAR)).min(b / bw);
+                commands.spawn((
+                    ChildOf(binnen),
+                    ImageNode { image: beeld, color: Color::WHITE.with_alpha(dekking), image_mode: NodeImageMode::Stretch, ..default() },
+                    Node { width: Val::Px((bw * schaal).round()), height: Val::Px((bh * schaal).round()), flex_shrink: 0.0, ..default() },
+                    Deel { kleur: Color::WHITE },
+                ));
             } else {
+                commands.entity(binnen).insert(foto_node.clone());
                 // geen foto: de voorletters in de kleur van het Blok op de partijkleur; op een
                 // donkere partijkleur in wit
                 vlak(commands, kleur(*vlakkleur), *hoek, foto_node);
@@ -1181,8 +1188,8 @@ pub fn bouw_inhoud(
                     ChildOf(kaartje),
                     Node {
                         position_type: PositionType::Absolute,
-                        left: Val::Px(0.0),
-                        right: Val::Px(0.0),
+                        left: Val::Px(((breed - KAARTJE_TEKEN.min(breed - 12.0)) / 2.0).round()),
+                        width: Val::Px(KAARTJE_TEKEN.min(breed - 12.0).max(0.0)),
                         top: Val::Px(0.0),
                         height: Val::Px(KAARTJE_BAND),
                         ..default()
@@ -1487,6 +1494,9 @@ pub(crate) fn beeld_of_wacht(
     b
 }
 
+/// Welk deel van een portretfoto, van boven af, in het fotovlak past: de rest valt onder het vlak.
+const PORTRET_ZICHTBAAR: f32 = 0.85;
+
 /// Een beeld in `ouder`: passend (logo's) of vullend en bijgesneden (foto's).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn beeld_deel(
@@ -1499,7 +1509,7 @@ pub(crate) fn beeld_deel(
     vullend: bool,
     dekking: f32,
     eigen_dekking: f32,
-) {
+) -> Entity {
     let (bw, bh) = beelden
         .get(&beeld)
         .map_or((b, h), |i| (i.width() as f32, i.height() as f32));
@@ -1508,7 +1518,8 @@ pub(crate) fn beeld_deel(
     } else {
         (b / bw).min(h / bh)
     };
-    commands.spawn((
+    commands
+        .spawn((
         ChildOf(ouder),
         ImageNode {
             image: beeld,
@@ -1525,7 +1536,8 @@ pub(crate) fn beeld_deel(
         Deel {
             kleur: Color::WHITE.with_alpha(eigen_dekking),
         },
-    ));
+    ))
+        .id()
 }
 
 #[cfg(test)]
