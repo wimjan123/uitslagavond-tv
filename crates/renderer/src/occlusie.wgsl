@@ -43,8 +43,11 @@ struct Instellingen {
 
 const AANTAL: i32 = 16;
 const GULDEN_HOEK: f32 = 2.39996323;
-// zoveel van de lichtstrook valt op een stootbord (een vlak dat opzij kijkt)
+// zoveel van de lichtstrook valt op een stootbord (een vlak dat opzij kijkt), en zoveel licht komt
+// er daar bovenop: het stootbord is veel donkerder dan het tapijt, dus alleen lichter maken liet
+// donkere strepen in de lijn
 const STOOTBORD: f32 = 0.85;
+const STOOTBORD_EIGEN: f32 = 0.04;
 
 // De plek in de ruimte van de camera bij een pixel; z negatief, voor de camera.
 fn plek(px: vec2<i32>, maat: vec2<f32>) -> vec3<f32> {
@@ -163,9 +166,13 @@ fn fragment(@builtin(position) positie: vec4<f32>, @location(0) uv: vec2<f32>) -
     if (s.strook_van.w > 0.0) {
         licht += s.strook_licht.rgb * strook(p) * op_de_treden(p) * max(boven, STOOTBORD);
     }
+    var eigen = vec3<f32>(0.0);
+    if (s.strook_van.w > 0.0 && boven < 1.0) {
+        eigen = s.strook_licht.rgb * strook(p) * op_de_treden(p) * (1.0 - boven) * STOOTBORD_EIGEN;
+    }
     // de voorgrond donkerder (de Persoonskaart): het bureau vooraan trekt dan niet het oog
     let voor = s.voorgrond_donker * (1.0 - smoothstep(0.6, 0.92, -p.z / max(s.voorgrond, 1e-3)));
-    let verlicht = kleur.rgb * (1.0 + licht) * (1.0 - voor);
+    let verlicht = kleur.rgb * (1.0 + licht) * (1.0 - voor) + eigen;
     if (s.sterkte <= 0.0) {
         return vec4<f32>(verlicht, kleur.a);
     }

@@ -39,13 +39,13 @@ const STOEL_WAPEN: &str = "stoel_wapen";
 const WAPEN_STRAALT: LinearRgba = LinearRgba::rgb(0.22, 0.22, 0.21);
 /// Het groene bordje van de nooduitgang: in het model zo fel dat het in een close-up de aandacht
 /// trekt (council-ronde 3), en met een groene gloed bij de deur (ronde 4). Dit deel van zijn licht blijft over.
-/// Materialen in het vaste deel van het model die geen gebakken licht krijgen. `middenvak_alu` is
-/// in `Zaal_Vast` alleen een voetplaat van 61 cm op de vloer tussen de binnenste poten van de
-/// voorzittersbank (x -0,56 tot 0,05): met het gebakken licht van boven las hij in de wijde shots
-/// als een wit streepje onder de katheder (council-ronde 7). De voetplaten onder de buitenste poten
-/// zijn losse onderdelen met alleen live licht, en die zijn donker; zonder gebakken licht oogt deze
-/// net zo. Weghalen kan niet: de vloer eronder is zwart gebakken.
-const ZAAL_LIVE: [&str; 1] = ["middenvak_alu"];
+/// Materialen die uit het vaste deel van het model weg moeten. `middenvak_alu` is in `Zaal_Vast`
+/// alleen een voetplaat van 61 cm op de vloer tussen de binnenste poten van de voorzittersbank
+/// (x -0,56 tot 0,05). Hij las in de wijde shots als een wit streepje onder de katheder
+/// (council-ronde 7), met gebakken licht en ook met alleen live licht. Waar hij lag, is de vloer
+/// zwart gebakken: er blijft een smalle donkere streep, zoals de donkere voeten onder de
+/// buitenste poten. Die voeten zijn losse onderdelen en blijven.
+const ZAAL_WEG: [&str; 1] = ["middenvak_alu"];
 
 const NOODUITGANG: &str = "nooduitgang";
 const NOODUITGANG_LICHT: f32 = 0.03;
@@ -381,8 +381,8 @@ fn laad(
                     as usize;
                 if namen.get(e).is_ok_and(|n| n.as_str() == "Zaal_Vast") {
                     for d in kinderen.iter_descendants(e).chain([e]) {
-                        if materiaalnamen.get(d).is_ok_and(|m| ZAAL_LIVE.contains(&m.0.as_str())) {
-                            commands.entity(d).insert(crate::schil::Splitsen);
+                        if materiaalnamen.get(d).is_ok_and(|m| ZAAL_WEG.contains(&m.0.as_str())) {
+                            commands.entity(d).despawn();
                             continue;
                         }
                         if meshes.contains(d) {
@@ -1568,7 +1568,7 @@ const STIL_RAD_PER_S: f32 = 0.05;
 /// een dikke donkere rand las als een sticker, in een ander roze dan Accent in de Graphics
 /// (council-ronde 7). Dit licht komt minder ver boven het tapijt uit dan dat getal en haalt nog
 /// 3:1 tegen het tapijt.
-const GETAL_76_LICHT: f32 = 2.8;
+const GETAL_76_LICHT: f32 = 3.2;
 /// De tint van Accent, met hoogstens deze lichtheid (Oklch): de kleur van het licht, niet van een
 /// vlak, dus niet lichter gemaakt.
 const LIJN_76_L: f32 = 0.7;
