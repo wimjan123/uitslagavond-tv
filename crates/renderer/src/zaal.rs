@@ -1246,6 +1246,7 @@ fn stap_lijn_76(zicht: f32, stil: f32, coalitie: bool, camera_stil: bool, dt: f3
 /// kleur Accent van de Stijl. Hij verschijnt pas als de camera stilstaat, groeit dan van voor naar
 /// achter, en krimpt terug als hij weggaat. Wat er al staat, blijft staan als de camera weer gaat
 /// rijden.
+#[allow(clippy::too_many_arguments)]
 fn toon_lijn_bij_76(
     standen: Res<Standen>,
     tijd: Res<Time>,
@@ -1495,7 +1496,7 @@ fn stel_stof_en_hout_bij(
         if wapen {
             m.emissive = WAPEN_STRAALT;
         } else if nood {
-            m.emissive = m.emissive * NOODUITGANG_LICHT;
+            m.emissive *= NOODUITGANG_LICHT;
         } else if leer {
             m.metallic_roughness_texture = None;
             m.perceptual_roughness = STOF_RUWHEID;
