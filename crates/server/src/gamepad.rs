@@ -85,7 +85,11 @@ pub fn opdracht_voor(gevolg: Gevolg, camera: &Camerakeuze) -> Opdracht {
     match gevolg {
         Gevolg::WisselVrijeCamera => Opdracht::ZetVrijeCamera { aan: !camera.vrij },
         // stoppen: de server vult in wat hij opnam
-        Gevolg::WisselOpnemen => Opdracht::ZetOpnemen { aan: camera.opname.is_none(), voor: None, opname: None },
+        Gevolg::WisselOpnemen => Opdracht::ZetOpnemen {
+            aan: camera.opname.is_none(),
+            voor: None,
+            opname: None,
+        },
     }
 }
 
@@ -203,10 +207,33 @@ mod tests {
     fn b_start_en_stopt_de_opname() {
         let mut gp = Gamepad::default();
         let gevolg = gp.druk(Druk::B).unwrap();
-        let mut camera = Camerakeuze { oefenen: true, ..Default::default() };
-        assert_eq!(opdracht_voor(gevolg, &camera), Opdracht::ZetOpnemen { aan: true, voor: None, opname: None });
-        camera.opname = Some(gedeeld::camera::Opname { voor: None, sinds: 4 });
-        assert_eq!(opdracht_voor(gevolg, &camera), Opdracht::ZetOpnemen { aan: false, voor: None, opname: None });
-        assert!(!gp.stuur(&Gamepadstand::default()).snel, "B wisselt niet langzaam en snel");
+        let mut camera = Camerakeuze {
+            oefenen: true,
+            ..Default::default()
+        };
+        assert_eq!(
+            opdracht_voor(gevolg, &camera),
+            Opdracht::ZetOpnemen {
+                aan: true,
+                voor: None,
+                opname: None
+            }
+        );
+        camera.opname = Some(gedeeld::camera::Opname {
+            voor: None,
+            sinds: 4,
+        });
+        assert_eq!(
+            opdracht_voor(gevolg, &camera),
+            Opdracht::ZetOpnemen {
+                aan: false,
+                voor: None,
+                opname: None
+            }
+        );
+        assert!(
+            !gp.stuur(&Gamepadstand::default()).snel,
+            "B wisselt niet langzaam en snel"
+        );
     }
 }

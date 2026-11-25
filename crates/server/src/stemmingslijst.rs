@@ -144,7 +144,12 @@ pub fn punten_op(activiteiten: &[Activiteit], dag: Date) -> Vec<Lijstpunt> {
 fn nummer(z: &Zaak) -> Option<String> {
     let d = z.kamerstukdossier.first()?;
     let mut n = d.nummer?.to_string();
-    if let Some(t) = d.toevoeging.as_deref().map(str::trim).filter(|t| !t.is_empty()) {
+    if let Some(t) = d
+        .toevoeging
+        .as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+    {
         n = format!("{n}-{t}");
     }
     match z.volgnummer {
@@ -176,7 +181,9 @@ fn tekst(t: &Option<String>) -> Option<String> {
 
 pub(crate) fn volg(g: Arc<Gedeeld>, inst: OpenData) {
     tokio::spawn(async move {
-        let afzender = Afzender::OpenData { bron: inst.basis.clone() };
+        let afzender = Afzender::OpenData {
+            bron: inst.basis.clone(),
+        };
         let mut gestopt = g.gestopt.clone();
         let client = match reqwest::Client::builder()
             .user_agent(concat!("uitslagavond-tv/", env!("CARGO_PKG_VERSION")))
@@ -190,7 +197,9 @@ pub(crate) fn volg(g: Arc<Gedeeld>, inst: OpenData) {
             }
         };
         loop {
-            let dag = inst.peildatum.unwrap_or_else(|| jiff::ZonedDateTime::now().date());
+            let dag = inst
+                .peildatum
+                .unwrap_or_else(|| jiff::ZonedDateTime::now().date());
             let wacht = tokio::select! {
                 r = ronde(&g, &afzender, &client, &inst.basis, dag) => match r {
                     Ok(()) => inst.elke,
@@ -223,7 +232,12 @@ async fn ronde(
         let s = g.uitzending.borrow();
         let nu = &s.stand.stemmingen;
         let mut proef = nu.clone();
-        proef.lees(&dag, nu.ingelezen.as_deref().unwrap_or(""), &punten, &s.stand.kamer);
+        proef.lees(
+            &dag,
+            nu.ingelezen.as_deref().unwrap_or(""),
+            &punten,
+            &s.stand.kamer,
+        );
         proef == *nu
     };
     if ongewijzigd {
@@ -233,7 +247,9 @@ async fn ronde(
     let n = punten.len();
     let opdracht = Opdracht::LeesStemmingslijst {
         dag,
-        ingelezen: jiff::ZonedDateTime::now().strftime("%Y-%m-%dT%H:%M:%S%:z").to_string(),
+        ingelezen: jiff::ZonedDateTime::now()
+            .strftime("%Y-%m-%dT%H:%M:%S%:z")
+            .to_string(),
         punten,
     };
     g.voer_uit(afzender, &opdracht)
@@ -243,7 +259,11 @@ async fn ronde(
     Ok(())
 }
 
-async fn haal_op(client: &reqwest::Client, basis: &str, dag: Date) -> anyhow::Result<Vec<Lijstpunt>> {
+async fn haal_op(
+    client: &reqwest::Client,
+    basis: &str,
+    dag: Date,
+) -> anyhow::Result<Vec<Lijstpunt>> {
     let (adres, parameters) = vraag(basis, dag);
     let mut verzoek = client.get(adres).query(&parameters);
     let mut activiteiten = Vec::new();

@@ -8,7 +8,11 @@ impl Stand {
     /// Of deze afzender deze Opdracht mag geven. De server vraagt het vóór [`Stand::voer_uit`].
     /// Alleen de tablet heeft grenzen: [`Opdracht::ZetPresetKlaar`] voor een Preset op de tablet, en
     /// [`Opdracht::ZetCoalitie`] (een Coalitie in beeld werkt direct bij, besluit #6).
-    pub fn controleer_afzender(&self, afzender: &Afzender, opdracht: &Opdracht) -> Result<(), Weigering> {
+    pub fn controleer_afzender(
+        &self,
+        afzender: &Afzender,
+        opdracht: &Opdracht,
+    ) -> Result<(), Weigering> {
         if !matches!(afzender, Afzender::Tablet { .. }) {
             return Ok(());
         }

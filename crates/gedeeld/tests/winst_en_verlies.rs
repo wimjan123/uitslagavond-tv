@@ -14,7 +14,10 @@ impl Proef {
     /// VOORBEELDGEGEVENS: verzonnen Partijen en drie sets. Paars heeft Oud-paars als
     /// Voorganger, Wit is nieuw, Geel verdwijnt.
     fn new() -> Self {
-        let mut p = Proef { stand: Stand::default(), volgnummer: 0 };
+        let mut p = Proef {
+            stand: Stand::default(),
+            volgnummer: 0,
+        };
         let invoer = Invoer::uit_json(
             r##"{
             "partijen": [
@@ -38,17 +41,32 @@ impl Proef {
             "vergelijk_met": "vorige"
         }"##,
         );
-        p.doe(Opdracht::LeesInvoer { bestand: "proef.json".into(), ontvangen: "nu".into(), invoer })
-            .unwrap();
-        let lijst = ["groen", "rood", "blauw", "oudpaars", "paars", "wit", "geel"].map(String::from).to_vec();
-        p.doe(Opdracht::ZetUitslagvolgorde { volgorde: Uitslagvolgorde { lijst, ..Default::default() } })
-            .unwrap();
+        p.doe(Opdracht::LeesInvoer {
+            bestand: "proef.json".into(),
+            ontvangen: "nu".into(),
+            invoer,
+        })
+        .unwrap();
+        let lijst = ["groen", "rood", "blauw", "oudpaars", "paars", "wit", "geel"]
+            .map(String::from)
+            .to_vec();
+        p.doe(Opdracht::ZetUitslagvolgorde {
+            volgorde: Uitslagvolgorde {
+                lijst,
+                ..Default::default()
+            },
+        })
+        .unwrap();
         p
     }
 
     fn doe(&mut self, opdracht: Opdracht) -> Result<(), Weigering> {
         let mut nieuw = self.stand.clone();
-        let h = Herkomst { door: "Regie 1", volgnummer: self.volgnummer + 1, tijd_ms: 1_000 };
+        let h = Herkomst {
+            door: "Regie 1",
+            volgnummer: self.volgnummer + 1,
+            tijd_ms: 1_000,
+        };
         nieuw.voer_uit(&opdracht, &h)?;
         self.stand = nieuw;
         self.volgnummer += 1;
@@ -56,7 +74,11 @@ impl Proef {
     }
 
     fn toon(&mut self, graphic: Graphic) {
-        self.doe(Opdracht::ZetKlaar { graphic, standpunt: None }).unwrap();
+        self.doe(Opdracht::ZetKlaar {
+            graphic,
+            standpunt: None,
+        })
+        .unwrap();
         self.doe(Opdracht::Toon { versie: None }).unwrap();
     }
 
@@ -70,7 +92,11 @@ impl Proef {
         let invulling = g.invulling();
         let sjabloon = vast_sjabloon(&invulling.sjabloon).expect("vast Sjabloon");
         let cijfers = g.cijfers().expect("de Graphic houdt haar cijfers vast");
-        sjabloon.vul_in(&invulling, &cijfers, &self.stand.stijl).into_iter().map(|b| b.inhoud).collect()
+        sjabloon
+            .vul_in(&invulling, &cijfers, &self.stand.stijl)
+            .into_iter()
+            .map(|b| b.inhoud)
+            .collect()
     }
 }
 
@@ -81,7 +107,11 @@ fn kleur(hex: &str) -> Kleur {
 #[test]
 fn partij_uitgelicht_kleurt_alleen_de_stoelen_van_die_partij_en_de_rest_grijs() {
     let mut p = Proef::new();
-    p.toon(Graphic::PartijUitgelicht { set: "uitslag".into(), partij: "blauw".into(), cijfers: None });
+    p.toon(Graphic::PartijUitgelicht {
+        set: "uitslag".into(),
+        partij: "blauw".into(),
+        cijfers: None,
+    });
     let blauw = kleur("#12357a");
     let zaal = p.zaal("uitslag");
     let kleuren = &p.stand.stoelkleuren;
@@ -90,7 +120,11 @@ fn partij_uitgelicht_kleurt_alleen_de_stoelen_van_die_partij_en_de_rest_grijs() 
         let verwacht = if *in_zaal == blauw { blauw } else { GRIJS };
         assert_eq!(*nu, verwacht, "Stoel {stoel}");
     }
-    assert_eq!(kleuren.iter().filter(|k| **k == blauw).count(), 40, "haar 40 Stoelen op haar plek");
+    assert_eq!(
+        kleuren.iter().filter(|k| **k == blauw).count(),
+        40,
+        "haar 40 Stoelen op haar plek"
+    );
 }
 
 /// De rijen van de Winst-en-verliesgrafiek in de Ether, met de as.
@@ -98,7 +132,13 @@ fn grafiek(p: &Proef) -> (Vec<Zeteldeel>, u32, u32) {
     p.ether()
         .into_iter()
         .find_map(|i| match i {
-            Inhoud::Uitslaggrafiek { rijen, schaal, stap, as_in_het_midden: true, .. } => Some((rijen, schaal, stap)),
+            Inhoud::Uitslaggrafiek {
+                rijen,
+                schaal,
+                stap,
+                as_in_het_midden: true,
+                ..
+            } => Some((rijen, schaal, stap)),
             _ => None,
         })
         .expect("een Winst-en-verliesgrafiek")
@@ -130,8 +170,16 @@ fn teksten(p: &Proef) -> Vec<String> {
 fn winst_en_verlies_van_winst_naar_verlies_met_nieuw_en_een_verdwenen_partij_op_nul() {
     let mut p = Proef::new();
     // zonder keuze: de vergelijkingsset van de cijfers ("vorige")
-    p.toon(Graphic::WinstEnVerlies { set: "uitslag".into(), vergelijk_met: None, cijfers: None });
-    assert_eq!(p.stand.stoelkleuren, p.zaal("uitslag"), "de Zaal toont de set, zonder de verdwenen Partij");
+    p.toon(Graphic::WinstEnVerlies {
+        set: "uitslag".into(),
+        vergelijk_met: None,
+        cijfers: None,
+    });
+    assert_eq!(
+        p.stand.stoelkleuren,
+        p.zaal("uitslag"),
+        "de Zaal toont de set, zonder de verdwenen Partij"
+    );
     let (r, schaal, stap) = grafiek(&p);
     assert_eq!(
         rijen(&r),
@@ -147,16 +195,28 @@ fn winst_en_verlies_van_winst_naar_verlies_met_nieuw_en_een_verdwenen_partij_op_
         "geen eigen rij voor de Voorganger Oud-paars"
     );
     let geel = r.last().unwrap();
-    assert_eq!((geel.kleur, geel.dekking), (p.stand.stijl.kleuren.hoofd, 60), "een verdwenen Partij in Hoofd op 60 procent");
+    assert_eq!(
+        (geel.kleur, geel.dekking),
+        (p.stand.stijl.kleuren.hoofd, 60),
+        "een verdwenen Partij in Hoofd op 60 procent"
+    );
     assert_eq!((r[0].kleur, r[0].dekking), (kleur("#eeeeee"), 100));
-    assert_eq!((schaal, stap), (20, 5), "de as zoals de Uitslaggrafiek, naar beide kanten");
+    assert_eq!(
+        (schaal, stap),
+        (20, 5),
+        "de as zoals de Uitslaggrafiek, naar beide kanten"
+    );
     assert!(teksten(&p).contains(&"zetels tegenover Uitslag 2023".to_string()));
 }
 
 #[test]
 fn winst_en_verlies_tegen_een_andere_set_die_de_regie_kiest() {
     let mut p = Proef::new();
-    p.toon(Graphic::WinstEnVerlies { set: "uitslag".into(), vergelijk_met: Some("peiling".into()), cijfers: None });
+    p.toon(Graphic::WinstEnVerlies {
+        set: "uitslag".into(),
+        vergelijk_met: Some("peiling".into()),
+        cijfers: None,
+    });
     assert_eq!(
         rijen(&grafiek(&p).0),
         [
@@ -170,27 +230,62 @@ fn winst_en_verlies_tegen_een_andere_set_die_de_regie_kiest() {
     );
     assert!(teksten(&p).contains(&"zetels tegenover Peiling".to_string()));
     let g = p.stand.ether.clone().unwrap().graphic;
-    p.doe(Opdracht::ZetZetels { set: "peiling".into(), partij: "rood".into(), zetels: 35 }).unwrap();
-    assert!(p.stand.nieuwere_cijfers(&g), "de vergelijkingsset veranderde");
+    p.doe(Opdracht::ZetZetels {
+        set: "peiling".into(),
+        partij: "rood".into(),
+        zetels: 35,
+    })
+    .unwrap();
+    assert!(
+        p.stand.nieuwere_cijfers(&g),
+        "de vergelijkingsset veranderde"
+    );
 }
 
 #[test]
 fn winst_en_verlies_zonder_vergelijkingsset_of_tegen_zichzelf_wordt_geweigerd() {
     let mut p = Proef::new();
     p.doe(Opdracht::KiesVergelijkingsset { set: None }).unwrap();
-    let g = Graphic::WinstEnVerlies { set: "uitslag".into(), vergelijk_met: None, cijfers: None };
-    assert_eq!(p.doe(Opdracht::ZetKlaar { graphic: g, standpunt: None }), Err(Weigering::GeenVergelijkingsset));
-    let g = Graphic::WinstEnVerlies { set: "uitslag".into(), vergelijk_met: Some("uitslag".into()), cijfers: None };
-    assert_eq!(p.doe(Opdracht::ZetKlaar { graphic: g, standpunt: None }), Err(Weigering::TweeKeerDezelfdeSet));
+    let g = Graphic::WinstEnVerlies {
+        set: "uitslag".into(),
+        vergelijk_met: None,
+        cijfers: None,
+    };
+    assert_eq!(
+        p.doe(Opdracht::ZetKlaar {
+            graphic: g,
+            standpunt: None
+        }),
+        Err(Weigering::GeenVergelijkingsset)
+    );
+    let g = Graphic::WinstEnVerlies {
+        set: "uitslag".into(),
+        vergelijk_met: Some("uitslag".into()),
+        cijfers: None,
+    };
+    assert_eq!(
+        p.doe(Opdracht::ZetKlaar {
+            graphic: g,
+            standpunt: None
+        }),
+        Err(Weigering::TweeKeerDezelfdeSet)
+    );
 }
 
 #[test]
 fn partij_uitgelicht_schuift_aan_naar_het_blok_van_die_partij() {
     let mut p = Proef::new();
-    p.toon(Graphic::PartijUitgelicht { set: "uitslag".into(), partij: "blauw".into(), cijfers: None });
-    let (van, tot) = gedeeld::camera::aanschuif_uit_sleutel(&p.stand.camera.standpunt).expect("Aanschuiven");
+    p.toon(Graphic::PartijUitgelicht {
+        set: "uitslag".into(),
+        partij: "blauw".into(),
+        cijfers: None,
+    });
+    let (van, tot) =
+        gedeeld::camera::aanschuif_uit_sleutel(&p.stand.camera.standpunt).expect("Aanschuiven");
     // de Stoelen van links naar rechts in dat blok zijn precies de gekleurde
     let volgorde = gedeeld::uitslagindeling::stoelen_van_links_naar_rechts();
-    let gekleurd: Vec<usize> = (0..150).filter(|&r| p.stand.stoelkleuren[volgorde[r]] == kleur("#12357a")).collect();
+    let gekleurd: Vec<usize> = (0..150)
+        .filter(|&r| p.stand.stoelkleuren[volgorde[r]] == kleur("#12357a"))
+        .collect();
     assert_eq!((gekleurd[0], *gekleurd.last().unwrap()), (van, tot));
 }

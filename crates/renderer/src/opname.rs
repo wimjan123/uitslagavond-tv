@@ -20,8 +20,7 @@ const OPWARMEN: u32 = 10;
 
 /// Een beeld in het geheugen als doel voor de camera.
 pub fn maak_doel(app: &mut App, (breedte, hoogte): (u32, u32)) -> Doel {
-    let mut beeld =
-        Image::new_target_texture(breedte, hoogte, TextureFormat::Rgba8UnormSrgb, None);
+    let mut beeld = Image::new_target_texture(breedte, hoogte, TextureFormat::Rgba8UnormSrgb, None);
     beeld.asset_usage = RenderAssetUsages::RENDER_WORLD;
     let handle = app.world_mut().resource_mut::<Assets<Image>>().add(beeld);
     Doel(RenderTarget::from(handle))
@@ -89,26 +88,28 @@ fn neem_opname(
         unreachable!("zonder venster is het doel een beeld")
     };
     let pad = opname.pad.clone();
-    commands.spawn(Screenshot::image(beeld.handle.clone())).observe(
-        move |vangst: On<ScreenshotCaptured>, mut exit: MessageWriter<AppExit>| {
-            let opgeslagen = vangst
-                .image
-                .clone()
-                .try_into_dynamic()
-                .map_err(|e| e.to_string())
-                .and_then(|b| b.to_rgb8().save(&pad).map_err(|e| e.to_string()));
-            match opgeslagen {
-                Ok(()) => {
-                    info!("beeld opgeslagen: {}", pad.display());
-                    exit.write(AppExit::Success);
+    commands
+        .spawn(Screenshot::image(beeld.handle.clone()))
+        .observe(
+            move |vangst: On<ScreenshotCaptured>, mut exit: MessageWriter<AppExit>| {
+                let opgeslagen = vangst
+                    .image
+                    .clone()
+                    .try_into_dynamic()
+                    .map_err(|e| e.to_string())
+                    .and_then(|b| b.to_rgb8().save(&pad).map_err(|e| e.to_string()));
+                match opgeslagen {
+                    Ok(()) => {
+                        info!("beeld opgeslagen: {}", pad.display());
+                        exit.write(AppExit::Success);
+                    }
+                    Err(e) => {
+                        error!("beeld niet opgeslagen: {e}");
+                        exit.write(AppExit::error());
+                    }
                 }
-                Err(e) => {
-                    error!("beeld niet opgeslagen: {e}");
-                    exit.write(AppExit::error());
-                }
-            }
-        },
-    );
+            },
+        );
 }
 
 /// Een reeks beelden voor bewijs, zoals een camera-overgang: vanaf de Stand met `volgnummer`
@@ -160,11 +161,18 @@ fn neem_reeks(
     mut exit: MessageWriter<AppExit>,
 ) {
     let Some(begin) = reeks.begin else {
-        let klaar = standen.huidig.as_ref().is_some_and(|s| s.volgnummer >= reeks.volgnummer) && zaal.0;
+        let klaar = standen
+            .huidig
+            .as_ref()
+            .is_some_and(|s| s.volgnummer >= reeks.volgnummer)
+            && zaal.0;
         if klaar {
             reeks.begin = Some(Instant::now());
         } else if reeks.gestart.elapsed() > GEDULD {
-            error!("geen Stand met volgnummer {} of geen Zaal binnen {GEDULD:?}", reeks.volgnummer);
+            error!(
+                "geen Stand met volgnummer {} of geen Zaal binnen {GEDULD:?}",
+                reeks.volgnummer
+            );
             exit.write(AppExit::error());
         }
         return;
@@ -185,20 +193,22 @@ fn neem_reeks(
     };
     let pad = reeks.map.join(format!("{:03}.png", reeks.genomen));
     reeks.genomen += 1;
-    commands.spawn(Screenshot::image(beeld.handle.clone())).observe(
-        move |vangst: On<ScreenshotCaptured>, mut reeks: ResMut<Reeks>| {
-            let beeld = vangst.image.clone();
-            let pad = pad.clone();
-            reeks.schrijvers.push(std::thread::spawn(move || {
-                match beeld.try_into_dynamic() {
-                    Ok(b) => {
-                        if let Err(e) = b.to_rgb8().save(&pad) {
-                            error!("{}: {e}", pad.display());
+    commands
+        .spawn(Screenshot::image(beeld.handle.clone()))
+        .observe(
+            move |vangst: On<ScreenshotCaptured>, mut reeks: ResMut<Reeks>| {
+                let beeld = vangst.image.clone();
+                let pad = pad.clone();
+                reeks
+                    .schrijvers
+                    .push(std::thread::spawn(move || match beeld.try_into_dynamic() {
+                        Ok(b) => {
+                            if let Err(e) = b.to_rgb8().save(&pad) {
+                                error!("{}: {e}", pad.display());
+                            }
                         }
-                    }
-                    Err(e) => error!("{}: {e}", pad.display()),
-                }
-            }));
-        },
-    );
+                        Err(e) => error!("{}: {e}", pad.display()),
+                    }));
+            },
+        );
 }

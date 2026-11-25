@@ -66,7 +66,11 @@ pub fn namen<S: AsRef<str>>(korte: &[S]) -> String {
 /// De `gekozen` Partijen in de volgorde van de Uitslagindeling (`volgorde`). Gekozen Partijen
 /// die niet in de volgorde staan, komen achteraan.
 pub fn op_volgorde(volgorde: &[String], gekozen: &[String]) -> Vec<String> {
-    let mut uit: Vec<String> = volgorde.iter().filter(|p| gekozen.contains(p)).cloned().collect();
+    let mut uit: Vec<String> = volgorde
+        .iter()
+        .filter(|p| gekozen.contains(p))
+        .cloned()
+        .collect();
     for p in gekozen {
         if !uit.contains(p) {
             uit.push(p.clone());
@@ -112,8 +116,17 @@ mod tests {
 
     #[test]
     fn de_teller_telt_de_zetels_van_de_gekozen_partijen() {
-        let set = set(&[("d66", 26), ("cda", 18), ("vvd", 22), ("ja21", 9), ("pvv", 26)]);
-        assert_eq!(Telling::van(&set, &s(&["d66", "cda", "vvd", "ja21"])).zetels, 75);
+        let set = set(&[
+            ("d66", 26),
+            ("cda", 18),
+            ("vvd", 22),
+            ("ja21", 9),
+            ("pvv", 26),
+        ]);
+        assert_eq!(
+            Telling::van(&set, &s(&["d66", "cda", "vvd", "ja21"])).zetels,
+            75
+        );
         assert_eq!(Telling::van(&set, &[]).zetels, 0);
         // twee keer dezelfde Partij telt één keer; een Partij zonder Zetels telt 0
         assert_eq!(Telling::van(&set, &s(&["d66", "d66", "sp"])).zetels, 26);
@@ -139,7 +152,10 @@ mod tests {
 
     #[test]
     fn de_kop_noemt_de_partijen_met_komma_s_en_en() {
-        assert_eq!(namen(&["D66", "CDA", "VVD", "JA21"]), "D66, CDA, VVD en JA21");
+        assert_eq!(
+            namen(&["D66", "CDA", "VVD", "JA21"]),
+            "D66, CDA, VVD en JA21"
+        );
         assert_eq!(namen(&["D66", "CDA"]), "D66 en CDA");
         assert_eq!(namen(&["D66"]), "D66");
         assert_eq!(namen::<&str>(&[]), "");
@@ -148,9 +164,15 @@ mod tests {
     #[test]
     fn de_gekozen_partijen_staan_in_de_volgorde_van_de_uitslagindeling() {
         let volgorde = s(&["sp", "d66", "cda", "vvd", "ja21", "pvv"]);
-        assert_eq!(op_volgorde(&volgorde, &s(&["ja21", "d66", "vvd"])), s(&["d66", "vvd", "ja21"]));
+        assert_eq!(
+            op_volgorde(&volgorde, &s(&["ja21", "d66", "vvd"])),
+            s(&["d66", "vvd", "ja21"])
+        );
         // een onbekende Partij achteraan
-        assert_eq!(op_volgorde(&volgorde, &s(&["nieuw", "cda"])), s(&["cda", "nieuw"]));
+        assert_eq!(
+            op_volgorde(&volgorde, &s(&["nieuw", "cda"])),
+            s(&["cda", "nieuw"])
+        );
     }
 
     #[test]

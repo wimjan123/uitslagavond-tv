@@ -44,7 +44,10 @@ async fn wacht_op(server: &Server, past: impl Fn(&GenummerdeStand) -> bool) -> G
         if past(&s) {
             return s;
         }
-        assert!(tokio::time::Instant::now() < tot, "Stand niet binnen 10 s: {s:?}");
+        assert!(
+            tokio::time::Instant::now() < tot,
+            "Stand niet binnen 10 s: {s:?}"
+        );
         tokio::time::sleep(Duration::from_millis(50)).await;
     }
 }
@@ -90,7 +93,11 @@ fn bestand(wie: &str) -> String {
 }
 
 fn op_1_1_1(s: &GenummerdeStand) -> Option<&str> {
-    s.stand.zaalindeling.op(Stoel { vak: 1, rij: 1, nummer: 1 })
+    s.stand.zaalindeling.op(Stoel {
+        vak: 1,
+        rij: 1,
+        nummer: 1,
+    })
 }
 
 #[tokio::test]
@@ -110,14 +117,46 @@ async fn de_server_leest_de_zaalindeling_in_en_schrijft_een_gegeven_stoel_terug(
         opgehaald: "nu".into(),
         peildatum: "2026-11-22".into(),
         kamerleden: vec![lid("a", "Aal"), lid("b", "Bes")],
-        fracties: vec![Fractie { id: "rood".into(), afkorting: "ROOD".into(), naam: "Rood".into(), zetels: 2 }],
+        fracties: vec![Fractie {
+            id: "rood".into(),
+            afkorting: "ROOD".into(),
+            naam: "Rood".into(),
+            zetels: 2,
+        }],
     };
-    assert!(matches!(opdracht(&server, &kamer).await, BerichtVanServer::Uitgevoerd { .. }));
-    let geef = Opdracht::GeefStoel { kamerlid: "a".into(), stoel: Stoel { vak: 2, rij: 1, nummer: 1 } };
+    assert!(matches!(
+        opdracht(&server, &kamer).await,
+        BerichtVanServer::Uitgevoerd { .. }
+    ));
+    let geef = Opdracht::GeefStoel {
+        kamerlid: "a".into(),
+        stoel: Stoel {
+            vak: 2,
+            rij: 1,
+            nummer: 1,
+        },
+    };
     let antwoord = opdracht(&server, &geef).await;
-    assert!(matches!(antwoord, BerichtVanServer::Uitgevoerd { .. }), "{antwoord:?}");
+    assert!(
+        matches!(antwoord, BerichtVanServer::Uitgevoerd { .. }),
+        "{antwoord:?}"
+    );
     let terug = Zaalindeling::uit_json(&std::fs::read_to_string(&pad).unwrap()).unwrap();
-    assert_eq!(terug.stoel_van("a"), Some(Stoel { vak: 2, rij: 1, nummer: 1 }));
-    assert_eq!(terug.stoel_van("b"), Some(Stoel { vak: 1, rij: 1, nummer: 1 }));
+    assert_eq!(
+        terug.stoel_van("a"),
+        Some(Stoel {
+            vak: 2,
+            rij: 1,
+            nummer: 1
+        })
+    );
+    assert_eq!(
+        terug.stoel_van("b"),
+        Some(Stoel {
+            vak: 1,
+            rij: 1,
+            nummer: 1
+        })
+    );
     server.stop().await;
 }

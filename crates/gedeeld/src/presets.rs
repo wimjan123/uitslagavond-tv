@@ -50,22 +50,30 @@ pub struct Preset {
 impl Preset {
     /// De letter van het Standpunt: de keuze voor deze Preset, anders die van het Sjabloon.
     pub fn standpunt(&self) -> std::borrow::Cow<'_, str> {
-        self.standpunt.as_deref().map_or_else(|| self.graphic.standaard_standpunt(), std::borrow::Cow::Borrowed)
+        self.standpunt.as_deref().map_or_else(
+            || self.graphic.standaard_standpunt(),
+            std::borrow::Cow::Borrowed,
+        )
     }
 
     /// Of deze klaargezette Graphic uit deze Preset komt.
     pub fn is_bron_van_klaar(&self, klaar: &KlaargezetteGraphic) -> bool {
-        self.klaargezet_als.is_some_and(|k| klaar.id == k && klaar.versie == k)
+        self.klaargezet_als
+            .is_some_and(|k| klaar.id == k && klaar.versie == k)
     }
 
     /// Of deze Graphic in de Ether uit deze Preset komt.
     pub fn is_bron_van_ether(&self, ether: &GraphicInBeeld) -> bool {
-        self.getoond_als.is_some_and(|k| ether.id == k && ether.versie == k)
+        self.getoond_als
+            .is_some_and(|k| ether.id == k && ether.versie == k)
     }
 
     /// Noteert een Toon: komt de Graphic in de Ether uit deze Preset, dan is hij nu live.
     pub(crate) fn getoond(&mut self, ether: &GraphicInBeeld) {
-        if self.klaargezet_als.is_some_and(|k| ether.id == k && ether.versie == k) {
+        if self
+            .klaargezet_als
+            .is_some_and(|k| ether.id == k && ether.versie == k)
+        {
             self.getoond_als = Some(ether.id);
             self.laatst_live_ms = Some(ether.sinds_ms);
         }
@@ -74,5 +82,7 @@ impl Preset {
 
 /// Het eerste nummer dat geen Preset heeft.
 pub(crate) fn eerste_vrije_nummer(presets: &[Preset]) -> u16 {
-    (1..).find(|n| presets.iter().all(|p| p.nummer != *n)).expect("er is altijd een vrij nummer")
+    (1..)
+        .find(|n| presets.iter().all(|p| p.nummer != *n))
+        .expect("er is altijd een vrij nummer")
 }

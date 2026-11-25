@@ -206,7 +206,13 @@ impl Graphic {
                     ..Default::default()
                 };
             }
-            Graphic::Zetelverdeling { set, namen, zetels, indeling, .. } => {
+            Graphic::Zetelverdeling {
+                set,
+                namen,
+                zetels,
+                indeling,
+                ..
+            } => {
                 let set = match indeling {
                     Indeling::Uitslagindeling => set.clone(),
                     Indeling::Zaalindeling => crate::uitslagindeling::ZAALINDELING.into(),
@@ -214,19 +220,33 @@ impl Graphic {
                 let ja = |aan: bool| if aan { "ja" } else { "" }.to_string();
                 return crate::sjabloon::Invulling {
                     sjabloon: crate::sjabloon::ZETELVERDELING.into(),
-                    velden: [(VELD_NAMEN.into(), ja(*namen)), (VELD_ZETELS.into(), ja(*zetels))]
-                        .into(),
+                    velden: [
+                        (VELD_NAMEN.into(), ja(*namen)),
+                        (VELD_ZETELS.into(), ja(*zetels)),
+                    ]
+                    .into(),
                     set: Some(set),
                     ..Default::default()
                 };
             }
-            Graphic::Persoonskaart { regel, extra, gegevens, .. } => {
+            Graphic::Persoonskaart {
+                regel,
+                extra,
+                gegevens,
+                ..
+            } => {
                 let g = gegevens.as_ref();
                 return crate::sjabloon::Invulling {
                     sjabloon: "persoonskaart".into(),
                     velden: [
-                        (VELD_FUNCTIE.into(), g.and_then(|g| g.functie.clone()).unwrap_or_default()),
-                        (VELD_GEGEVENS.into(), g.map(|g| g.regel(extra)).unwrap_or_default()),
+                        (
+                            VELD_FUNCTIE.into(),
+                            g.and_then(|g| g.functie.clone()).unwrap_or_default(),
+                        ),
+                        (
+                            VELD_GEGEVENS.into(),
+                            g.map(|g| g.regel(extra)).unwrap_or_default(),
+                        ),
                         (VELD_VRIJE_REGEL.into(), regel.trim().to_owned()),
                     ]
                     .into(),
@@ -239,7 +259,8 @@ impl Graphic {
                     ..Default::default()
                 };
             }
-            Graphic::Zetelbalk { set, grootste, .. } | Graphic::UitslagPerPartij { set, grootste, .. } => {
+            Graphic::Zetelbalk { set, grootste, .. }
+            | Graphic::UitslagPerPartij { set, grootste, .. } => {
                 let sjabloon = match self {
                     Graphic::Zetelbalk { .. } => crate::sjabloon::ZETELBALK,
                     _ => crate::sjabloon::UITSLAG_PER_PARTIJ,
@@ -251,10 +272,19 @@ impl Graphic {
                     ..Default::default()
                 };
             }
-            Graphic::TweeSets { set, tweede, grootste, cijfers } => {
+            Graphic::TweeSets {
+                set,
+                tweede,
+                grootste,
+                cijfers,
+            } => {
                 // de nieuwste set is de set van de kopie; zonder kopie de volgorde van de Regie
                 let (set, vorige) = match cijfers {
-                    Some(Zetelstand { set: nieuw, vorige: Some(oud), .. }) => (nieuw.id.clone(), oud.id.clone()),
+                    Some(Zetelstand {
+                        set: nieuw,
+                        vorige: Some(oud),
+                        ..
+                    }) => (nieuw.id.clone(), oud.id.clone()),
                     _ => (tweede.clone(), set.clone()),
                 };
                 return crate::sjabloon::Invulling {
@@ -265,9 +295,15 @@ impl Graphic {
                     ..Default::default()
                 };
             }
-            Graphic::WinstEnVerlies { set, vergelijk_met, cijfers } => {
+            Graphic::WinstEnVerlies {
+                set,
+                vergelijk_met,
+                cijfers,
+            } => {
                 let vorige = match cijfers {
-                    Some(Zetelstand { vorige: Some(v), .. }) => Some(v.id.clone()),
+                    Some(Zetelstand {
+                        vorige: Some(v), ..
+                    }) => Some(v.id.clone()),
                     _ => vergelijk_met.clone(),
                 };
                 return crate::sjabloon::Invulling {
@@ -285,24 +321,49 @@ impl Graphic {
                     ..Default::default()
                 };
             }
-            Graphic::Eigen { id, velden, set, partij, cijfers } => {
+            Graphic::Eigen {
+                id,
+                velden,
+                set,
+                partij,
+                cijfers,
+            } => {
                 return crate::sjabloon::Invulling {
                     sjabloon: id.clone(),
                     velden: velden.clone(),
-                    set: cijfers.as_ref().map(|c| c.set.id.clone()).or_else(|| set.clone()),
-                    vorige_set: cijfers.as_ref().and_then(|c| c.vorige.as_ref()).map(|v| v.id.clone()),
+                    set: cijfers
+                        .as_ref()
+                        .map(|c| c.set.id.clone())
+                        .or_else(|| set.clone()),
+                    vorige_set: cijfers
+                        .as_ref()
+                        .and_then(|c| c.vorige.as_ref())
+                        .map(|v| v.id.clone()),
                     partij: partij.clone(),
                     ..Default::default()
                 };
             }
-            Graphic::Coalitie { set, partijen, cijfers } | Graphic::Coalitiebalk { set, partijen, cijfers } => {
+            Graphic::Coalitie {
+                set,
+                partijen,
+                cijfers,
+            }
+            | Graphic::Coalitiebalk {
+                set,
+                partijen,
+                cijfers,
+            } => {
                 let sjabloon = match self {
                     Graphic::Coalitie { .. } => crate::sjabloon::COALITIE,
                     _ => crate::sjabloon::COALITIEBALK,
                 };
                 return crate::sjabloon::Invulling {
                     sjabloon: sjabloon.into(),
-                    set: Some(cijfers.as_ref().map_or_else(|| set.clone(), |c| c.set.id.clone())),
+                    set: Some(
+                        cijfers
+                            .as_ref()
+                            .map_or_else(|| set.clone(), |c| c.set.id.clone()),
+                    ),
                     coalitie: partijen.clone(),
                     ..Default::default()
                 };
@@ -362,10 +423,15 @@ impl Graphic {
             Graphic::UitslagStemming { uitslag }
             | Graphic::HoofdelijkeStemming { uitslag }
             | Graphic::FractiesVoorEnTegen { uitslag } => uitslag.stoelkleuren(),
-            Graphic::PartijUitgelicht { partij, cijfers, .. } => cijfers.as_ref().map(|c| c.stoelkleuren_van(partij)),
-            Graphic::Coalitie { partijen, cijfers, .. } | Graphic::Coalitiebalk { partijen, cijfers, .. } => {
-                cijfers.as_ref().map(|c| c.coalitiekleuren(partijen))
+            Graphic::PartijUitgelicht {
+                partij, cijfers, ..
+            } => cijfers.as_ref().map(|c| c.stoelkleuren_van(partij)),
+            Graphic::Coalitie {
+                partijen, cijfers, ..
             }
+            | Graphic::Coalitiebalk {
+                partijen, cijfers, ..
+            } => cijfers.as_ref().map(|c| c.coalitiekleuren(partijen)),
             _ => self.zetelstand().map(Zetelstand::stoelkleuren),
         }
     }
@@ -373,7 +439,9 @@ impl Graphic {
     /// De Stoel die oplicht: die van het Kamerlid op een Persoonskaart.
     pub fn uitgelichte_stoel(&self) -> Option<crate::Stoel> {
         match self {
-            Graphic::Persoonskaart { gegevens: Some(g), .. } => g.stoel,
+            Graphic::Persoonskaart {
+                gegevens: Some(g), ..
+            } => g.stoel,
             _ => None,
         }
     }
@@ -480,7 +548,9 @@ impl Graphic {
             | Graphic::Coalitiebalk { .. }
             | Graphic::Eigen { .. } => Cow::Borrowed("A"),
             // Bovenaf: alle Stoelen met hun eigen kleur, en het paneel dekt het beeld bijna.
-            Graphic::HoofdelijkeStemming { .. } | Graphic::FractiesVoorEnTegen { .. } => Cow::Borrowed("G"),
+            Graphic::HoofdelijkeStemming { .. } | Graphic::FractiesVoorEnTegen { .. } => {
+                Cow::Borrowed("G")
+            }
             // langzaam naar het blok van de gekozen Partij
             Graphic::PartijUitgelicht { .. } => match self.aanschuifsleutel() {
                 Some(s) => Cow::Owned(s),
@@ -519,7 +589,10 @@ impl Graphic {
             Graphic::Zetelverdeling { .. }
             | Graphic::Zetelbalk { .. }
             | Graphic::UitslagPerPartij { .. }
-            | Graphic::WinstEnVerlies { vergelijk_met: None, .. }
+            | Graphic::WinstEnVerlies {
+                vergelijk_met: None,
+                ..
+            }
             | Graphic::PartijUitgelicht { .. }
             | Graphic::Coalitie { .. }
             | Graphic::Coalitiebalk { .. } => {}
@@ -537,7 +610,12 @@ impl Graphic {
                     return Err(Weigering::RegelTeLang);
                 }
             }
-            Graphic::WinstEnVerlies { set, vergelijk_met: Some(tweede), .. } | Graphic::TweeSets { set, tweede, .. } => {
+            Graphic::WinstEnVerlies {
+                set,
+                vergelijk_met: Some(tweede),
+                ..
+            }
+            | Graphic::TweeSets { set, tweede, .. } => {
                 if set == tweede {
                     return Err(Weigering::TweeKeerDezelfdeSet);
                 }
@@ -609,7 +687,11 @@ pub struct GraphicInBeeld {
 impl KlaargezetteGraphic {
     /// De letter van het Standpunt: de keuze voor deze Graphic, anders die van het Sjabloon.
     pub fn standpunt(&self) -> Cow<'_, str> {
-        self.graphic.standpunt_bij(self.standpunt.as_deref().or(self.standpunt_van_sjabloon.as_deref()))
+        self.graphic.standpunt_bij(
+            self.standpunt
+                .as_deref()
+                .or(self.standpunt_van_sjabloon.as_deref()),
+        )
     }
 }
 
@@ -617,18 +699,27 @@ impl GraphicInBeeld {
     /// De letter van het Standpunt: de keuze voor deze Graphic, anders die van het Sjabloon.
     pub fn standpunt(&self) -> Cow<'_, str> {
         let van_sjabloon = self.sjabloon.as_ref().and_then(|s| s.standpunt.as_deref());
-        self.graphic.standpunt_bij(self.standpunt.as_deref().or(van_sjabloon))
+        self.graphic
+            .standpunt_bij(self.standpunt.as_deref().or(van_sjabloon))
     }
 
     /// De kleuren van de Stoelen zoals het Sjabloon van deze Graphic zegt. `None`: de Zaal houdt
     /// de kleuren van de vorige Graphic.
     pub fn stoelkleuren(&self) -> Option<Vec<crate::Kleur>> {
-        self.graphic.stoelkleuren_in(self.sjabloon.as_ref().map(|s| s.stoelen).unwrap_or_default())
+        self.graphic.stoelkleuren_in(
+            self.sjabloon
+                .as_ref()
+                .map(|s| s.stoelen)
+                .unwrap_or_default(),
+        )
     }
 
     /// De Kleurovergang van het Sjabloon van deze Graphic, of anders die van haar Stijl.
     pub fn kleurovergang(&self) -> crate::sjabloon::Kleurovergang {
-        self.sjabloon.as_ref().and_then(|s| s.kleurovergang).unwrap_or(self.stijl.kleurovergang)
+        self.sjabloon
+            .as_ref()
+            .and_then(|s| s.kleurovergang)
+            .unwrap_or(self.stijl.kleurovergang)
     }
 }
 

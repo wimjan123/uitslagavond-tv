@@ -48,7 +48,11 @@ pub struct Bezetting {
 
 impl Bezetting {
     pub fn stoel(&self) -> Stoel {
-        Stoel { vak: self.vak, rij: self.rij, nummer: self.nummer }
+        Stoel {
+            vak: self.vak,
+            rij: self.rij,
+            nummer: self.nummer,
+        }
     }
 }
 
@@ -152,7 +156,10 @@ impl Zaalindeling {
                 c.dubbele_stoelen.push(s);
             }
             if let Some(k) = &b.kamerlid {
-                plek_van.entry(k).or_default().insert((s.vak, s.rij, s.nummer));
+                plek_van
+                    .entry(k)
+                    .or_default()
+                    .insert((s.vak, s.rij, s.nummer));
             }
         }
         c.ontbrekend = Stoel::alle()
@@ -254,17 +261,33 @@ impl Zaalindeling {
     /// Geeft een Kamerlid van de Kamer die zit deze Stoel, zoals na een voorstel bij een wissel.
     /// Had het Kamerlid al een Stoel, dan is die daarna leeg. Een Stoel waar een ander Kamerlid
     /// van de Kamer zit, geeft de server niet weg.
-    pub fn geef_stoel(&mut self, kamer: &Kamer, kamerlid: &str, stoel: Stoel) -> Result<(), ZaalWeigering> {
+    pub fn geef_stoel(
+        &mut self,
+        kamer: &Kamer,
+        kamerlid: &str,
+        stoel: Stoel,
+    ) -> Result<(), ZaalWeigering> {
         let k = kamer
             .kamerlid(kamerlid)
             .ok_or_else(|| ZaalWeigering::OnbekendKamerlid(kamerlid.into()))?;
         if stoel.index().is_none() {
             return Err(ZaalWeigering::OnbekendeStoel(tekst(stoel)));
         }
-        if let Some(ander) = self.op(stoel).filter(|id| *id != kamerlid).and_then(|id| kamer.kamerlid(id)) {
-            return Err(ZaalWeigering::StoelBezet { stoel: tekst(stoel), naam: ander.naam() });
+        if let Some(ander) = self
+            .op(stoel)
+            .filter(|id| *id != kamerlid)
+            .and_then(|id| kamer.kamerlid(id))
+        {
+            return Err(ZaalWeigering::StoelBezet {
+                stoel: tekst(stoel),
+                naam: ander.naam(),
+            });
         }
-        for b in self.stoelen.iter_mut().filter(|b| b.kamerlid.as_deref() == Some(kamerlid)) {
+        for b in self
+            .stoelen
+            .iter_mut()
+            .filter(|b| b.kamerlid.as_deref() == Some(kamerlid))
+        {
             b.kamerlid = None;
             b.naam.clear();
         }

@@ -13,8 +13,8 @@ use ts_rs::TS;
 
 use crate::cijfers::{Cijfers, Cijferset, Partij, Soort, ZETELS};
 use crate::kamer::Kamer;
-use crate::zaalindeling::Zaalindeling;
 use crate::sjabloon::GRIJS;
+use crate::zaalindeling::Zaalindeling;
 use crate::zaalkaart::STOELPLEKKEN;
 use crate::{AANTAL_STOELEN, Kleur};
 
@@ -213,9 +213,9 @@ pub fn verdeel(delen: impl IntoIterator<Item = (Kleur, u32)>) -> Vec<Kleur> {
 /// De kleur per Stoel voor set `id` in deze volgorde. `None` als de set er niet is.
 pub fn zaal_voor_set(volgorde: &Volgorde, cijfers: &Cijfers, id: &str) -> Option<Vec<Kleur>> {
     let set = cijfers.set(id)?;
-    Some(verdeel(delen(volgorde, cijfers, set).map(|(p, z)| {
-        (p.kleur.parse().unwrap_or(GRIJS), z)
-    })))
+    Some(verdeel(
+        delen(volgorde, cijfers, set).map(|(p, z)| (p.kleur.parse().unwrap_or(GRIJS), z)),
+    ))
 }
 
 /// De Partijen met Zetels in `set`, van links naar rechts, met hun Zetels.
@@ -274,7 +274,12 @@ impl Zetelstand {
 
     /// De kopie van twee sets: de set die later in de cijfers staat is de nieuwste. `None` als
     /// een van beide er niet is.
-    pub fn van_twee(volgorde: &Volgorde, cijfers: &Cijfers, a: &str, b: &str) -> Option<Zetelstand> {
+    pub fn van_twee(
+        volgorde: &Volgorde,
+        cijfers: &Cijfers,
+        a: &str,
+        b: &str,
+    ) -> Option<Zetelstand> {
         let plaats = |id: &str| cijfers.sets.iter().position(|s| s.id == id);
         let (pa, pb) = (plaats(a)?, plaats(b)?);
         let (oud, nieuw) = if pa <= pb { (a, b) } else { (b, a) };
@@ -283,7 +288,12 @@ impl Zetelstand {
 
     /// De kopie van set `id` met set `vorige` ernaast (Winst en verlies, Twee sets naast elkaar):
     /// de Partijen met Zetels in een van beide. `None` als een van beide er niet is.
-    pub fn tegen(volgorde: &Volgorde, cijfers: &Cijfers, id: &str, vorige: &str) -> Option<Zetelstand> {
+    pub fn tegen(
+        volgorde: &Volgorde,
+        cijfers: &Cijfers,
+        id: &str,
+        vorige: &str,
+    ) -> Option<Zetelstand> {
         let (oud, nieuw) = (cijfers.set(vorige)?, cijfers.set(id)?);
         let partijen = volgorde
             .partijen
@@ -301,7 +311,12 @@ impl Zetelstand {
 
     /// De Kamer die zit in de Zaalindeling: per Stoel de Partij van wie er zit, en een set met
     /// het aantal Stoelen per Partij voor de labels.
-    pub fn van_zaal(volgorde: &Volgorde, cijfers: &Cijfers, kamer: &Kamer, zaal: &Zaalindeling) -> Zetelstand {
+    pub fn van_zaal(
+        volgorde: &Volgorde,
+        cijfers: &Cijfers,
+        kamer: &Kamer,
+        zaal: &Zaalindeling,
+    ) -> Zetelstand {
         let stoelen: Vec<Option<String>> = zaal
             .kamerleden(kamer)
             .into_iter()
@@ -356,7 +371,9 @@ impl Zetelstand {
             versie: 0,
         };
         Zetelstand {
-            partijen: delen(volgorde, cijfers, &set).map(|(p, _)| p.clone()).collect(),
+            partijen: delen(volgorde, cijfers, &set)
+                .map(|(p, _)| p.clone())
+                .collect(),
             set,
             stoelen: None,
             vorige: None,
@@ -370,11 +387,22 @@ impl Zetelstand {
     pub fn coalitiekleuren(&self, gekozen: &[String]) -> Vec<Kleur> {
         let volgorde: Vec<String> = self.partijen.iter().map(|p| p.sleutel.clone()).collect();
         let kleur = |s: &str| {
-            self.partijen.iter().find(|p| p.sleutel == s).and_then(|p| p.kleur.parse().ok()).unwrap_or(GRIJS)
+            self.partijen
+                .iter()
+                .find(|p| p.sleutel == s)
+                .and_then(|p| p.kleur.parse().ok())
+                .unwrap_or(GRIJS)
         };
-        verdeel(crate::coalitie::blokken(&volgorde, gekozen).into_iter().map(|(p, in_coalitie)| {
-            (if in_coalitie { kleur(&p) } else { GRIJS }, self.set.zetels_van(&p))
-        }))
+        verdeel(
+            crate::coalitie::blokken(&volgorde, gekozen)
+                .into_iter()
+                .map(|(p, in_coalitie)| {
+                    (
+                        if in_coalitie { kleur(&p) } else { GRIJS },
+                        self.set.zetels_van(&p),
+                    )
+                }),
+        )
     }
 
     /// De kopie als cijfers, zodat een Sjabloon er zijn bronnen in opzoekt.
@@ -390,12 +418,21 @@ impl Zetelstand {
     pub fn stoelkleuren(&self) -> Vec<Kleur> {
         if let Some(stoelen) = &self.stoelen {
             let kleur = |s: &str| {
-                self.partijen.iter().find(|p| p.sleutel == s).and_then(|p| p.kleur.parse().ok())
+                self.partijen
+                    .iter()
+                    .find(|p| p.sleutel == s)
+                    .and_then(|p| p.kleur.parse().ok())
             };
-            return stoelen.iter().map(|p| p.as_deref().and_then(kleur).unwrap_or(GRIJS)).collect();
+            return stoelen
+                .iter()
+                .map(|p| p.as_deref().and_then(kleur).unwrap_or(GRIJS))
+                .collect();
         }
         verdeel(self.partijen.iter().map(|p| {
-            (p.kleur.parse().unwrap_or(GRIJS), self.set.zetels_van(&p.sleutel))
+            (
+                p.kleur.parse().unwrap_or(GRIJS),
+                self.set.zetels_van(&p.sleutel),
+            )
         }))
     }
 
@@ -426,7 +463,11 @@ impl Zetelstand {
     /// Uitslagindeling en in haar kleur, alle andere grijs.
     pub fn stoelkleuren_van(&self, partij: &str) -> Vec<Kleur> {
         verdeel(self.partijen.iter().map(|p| {
-            let kleur = if p.sleutel == partij { p.kleur.parse().unwrap_or(GRIJS) } else { GRIJS };
+            let kleur = if p.sleutel == partij {
+                p.kleur.parse().unwrap_or(GRIJS)
+            } else {
+                GRIJS
+            };
             (kleur, self.set.zetels_van(&p.sleutel))
         }))
     }

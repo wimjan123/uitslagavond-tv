@@ -122,7 +122,10 @@ async fn bewaar_als_standpunt_neemt_de_camera_van_nu_en_wissen_wacht_tot_niets_h
 /// Voert een Opdracht uit en eist dat de server hem uitvoert.
 async fn uitgevoerd(server: &Server, o: Opdracht) {
     let antwoord = opdracht(server, &o).await;
-    assert!(matches!(antwoord, BerichtVanServer::Uitgevoerd { .. }), "{o:?}: {antwoord:?}");
+    assert!(
+        matches!(antwoord, BerichtVanServer::Uitgevoerd { .. }),
+        "{o:?}: {antwoord:?}"
+    );
 }
 
 #[tokio::test]
@@ -130,21 +133,52 @@ async fn de_server_neemt_tijdens_oefenen_100_standen_per_seconde_op_en_bewaart_d
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
     uitgevoerd(&server, Opdracht::ZetOefenen { aan: true }).await;
-    uitgevoerd(&server, Opdracht::ZetOpnemen { aan: true, voor: None, opname: None }).await;
+    uitgevoerd(
+        &server,
+        Opdracht::ZetOpnemen {
+            aan: true,
+            voor: None,
+            opname: None,
+        },
+    )
+    .await;
     let begin = std::time::Instant::now();
     tokio::time::sleep(std::time::Duration::from_millis(300)).await;
     // stoppen zonder opname: de server vult in wat hij opnam
-    uitgevoerd(&server, Opdracht::ZetOpnemen { aan: false, voor: None, opname: None }).await;
+    uitgevoerd(
+        &server,
+        Opdracht::ZetOpnemen {
+            aan: false,
+            voor: None,
+            opname: None,
+        },
+    )
+    .await;
     let ms = begin.elapsed().as_millis() as usize;
     let s = stand(&server).await.stand;
-    let rit = s.cameraritten.iter().find(|r| !r.vast).expect("een eigen Camerarit");
+    let rit = s
+        .cameraritten
+        .iter()
+        .find(|r| !r.vast)
+        .expect("een eigen Camerarit");
     // 100 per seconde: in ruim 300 ms ongeveer 30, met een paar tikken speling
-    assert!((25..=ms / 10 + 5).contains(&rit.opname.len()), "{} standen in {ms} ms", rit.opname.len());
+    assert!(
+        (25..=ms / 10 + 5).contains(&rit.opname.len()),
+        "{} standen in {ms} ms",
+        rit.opname.len()
+    );
     assert_eq!(rit.toets.as_deref(), Some("J"));
     assert_eq!(s.camera.opname, None);
-    assert_eq!(s.camera.proef.as_ref().map(|p| p.letter.as_str()), Some(rit.letter.as_str()));
+    assert_eq!(
+        s.camera.proef.as_ref().map(|p| p.letter.as_str()),
+        Some(rit.letter.as_str())
+    );
     // zonder gamepad stond het Voorbeeld stil, op A
     let a = s.standpunt("A").unwrap().stand;
-    assert!(rit.opname.iter().all(|p| (p[0] - a.positie[0]).abs() < 1e-3 && (p[1] - a.positie[1]).abs() < 1e-3));
+    assert!(
+        rit.opname
+            .iter()
+            .all(|p| (p[0] - a.positie[0]).abs() < 1e-3 && (p[1] - a.positie[1]).abs() < 1e-3)
+    );
     server.stop().await;
 }

@@ -7,7 +7,9 @@
 use bevy::prelude::*;
 use bevy::ui::{ColorStop, Gradient, InterpolationColorSpace, LinearGradient};
 use gedeeld::Kleur;
-use gedeeld::sjabloon::{Getalwaarde, IngevuldBlok, IngevuldVerloop, Inhoud, Uitlijning, Zeteldeel};
+use gedeeld::sjabloon::{
+    Getalwaarde, IngevuldBlok, IngevuldVerloop, Inhoud, Uitlijning, Zeteldeel,
+};
 use gedeeld::zetelbalk::Pijl;
 
 use crate::bestanden::Bestanden;
@@ -182,7 +184,13 @@ pub fn bouw_blok(
             UiTransform::default(),
         ))
         .id();
-    if matches!(blok.inhoud, Inhoud::Vlak { om_tekst: Some(_), .. }) {
+    if matches!(
+        blok.inhoud,
+        Inhoud::Vlak {
+            om_tekst: Some(_),
+            ..
+        }
+    ) {
         commands.entity(knoop).insert(Pasbreedte(0.0));
     }
     bouw_inhoud(commands, bestanden, beelden, knoop, blok, dekking, None);
@@ -215,7 +223,12 @@ pub struct Rijplek {
 
 /// Winst of verlies als tekst: "+17", "0" of "−20" met een echt minteken.
 fn winsttekst(verschil: i32) -> String {
-    Getalwaarde::Getal { waarde: i64::from(verschil), plus: true, achter: String::new() }.tekst()
+    Getalwaarde::Getal {
+        waarde: i64::from(verschil),
+        plus: true,
+        achter: String::new(),
+    }
+    .tekst()
 }
 
 /// Een label onder een Zetelbalk dat alleen te zien is als het in zijn deel past: zo breed is
@@ -249,7 +262,11 @@ fn met_vorige<'a>(
         })
         .collect();
     if let Some(v) = vorig {
-        for o in v.delen.iter().filter(|o| !delen.iter().any(|d| d.partij == o.partij)) {
+        for o in v
+            .delen
+            .iter()
+            .filter(|o| !delen.iter().any(|d| d.partij == o.partij))
+        {
             alle.push((o, breed(o), 0.0, Some(o.zetels)));
         }
     }
@@ -265,14 +282,20 @@ const LABELRIJ: f32 = 46.0;
 /// raakt, anders (met `twee_rijen`) op de tweede, anders nergens. Zijn ruimte loopt tot het
 /// volgende label op dezelfde rij, zodat "9 JA21" onder de Coalitiebalk ook past als het deel van
 /// JA21 smaller is (mockup `3-zetelbalk.jpg`).
-fn labelrijen(delen: &[(f32, f32, Option<f32>)], b: f32, twee_rijen: bool) -> Vec<Option<(usize, f32)>> {
+fn labelrijen(
+    delen: &[(f32, f32, Option<f32>)],
+    b: f32,
+    twee_rijen: bool,
+) -> Vec<Option<(usize, f32)>> {
     const RUIMTE: f32 = 10.0;
     let mut volgorde: Vec<usize> = (0..delen.len()).filter(|&i| delen[i].2.is_some()).collect();
     volgorde.sort_by(|&a, &b| delen[b].1.total_cmp(&delen[a].1).then(a.cmp(&b)));
     let mut rijen: Vec<Option<usize>> = vec![None; delen.len()];
     let mut bezet: [Vec<(f32, f32)>; 2] = [Vec::new(), Vec::new()];
     for i in volgorde {
-        let (x, _, Some(breed)) = delen[i] else { continue };
+        let (x, _, Some(breed)) = delen[i] else {
+            continue;
+        };
         let stuk = (x, x + breed + RUIMTE);
         let vrij = |r: &Vec<(f32, f32)>| r.iter().all(|&(a, z)| stuk.1 <= a || stuk.0 >= z);
         if let Some(r) = (0..if twee_rijen { 2 } else { 1 }).find(|&r| vrij(&bezet[r])) {
@@ -285,7 +308,9 @@ fn labelrijen(delen: &[(f32, f32, Option<f32>)], b: f32, twee_rijen: bool) -> Ve
         .enumerate()
         .map(|(i, rij)| {
             let rij = (*rij)?;
-            let volgende = (i + 1..delen.len()).find(|&j| rijen[j] == Some(rij)).map_or(b, |j| delen[j].0);
+            let volgende = (i + 1..delen.len())
+                .find(|&j| rijen[j] == Some(rij))
+                .map_or(b, |j| delen[j].0);
             Some((rij, volgende - delen[i].0))
         })
         .collect()
@@ -316,7 +341,9 @@ fn labelplekken(delen: &[(f32, f32, Option<f32>)], b: f32) -> Vec<Labelplek> {
     delen
         .iter()
         .map(|&(x, breed, label)| {
-            let Some(w) = label else { return Labelplek::Geen };
+            let Some(w) = label else {
+                return Labelplek::Geen;
+            };
             if w + 2.0 * BINNEN_MARGE <= breed {
                 return Labelplek::Binnen;
             }
@@ -345,7 +372,11 @@ fn geschat_label(d: &Zeteldeel, g: f32) -> f32 {
 /// Een getal dat bij Bijwerken telt vanaf `was`.
 fn teller(zetels: u16, was: Option<u16>, duur: Option<f32>) -> Teller {
     Teller {
-        waarde: Getalwaarde::Getal { waarde: i64::from(zetels), plus: false, achter: String::new() },
+        waarde: Getalwaarde::Getal {
+            waarde: i64::from(zetels),
+            plus: false,
+            achter: String::new(),
+        },
         van: was.map_or(0, i64::from),
         bijwerken: was.zip(duur).map(|(_, d)| (0.0, d)),
     }
@@ -376,9 +407,31 @@ fn zetellabel(
             },
         ))
         .id();
-    let t = tekst_deel(commands, bestanden, regel, &d.zetels.to_string(), l.cijfers, grootte, l.tekst, Uitlijning::Links, dekking);
-    commands.entity(t).insert((TextLayout::no_wrap(), teller(d.zetels, was, duur)));
-    let t = tekst_deel(commands, bestanden, regel, &d.kort, l.naam, grootte, l.naam_kleur, Uitlijning::Links, dekking);
+    let t = tekst_deel(
+        commands,
+        bestanden,
+        regel,
+        &d.zetels.to_string(),
+        l.cijfers,
+        grootte,
+        l.tekst,
+        Uitlijning::Links,
+        dekking,
+    );
+    commands
+        .entity(t)
+        .insert((TextLayout::no_wrap(), teller(d.zetels, was, duur)));
+    let t = tekst_deel(
+        commands,
+        bestanden,
+        regel,
+        &d.kort,
+        l.naam,
+        grootte,
+        l.naam_kleur,
+        Uitlijning::Links,
+        dekking,
+    );
     commands.entity(t).insert(TextLayout::no_wrap());
     if let Some(p) = d.pijl {
         let (teken, getal) = match p {
@@ -397,10 +450,30 @@ fn zetellabel(
                 },
             ))
             .id();
-        let t = tekst_deel(commands, bestanden, pijl, teken, gedeeld::sjabloon::LETTER_VET, (grootte * 0.7).round(), l.naam_kleur, Uitlijning::Links, dekking);
+        let t = tekst_deel(
+            commands,
+            bestanden,
+            pijl,
+            teken,
+            gedeeld::sjabloon::LETTER_VET,
+            (grootte * 0.7).round(),
+            l.naam_kleur,
+            Uitlijning::Links,
+            dekking,
+        );
         commands.entity(t).insert(TextLayout::no_wrap());
         if !getal.is_empty() {
-            let t = tekst_deel(commands, bestanden, pijl, &getal, l.cijfers, grootte, l.naam_kleur, Uitlijning::Links, dekking);
+            let t = tekst_deel(
+                commands,
+                bestanden,
+                pijl,
+                &getal,
+                l.cijfers,
+                grootte,
+                l.naam_kleur,
+                Uitlijning::Links,
+                dekking,
+            );
             commands.entity(t).insert(TextLayout::no_wrap());
         }
     }
@@ -459,14 +532,17 @@ pub fn bouw_inhoud(
             if let Some((rk, rd, dikte)) = rand {
                 let rk = kleur(*rk).with_alpha(f32::from(*rd) / 100.0);
                 node.border = UiRect::all(Val::Px(f32::from(*dikte)));
-                commands
-                    .entity(binnen)
-                    .insert((Randkleur(rk), BorderColor::all(rk.with_alpha(rk.alpha() * dekking))));
+                commands.entity(binnen).insert((
+                    Randkleur(rk),
+                    BorderColor::all(rk.with_alpha(rk.alpha() * dekking)),
+                ));
             }
             if *draaiing != 0 {
-                commands.entity(binnen).insert(UiTransform::from_rotation(Rot2::degrees(
-                    f32::from(*draaiing),
-                )));
+                commands
+                    .entity(binnen)
+                    .insert(UiTransform::from_rotation(Rot2::degrees(f32::from(
+                        *draaiing,
+                    ))));
             }
             match verloop {
                 Some(v) => {
@@ -595,7 +671,11 @@ pub fn bouw_inhoud(
                 })
                 .collect();
             let rijen = labelrijen(&plaatsen, b, false);
-            let plekken = if *twee_labelrijen { labelplekken(&plaatsen, b) } else { Vec::new() };
+            let plekken = if *twee_labelrijen {
+                labelplekken(&plaatsen, b)
+            } else {
+                Vec::new()
+            };
             for (n, ((d, van, naar, was), plaats)) in delen.into_iter().zip(rijen).enumerate() {
                 let kl = kleur(d.kleur).with_alpha(f32::from(d.dekking) / 100.0);
                 let seg = commands
@@ -627,7 +707,11 @@ pub fn bouw_inhoud(
                 match plekken.get(n) {
                     Some(Labelplek::Binnen) => {
                         let op = leesbaar_op(d.kleur);
-                        let binnen_letters = Labelletters { tekst: op, naam_kleur: op, ..letters };
+                        let binnen_letters = Labelletters {
+                            tekst: op,
+                            naam_kleur: op,
+                            ..letters
+                        };
                         let label = commands
                             .spawn((
                                 ChildOf(seg),
@@ -642,7 +726,17 @@ pub fn bouw_inhoud(
                                 },
                             ))
                             .id();
-                        zetellabel(commands, bestanden, label, &d, was, vorig.as_ref().map(|v| v.duur), &binnen_letters, 30.0, dekking);
+                        zetellabel(
+                            commands,
+                            bestanden,
+                            label,
+                            &d,
+                            was,
+                            vorig.as_ref().map(|v| v.duur),
+                            &binnen_letters,
+                            30.0,
+                            dekking,
+                        );
                         continue;
                     }
                     Some(&Labelplek::Onder { rij, x: links }) => {
@@ -675,7 +769,17 @@ pub fn bouw_inhoud(
                                 },
                             ))
                             .id();
-                        zetellabel(commands, bestanden, label, &d, was, vorig.as_ref().map(|v| v.duur), &letters, 30.0, dekking);
+                        zetellabel(
+                            commands,
+                            bestanden,
+                            label,
+                            &d,
+                            was,
+                            vorig.as_ref().map(|v| v.duur),
+                            &letters,
+                            30.0,
+                            dekking,
+                        );
                         continue;
                     }
                     Some(Labelplek::Geen) => continue,
@@ -698,7 +802,17 @@ pub fn bouw_inhoud(
                             PastIn(ruimte),
                         ))
                         .id();
-                    zetellabel(commands, bestanden, label, d, was, vorig.as_ref().map(|v| v.duur), &letters, 30.0, dekking);
+                    zetellabel(
+                        commands,
+                        bestanden,
+                        label,
+                        d,
+                        was,
+                        vorig.as_ref().map(|v| v.duur),
+                        &letters,
+                        30.0,
+                        dekking,
+                    );
                 }
             }
             if *lijn_bij_76 {
@@ -727,7 +841,17 @@ pub fn bouw_inhoud(
                         },
                     ))
                     .id();
-                let t = tekst_deel(commands, bestanden, label, "76", letter, 30.0, k, Uitlijning::Links, dekking);
+                let t = tekst_deel(
+                    commands,
+                    bestanden,
+                    label,
+                    "76",
+                    letter,
+                    30.0,
+                    k,
+                    Uitlijning::Links,
+                    dekking,
+                );
                 commands.entity(t).insert(TextLayout::no_wrap());
             }
         }
@@ -791,7 +915,12 @@ pub fn bouw_inhoud(
             // Bij Bijwerken: waar elke rij stond, zodat hij naar zijn nieuwe plek schuift.
             let oude_rijen: Vec<&Zeteldeel> = vorig
                 .as_ref()
-                .map(|v| v.delen.iter().filter(|d| d.zetels > 0 || d.winst.is_some()).collect())
+                .map(|v| {
+                    v.delen
+                        .iter()
+                        .filter(|d| d.zetels > 0 || d.winst.is_some())
+                        .collect()
+                })
                 .unwrap_or_default();
             let oude_plek = |d: &Zeteldeel| {
                 let i = oude_rijen.iter().position(|o| o.partij == d.partij)?;
@@ -813,7 +942,10 @@ pub fn bouw_inhoud(
                 let regel = commands
                     .spawn((
                         ChildOf(binnen),
-                        Rijplek { van: oude_plek(d).unwrap_or(top), naar: top },
+                        Rijplek {
+                            van: oude_plek(d).unwrap_or(top),
+                            naar: top,
+                        },
                         Node {
                             position_type: PositionType::Absolute,
                             left: Val::Px(0.0),
@@ -838,8 +970,20 @@ pub fn bouw_inhoud(
                         },
                     ))
                     .id();
-                let t = tekst_deel(commands, bestanden, naam, &d.kort, naamletter, 32.0, tk, Uitlijning::Rechts, dekking);
-                commands.entity(t).insert(TextLayout::no_wrap().with_justify(Justify::Right));
+                let t = tekst_deel(
+                    commands,
+                    bestanden,
+                    naam,
+                    &d.kort,
+                    naamletter,
+                    32.0,
+                    tk,
+                    Uitlijning::Rechts,
+                    dekking,
+                );
+                commands
+                    .entity(t)
+                    .insert(TextLayout::no_wrap().with_justify(Justify::Right));
                 let baan_id = commands
                     .spawn((
                         ChildOf(regel),
@@ -886,8 +1030,20 @@ pub fn bouw_inhoud(
                 let Some(w) = d.winst else {
                     balk(commands, baan_id, van, naar);
                     let getal = getal_vak(commands, baan_id, UiRect::left(Val::Px(16.0)));
-                    let t = tekst_deel(commands, bestanden, getal, &d.zetels.to_string(), letter, 34.0, tk, Uitlijning::Links, dekking);
-                    commands.entity(t).insert((TextLayout::no_wrap(), teller(d.zetels, was, duur)));
+                    let t = tekst_deel(
+                        commands,
+                        bestanden,
+                        getal,
+                        &d.zetels.to_string(),
+                        letter,
+                        34.0,
+                        tk,
+                        Uitlijning::Links,
+                        dekking,
+                    );
+                    commands
+                        .entity(t)
+                        .insert((TextLayout::no_wrap(), teller(d.zetels, was, duur)));
                     continue;
                 };
                 // Winst naar rechts, verlies naar links: twee balken vanaf de as, waarvan er
@@ -901,8 +1057,9 @@ pub fn bouw_inhoud(
                 });
                 let deel = |v: i32| v.unsigned_abs() as f32 / schaal;
                 let (links_naar, rechts_naar) = (deel(w.verschil.min(0)), deel(w.verschil.max(0)));
-                let (links_van, rechts_van) =
-                    oud.map_or((links_naar, rechts_naar), |o| (deel(o.min(0)), deel(o.max(0))));
+                let (links_van, rechts_van) = oud.map_or((links_naar, rechts_naar), |o| {
+                    (deel(o.min(0)), deel(o.max(0)))
+                });
                 let kant = |commands: &mut Commands, x: f32, eind: bool| {
                     commands
                         .spawn((
@@ -915,7 +1072,11 @@ pub fn bouw_inhoud(
                                 flex_direction: FlexDirection::Row,
                                 align_items: AlignItems::Center,
                                 // een getal dat niet past, steekt naar buiten uit
-                                justify_content: if eind { JustifyContent::FlexEnd } else { JustifyContent::FlexStart },
+                                justify_content: if eind {
+                                    JustifyContent::FlexEnd
+                                } else {
+                                    JustifyContent::FlexStart
+                                },
                                 ..default()
                             },
                         ))
@@ -948,7 +1109,11 @@ pub fn bouw_inhoud(
                 commands.entity(t).insert((
                     TextLayout::no_wrap(),
                     Teller {
-                        waarde: Getalwaarde::Getal { waarde: i64::from(w.verschil), plus: true, achter: String::new() },
+                        waarde: Getalwaarde::Getal {
+                            waarde: i64::from(w.verschil),
+                            plus: true,
+                            achter: String::new(),
+                        },
                         van: i64::from(oud.unwrap_or(w.verschil)),
                         bijwerken: oud.zip(duur).map(|(_, d)| (0.0, d)),
                     },
@@ -962,7 +1127,17 @@ pub fn bouw_inhoud(
                     None
                 };
                 if let Some(e) = erbij {
-                    let t = tekst_deel(commands, bestanden, getal, e, naamletter, 30.0, nul_kleur, Uitlijning::Links, dekking);
+                    let t = tekst_deel(
+                        commands,
+                        bestanden,
+                        getal,
+                        e,
+                        naamletter,
+                        30.0,
+                        nul_kleur,
+                        Uitlijning::Links,
+                        dekking,
+                    );
                     commands.entity(t).insert(TextLayout::no_wrap());
                 }
             }
@@ -1025,7 +1200,11 @@ pub fn bouw_inhoud(
                 // geen foto: de voorletters in de kleur van het Blok op de partijkleur; op een
                 // donkere partijkleur in wit
                 vlak(commands, kleur(*vlakkleur), *hoek, foto_node);
-                let k = if is_licht(*vlakkleur) { k } else { Color::WHITE };
+                let k = if is_licht(*vlakkleur) {
+                    k
+                } else {
+                    Color::WHITE
+                };
                 let t = tekst_deel(
                     commands,
                     bestanden,
@@ -1138,7 +1317,9 @@ pub fn bouw_inhoud(
                     ..vol
                 },
                 BackgroundColor(k.with_alpha(0.97 * dekking)),
-                Deel { kleur: k.with_alpha(0.97) },
+                Deel {
+                    kleur: k.with_alpha(0.97),
+                },
             ));
             let (tk, nk) = (kleur(*tekstkleur), kleur(*naamkleur));
             let g = f32::from(*grootte);
@@ -1175,12 +1356,31 @@ pub fn bouw_inhoud(
                     Deel { kleur: pk },
                 ));
                 let regels = [
-                    l.zetels.map(|z| (z.to_string(), letter, (g * 1.5).round(), tk)),
-                    l.kort.as_deref().map(|t| (t.to_string(), naamletter, g, nk)),
+                    l.zetels
+                        .map(|z| (z.to_string(), letter, (g * 1.5).round(), tk)),
+                    l.kort
+                        .as_deref()
+                        .map(|t| (t.to_string(), naamletter, g, nk)),
                 ];
                 for (tekst, letter, grootte, kl) in regels.into_iter().flatten() {
-                    let t = tekst_deel(commands, bestanden, kaartje, &tekst, letter, grootte, kl, Uitlijning::Midden, dekking);
-                    commands.entity(t).insert((TextLayout::no_wrap(), Krimp { grootte, breedte: breed - 8.0 }));
+                    let t = tekst_deel(
+                        commands,
+                        bestanden,
+                        kaartje,
+                        &tekst,
+                        letter,
+                        grootte,
+                        kl,
+                        Uitlijning::Midden,
+                        dekking,
+                    );
+                    commands.entity(t).insert((
+                        TextLayout::no_wrap(),
+                        Krimp {
+                            grootte,
+                            breedte: breed - 8.0,
+                        },
+                    ));
                 }
             }
         }
@@ -1242,7 +1442,17 @@ pub fn bouw_inhoud(
                     Deel { kleur: pk },
                 ));
                 if let Some(z) = l.zetels {
-                    let t = tekst_deel(commands, bestanden, kaart, &z.to_string(), letter, (g * 2.1).round(), tk, Uitlijning::Links, dekking);
+                    let t = tekst_deel(
+                        commands,
+                        bestanden,
+                        kaart,
+                        &z.to_string(),
+                        letter,
+                        (g * 2.1).round(),
+                        tk,
+                        Uitlijning::Links,
+                        dekking,
+                    );
                     commands.entity(t).insert(TextLayout::no_wrap());
                 }
                 let kolom = commands
@@ -1256,13 +1466,37 @@ pub fn bouw_inhoud(
                     ))
                     .id();
                 if let Some(kort) = l.kort.as_deref() {
-                    let t = tekst_deel(commands, bestanden, kolom, kort, naamletter, g, nk, Uitlijning::Links, dekking);
+                    let t = tekst_deel(
+                        commands,
+                        bestanden,
+                        kolom,
+                        kort,
+                        naamletter,
+                        g,
+                        nk,
+                        Uitlijning::Links,
+                        dekking,
+                    );
                     commands.entity(t).insert(TextLayout::no_wrap());
                 }
                 if l.zetels.is_some() {
-                    let woord = if l.zetels == Some(1) { "zetel" } else { "zetels" };
+                    let woord = if l.zetels == Some(1) {
+                        "zetel"
+                    } else {
+                        "zetels"
+                    };
                     let zacht = tk.with_alpha(0.75);
-                    let t = tekst_deel(commands, bestanden, kolom, woord, naamletter, (g * 0.58).round(), zacht, Uitlijning::Links, dekking);
+                    let t = tekst_deel(
+                        commands,
+                        bestanden,
+                        kolom,
+                        woord,
+                        naamletter,
+                        (g * 0.58).round(),
+                        zacht,
+                        Uitlijning::Links,
+                        dekking,
+                    );
                     commands.entity(t).insert(TextLayout::no_wrap());
                 }
             }
@@ -1322,8 +1556,11 @@ pub fn bouw_inhoud(
                     Deel { kleur: pk },
                 ));
                 let regels = [
-                    l.zetels.map(|z| (z.to_string(), letter, (g * 1.4).round(), tk)),
-                    l.kort.as_deref().map(|t| (t.to_string(), naamletter, g, nk)),
+                    l.zetels
+                        .map(|z| (z.to_string(), letter, (g * 1.4).round(), tk)),
+                    l.kort
+                        .as_deref()
+                        .map(|t| (t.to_string(), naamletter, g, nk)),
                 ];
                 for (tekst, letter, grootte, kl) in regels.into_iter().flatten() {
                     let t = tekst_deel(
@@ -1389,7 +1626,10 @@ pub fn bouw_inhoud(
             }
         }
         // De achtergrond van een Sjabloon: vult de hele Plek, het midden blijft in beeld.
-        Inhoud::Afbeelding { bestand, dekking: d } => {
+        Inhoud::Afbeelding {
+            bestand,
+            dekking: d,
+        } => {
             commands.entity(binnen).insert(Node {
                 justify_content: JustifyContent::Center,
                 align_items: AlignItems::Center,
@@ -1397,7 +1637,17 @@ pub fn bouw_inhoud(
                 ..vol
             });
             if let Some(beeld) = beeld_of_wacht(commands, bestanden, knoop, bestand) {
-                beeld_deel(commands, binnen, beeld, beelden, b, h, true, dekking, f32::from(*d) / 100.0);
+                beeld_deel(
+                    commands,
+                    binnen,
+                    beeld,
+                    beelden,
+                    b,
+                    h,
+                    true,
+                    dekking,
+                    f32::from(*d) / 100.0,
+                );
             }
         }
     }
@@ -1528,18 +1778,36 @@ mod tests {
         ];
         let r = labelrijen(&delen, 1000.0, false);
         assert_eq!(r[0], Some((0, 200.0)), "tot het volgende label");
-        assert_eq!(r[2], Some((0, 700.0)), "de laatste in de coalitie loopt door tot het eind");
+        assert_eq!(
+            r[2],
+            Some((0, 700.0)),
+            "de laatste in de coalitie loopt door tot het eind"
+        );
         assert_eq!(r[3], None);
         assert_eq!(labelrijen(&[], 1000.0, false), Vec::new());
     }
 
     #[test]
-    fn de_grootste_partijen_krijgen_eerst_een_plek_en_de_rest_gaat_naar_de_tweede_rij_of_valt_weg() {
+    fn de_grootste_partijen_krijgen_eerst_een_plek_en_de_rest_gaat_naar_de_tweede_rij_of_valt_weg()
+    {
         // twee smalle delen vooraan, dan een groot deel dat ze anders zou verliezen
-        let delen = [(0.0, 20.0, Some(80.0)), (20.0, 20.0, Some(80.0)), (40.0, 40.0, Some(80.0)), (80.0, 400.0, Some(120.0))];
+        let delen = [
+            (0.0, 20.0, Some(80.0)),
+            (20.0, 20.0, Some(80.0)),
+            (40.0, 40.0, Some(80.0)),
+            (80.0, 400.0, Some(120.0)),
+        ];
         let twee = labelrijen(&delen, 1000.0, true);
-        assert_eq!(twee[3], Some((0, 920.0)), "het grote deel staat op de eerste rij");
-        assert_eq!(twee[2], Some((1, 960.0)), "het op een na grootste op de tweede rij");
+        assert_eq!(
+            twee[3],
+            Some((0, 920.0)),
+            "het grote deel staat op de eerste rij"
+        );
+        assert_eq!(
+            twee[2],
+            Some((1, 960.0)),
+            "het op een na grootste op de tweede rij"
+        );
         assert_eq!(twee[0], None, "botst op beide rijen");
         let een = labelrijen(&delen, 1000.0, false);
         assert_eq!(een[3], Some((0, 920.0)));
@@ -1551,24 +1819,36 @@ mod tests {
         // de linkerkant van de uitslag van 2025: SP 3, PvdD 3, GL-PvdA 20, DENK 3, Volt 1 (1632 breed)
         let z = |n: f32| n * 1632.0 / 150.0;
         let mut x = 0.0;
-        let delen: Vec<(f32, f32, Option<f32>)> = [(3.0, 62.0), (3.0, 98.0), (20.0, 171.0), (3.0, 98.0), (1.0, 98.0)]
-            .iter()
-            .map(|&(zetels, label)| {
-                let deel = (x, z(zetels), Some(label));
-                x += z(zetels);
-                deel
-            })
-            .collect();
+        let delen: Vec<(f32, f32, Option<f32>)> = [
+            (3.0, 62.0),
+            (3.0, 98.0),
+            (20.0, 171.0),
+            (3.0, 98.0),
+            (1.0, 98.0),
+        ]
+        .iter()
+        .map(|&(zetels, label)| {
+            let deel = (x, z(zetels), Some(label));
+            x += z(zetels);
+            deel
+        })
+        .collect();
         let p = labelplekken(&delen, 1632.0);
         assert_eq!(p[2], Labelplek::Binnen, "GL-PvdA past in haar deel");
         assert!(matches!(p[0], Labelplek::Onder { rij: 0, .. }));
-        assert!(matches!(p[1], Labelplek::Onder { rij: 1, .. }), "PvdD botst met SP en gaat een rij lager");
+        assert!(
+            matches!(p[1], Labelplek::Onder { rij: 1, .. }),
+            "PvdD botst met SP en gaat een rij lager"
+        );
         assert!(matches!(p[3], Labelplek::Onder { rij: 0, .. }));
         assert!(matches!(p[4], Labelplek::Onder { rij: 1, .. }));
         for (plek, (begin, breed, label)) in p.iter().zip(&delen) {
             if let Labelplek::Onder { x, .. } = plek {
                 let midden = begin + breed / 2.0;
-                assert!(*x <= midden && x + label.unwrap() >= midden, "het tikje komt op het label uit");
+                assert!(
+                    *x <= midden && x + label.unwrap() >= midden,
+                    "het tikje komt op het label uit"
+                );
             }
         }
     }

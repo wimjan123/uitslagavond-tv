@@ -49,7 +49,12 @@ pub struct Extra {
 impl Default for Extra {
     /// Leeftijd en woonplaats, zoals in de vormgeving.
     fn default() -> Self {
-        Extra { leeftijd: true, woonplaats: true, geboorteplaats: false, in_de_kamer_sinds: false }
+        Extra {
+            leeftijd: true,
+            woonplaats: true,
+            geboorteplaats: false,
+            in_de_kamer_sinds: false,
+        }
     }
 }
 
@@ -149,7 +154,10 @@ pub fn voorletters(naam: &str) -> String {
         .find(|w| w.chars().next().is_some_and(char::is_uppercase))
         .or(woorden.get(1..).and_then(<[&str]>::last))
         .and_then(eerste);
-    voor.into_iter().chain(achter).flat_map(char::to_uppercase).collect()
+    voor.into_iter()
+        .chain(achter)
+        .flat_map(char::to_uppercase)
+        .collect()
 }
 
 /// De dag (jaar, maand, dag) in UTC op `ms` milliseconden sinds 1970.
@@ -168,7 +176,11 @@ pub fn dag_van(ms: u64) -> (i64, u32, u32) {
 
 fn lees_datum(t: &str) -> Option<(i64, u32, u32)> {
     let mut d = t.get(..10)?.split('-');
-    let datum = (d.next()?.parse().ok()?, d.next()?.parse().ok()?, d.next()?.parse().ok()?);
+    let datum = (
+        d.next()?.parse().ok()?,
+        d.next()?.parse().ok()?,
+        d.next()?.parse().ok()?,
+    );
     (1..=12).contains(&datum.1).then_some(datum)
 }
 
@@ -184,16 +196,24 @@ impl Persoonsgegevens {
     /// eerste dag in de Kamer staat er als jaar, zodat de regel op één regel past.
     pub fn regel(&self, extra: &Extra) -> String {
         let mut delen = Vec::new();
-        if extra.leeftijd && let Some(l) = self.leeftijd {
+        if extra.leeftijd
+            && let Some(l) = self.leeftijd
+        {
             delen.push(format!("{l} jaar"));
         }
-        if extra.woonplaats && let Some(w) = &self.woonplaats {
+        if extra.woonplaats
+            && let Some(w) = &self.woonplaats
+        {
             delen.push(w.clone());
         }
-        if extra.geboorteplaats && let Some(g) = &self.geboorteplaats {
+        if extra.geboorteplaats
+            && let Some(g) = &self.geboorteplaats
+        {
             delen.push(format!("geboren in {g}"));
         }
-        if extra.in_de_kamer_sinds && let Some((jaar, _, _)) = self.in_de_kamer_sinds.as_deref().and_then(lees_datum) {
+        if extra.in_de_kamer_sinds
+            && let Some((jaar, _, _)) = self.in_de_kamer_sinds.as_deref().and_then(lees_datum)
+        {
             delen.push(format!("in de Kamer sinds {jaar}"));
         }
         delen.join(" · ")
@@ -201,7 +221,10 @@ impl Persoonsgegevens {
 }
 
 fn tekst(t: &Option<String>) -> Option<String> {
-    t.as_deref().map(str::trim).filter(|t| !t.is_empty()).map(str::to_owned)
+    t.as_deref()
+        .map(str::trim)
+        .filter(|t| !t.is_empty())
+        .map(str::to_owned)
 }
 
 impl Stand {
@@ -210,7 +233,10 @@ impl Stand {
         let vandaag = dag_van(tijd_ms);
         match wie {
             Wie::Kamerlid { id } => {
-                let k = self.kamer.kamerlid(id).ok_or_else(|| Weigering::OnbekendePersoon(id.clone()))?;
+                let k = self
+                    .kamer
+                    .kamerlid(id)
+                    .ok_or_else(|| Weigering::OnbekendePersoon(id.clone()))?;
                 Ok(Persoonsgegevens {
                     naam: k.naam(),
                     voorletters: k.voorletters(),
@@ -218,14 +244,19 @@ impl Stand {
                     partij: self.kamer.partij_van(k).map(str::to_owned),
                     functie: k.fractievoorzitter.then(|| "Fractievoorzitter".to_owned()),
                     stoel: self.zaalindeling.stoel_van(id),
-                    leeftijd: k.geboortedatum.as_deref().and_then(|g| leeftijd(g, vandaag)),
+                    leeftijd: k
+                        .geboortedatum
+                        .as_deref()
+                        .and_then(|g| leeftijd(g, vandaag)),
                     woonplaats: tekst(&k.woonplaats),
                     geboorteplaats: tekst(&k.geboorteplaats),
                     in_de_kamer_sinds: k.in_de_kamer_sinds.clone(),
                 })
             }
             Wie::Eigen { id } => {
-                let p = self.persoon(id).ok_or_else(|| Weigering::OnbekendePersoon(id.clone()))?;
+                let p = self
+                    .persoon(id)
+                    .ok_or_else(|| Weigering::OnbekendePersoon(id.clone()))?;
                 Ok(Persoonsgegevens {
                     naam: p.naam.trim().to_owned(),
                     voorletters: voorletters(&p.naam),
@@ -233,7 +264,10 @@ impl Stand {
                     partij: p.partij.clone(),
                     functie: None,
                     stoel: None,
-                    leeftijd: p.geboortedatum.as_deref().and_then(|g| leeftijd(g, vandaag)),
+                    leeftijd: p
+                        .geboortedatum
+                        .as_deref()
+                        .and_then(|g| leeftijd(g, vandaag)),
                     woonplaats: tekst(&p.woonplaats),
                     geboorteplaats: tekst(&p.geboorteplaats),
                     in_de_kamer_sinds: None,
@@ -249,7 +283,11 @@ impl Stand {
 
     /// Bewaart een nieuwe eigen persoon (zonder id) of wijzigt er een. Een nieuwe krijgt id
     /// "p" met het volgnummer.
-    pub(crate) fn bewaar_persoon(&mut self, persoon: &EigenPersoon, volgnummer: u64) -> Result<(), Weigering> {
+    pub(crate) fn bewaar_persoon(
+        &mut self,
+        persoon: &EigenPersoon,
+        volgnummer: u64,
+    ) -> Result<(), Weigering> {
         let naam = persoon.naam.trim();
         if naam.is_empty() {
             return Err(Weigering::NaamLeeg);
@@ -263,7 +301,9 @@ impl Stand {
         if let Some(p) = &persoon.partij
             && self.cijfers.partij(p).is_none()
         {
-            return Err(Weigering::Cijfers(crate::cijfers::CijferWeigering::OnbekendePartij(p.clone())));
+            return Err(Weigering::Cijfers(
+                crate::cijfers::CijferWeigering::OnbekendePartij(p.clone()),
+            ));
         }
         let mut nieuw = persoon.clone();
         nieuw.naam = naam.to_owned();

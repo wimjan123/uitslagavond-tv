@@ -210,23 +210,22 @@ impl Standpunt {
             na_aankomst: NaAankomst::Stil,
         };
         vec![
-            // Hoog tegen de wand achter de Voorzitter, met een heel wijde lens: zo staan alle
-            // 150 Stoelen in beeld, ook de voorste aan de zijkanten. Zo hoog en ver naar achteren
-            // als de ruimte toelaat en zo ver omlaag dat de Stoelen in de band tussen de Graphics
-            // boven (de kaartjes van de Zetelverdeling tot y 364) en onder (panelen vanaf y 646)
-            // staan, van y 395 tot 630.
+            // Virtueel, zoals in een studio: hoog boven het plafond en achter de voorwand, met
+            // een normale lens. De Renderer laat het plafond en de nis achter de Voorzitter weg
+            // zolang de camera daar staat (`crates/renderer/src/schil.rs`), de server laat hem
+            // daar vliegen (de studio in `crates/server/src/camera.rs`).
             //
-            // Groter kan niet zolang alle 150 Stoelen in beeld moeten (gerekend met de
-            // Stoelplekken, de rugleuningen helemaal): van elke plek waar de camera kan staan, ook
-            // virtueel achter de voorwand met de wand weggeknipt, oogt het halfrond zo'n 8 keer zo
-            // breed als hoog. Een rugleuning is daar in het midden 42 tot 43 pixels breed, hier
-            // 41, en de band wordt lager (150 tot 200 pixels in plaats van 235). Achter de wand
-            // ziet de camera bovendien boven het plafond uit, tenzij hij laag kijkt, en dan vallen
-            // de Stoelen achter de kaartjes van de Zetelverdeling.
+            // Van hoog en ver oogt het halfrond minder plat: alle 150 Stoelen staan van x 80 tot
+            // 1840 en van y 368 (de rugleuningen van de achterste rij, net onder de kaartjes van
+            // de Zetelverdeling tot y 360) tot ongeveer 740 (de voorste Stoelen opzij, boven het
+            // Opbouwlabel vanaf y 760). Een rugleuning achterin is 26 in plaats van 18 pixels
+            // breed, en het plafond is uit beeld. De verhouding: de Zetelverdeling houdt de hele
+            // Zaal vrij; de panelen van Zetelbalk (vanaf y 646) en Coalitiebalk (vanaf y 676)
+            // vallen over de voorste Stoelen opzij, want daar telt de balk.
             vast(
                 "A",
                 "Totaal vanaf voorzitter",
-                Camerastand::uit_graden([0.0, 4.56, 4.48], 0.0, -27.5, 96.5),
+                Camerastand::uit_graden([0.0, 10.0, 9.0], 0.0, -32.0, 58.3),
             ),
             vast(
                 "S",
@@ -281,7 +280,10 @@ pub const AANSCHUIVEN_S: f32 = 8.0;
 
 /// De overgang van Aanschuiven: langzaam en zacht.
 pub fn aanschuif_overgang() -> CameraOvergang {
-    CameraOvergang { duur_s: AANSCHUIVEN_S, ..CameraOvergang::default() }
+    CameraOvergang {
+        duur_s: AANSCHUIVEN_S,
+        ..CameraOvergang::default()
+    }
 }
 
 /// De sleutel van Aanschuiven naar de Stoelen op plaats `van` tot en met `tot` van links naar
@@ -292,7 +294,10 @@ pub fn aanschuifsleutel(van: usize, tot: usize) -> String {
 
 /// De plaatsen van links naar rechts bij een sleutel van [`aanschuifsleutel`].
 pub fn aanschuif_uit_sleutel(sleutel: &str) -> Option<(usize, usize)> {
-    let (van, tot) = sleutel.strip_prefix(AANSCHUIVEN)?.strip_prefix('-')?.split_once('-')?;
+    let (van, tot) = sleutel
+        .strip_prefix(AANSCHUIVEN)?
+        .strip_prefix('-')?
+        .split_once('-')?;
     let (van, tot) = (van.parse().ok()?, tot.parse().ok()?);
     (van <= tot && tot < crate::AANTAL_STOELEN).then_some((van, tot))
 }
@@ -302,7 +307,11 @@ pub fn aanschuif_uit_sleutel(sleutel: &str) -> Option<(usize, usize)> {
 pub fn aanschuif_stand(van: usize, tot: usize) -> Option<Camerastand> {
     use crate::zaalkaart::STOELPLEKKEN;
     let volgorde = crate::uitslagindeling::stoelen_van_links_naar_rechts();
-    let plekken: Vec<[f32; 3]> = volgorde.get(van..=tot)?.iter().map(|&i| STOELPLEKKEN[i]).collect();
+    let plekken: Vec<[f32; 3]> = volgorde
+        .get(van..=tot)?
+        .iter()
+        .map(|&i| STOELPLEKKEN[i])
+        .collect();
     let n = plekken.len() as f32;
     let midden: [f32; 3] = std::array::from_fn(|k| plekken.iter().map(|p| p[k]).sum::<f32>() / n);
     let breed = plekken
@@ -311,7 +320,10 @@ pub fn aanschuif_stand(van: usize, tot: usize) -> Option<Camerastand> {
         .fold(0.0_f32, f32::max)
         .max(0.8);
     // van het blok naar de Voorzitter, en zo ver dat het blok de helft van de breedte vult
-    let naar = [AANSCHUIF_VANAF[0] - midden[0], AANSCHUIF_VANAF[1] - midden[2]];
+    let naar = [
+        AANSCHUIF_VANAF[0] - midden[0],
+        AANSCHUIF_VANAF[1] - midden[2],
+    ];
     let lengte = naar[0].hypot(naar[1]).max(1e-3);
     let beeldhoek = AANSCHUIF_BEELDHOEK.to_radians();
     let horizontaal = 2.0 * ((beeldhoek / 2.0).tan() * 16.0 / 9.0).atan();
@@ -321,7 +333,11 @@ pub fn aanschuif_stand(van: usize, tot: usize) -> Option<Camerastand> {
         (midden[1] + 1.2 + 0.18 * afstand).clamp(2.0, 4.2),
         midden[2] + naar[1] / lengte * afstand,
     ];
-    let d = [midden[0] - positie[0], midden[1] + 0.2 - positie[1], midden[2] - positie[2]];
+    let d = [
+        midden[0] - positie[0],
+        midden[1] + 0.2 - positie[1],
+        midden[2] - positie[2],
+    ];
     Some(Camerastand {
         positie,
         draai: (-d[0]).atan2(-d[2]),
@@ -346,8 +362,15 @@ pub fn stoelsleutel(stoel: crate::Stoel) -> String {
 
 /// De Stoel bij een sleutel van [`stoelsleutel`].
 pub fn stoel_uit_sleutel(sleutel: &str) -> Option<crate::Stoel> {
-    let mut d = sleutel.strip_prefix("stoel-")?.split('-').map(str::parse::<u8>);
-    let stoel = crate::Stoel { vak: d.next()?.ok()?, rij: d.next()?.ok()?, nummer: d.next()?.ok()? };
+    let mut d = sleutel
+        .strip_prefix("stoel-")?
+        .split('-')
+        .map(str::parse::<u8>);
+    let stoel = crate::Stoel {
+        vak: d.next()?.ok()?,
+        rij: d.next()?.ok()?,
+        nummer: d.next()?.ok()?,
+    };
     (d.next().is_none() && stoel.index().is_some()).then_some(stoel)
 }
 
@@ -369,7 +392,11 @@ pub fn shot_op_stoel(stoel: crate::Stoel) -> Option<Camerastand> {
         p[2] + richting[1] * SHOT_AFSTAND,
     ];
     let doel = [p[0], p[1] + SHOT_HOOFD, p[2]];
-    let d = [doel[0] - positie[0], doel[1] - positie[1], doel[2] - positie[2]];
+    let d = [
+        doel[0] - positie[0],
+        doel[1] - positie[1],
+        doel[2] - positie[2],
+    ];
     let vlak = (d[0] * d[0] + d[2] * d[2]).sqrt();
     let beeldhoek = SHOT_BEELDHOEK.to_radians();
     // de camera draait zoveel naar rechts dat de Stoel op SHOT_PLEK_X komt
@@ -385,12 +412,20 @@ pub fn shot_op_stoel(stoel: crate::Stoel) -> Option<Camerastand> {
 impl Standpunt {
     /// De toets op het toetsenbord: de letter van een vast Standpunt, J, K of L, of geen.
     pub fn toets(&self) -> Option<&str> {
-        if self.vast { Some(&self.letter) } else { self.toets.as_deref() }
+        if self.vast {
+            Some(&self.letter)
+        } else {
+            self.toets.as_deref()
+        }
     }
 
     /// Hoe de Regie het Standpunt herkent, zoals "Standpunt J (Close-up)".
     fn kenmerk(&self) -> String {
-        format!("Standpunt {} ({})", self.toets().unwrap_or(&self.letter), self.naam)
+        format!(
+            "Standpunt {} ({})",
+            self.toets().unwrap_or(&self.letter),
+            self.naam
+        )
     }
 }
 
@@ -398,9 +433,16 @@ impl Standpunt {
 /// Sjablonen (#42) komen hier bij als ze een eigen Standpunt kunnen kiezen.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub enum StandpuntGebruik {
-    KlaargezetteGraphic { naam: String },
-    GraphicInEther { naam: String },
-    Preset { nummer: u16, naam: String },
+    KlaargezetteGraphic {
+        naam: String,
+    },
+    GraphicInEther {
+        naam: String,
+    },
+    Preset {
+        nummer: u16,
+        naam: String,
+    },
     /// De camera van de Ether staat erop of gaat erheen (niet als de Vrije camera aan staat).
     CameraVanDeEther,
 }
@@ -408,7 +450,9 @@ pub enum StandpuntGebruik {
 impl std::fmt::Display for StandpuntGebruik {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            StandpuntGebruik::KlaargezetteGraphic { naam } => write!(f, "de klaargezette Graphic {naam}"),
+            StandpuntGebruik::KlaargezetteGraphic { naam } => {
+                write!(f, "de klaargezette Graphic {naam}")
+            }
             StandpuntGebruik::GraphicInEther { naam } => write!(f, "de Graphic in de Ether {naam}"),
             StandpuntGebruik::Preset { nummer, naam } => write!(f, "Preset {nummer} {naam}"),
             StandpuntGebruik::CameraVanDeEther => write!(f, "de camera van de Ether"),
@@ -446,16 +490,21 @@ fn graphic_naam(g: &Graphic) -> String {
         | Graphic::WinstEnVerlies { set, cijfers, .. }
         | Graphic::PartijUitgelicht { set, cijfers, .. }
         | Graphic::Coalitie { set, cijfers, .. }
-        | Graphic::Coalitiebalk { set, cijfers, .. } => {
-            cijfers.as_ref().map_or(set.clone(), |c| c.set.label.clone())
-        }
+        | Graphic::Coalitiebalk { set, cijfers, .. } => cijfers
+            .as_ref()
+            .map_or(set.clone(), |c| c.set.label.clone()),
         Graphic::Persoonskaart { wie, gegevens, .. } => gegevens.as_ref().map_or_else(
             || match wie {
-                crate::persoonskaart::Wie::Kamerlid { id } | crate::persoonskaart::Wie::Eigen { id } => id.clone(),
+                crate::persoonskaart::Wie::Kamerlid { id }
+                | crate::persoonskaart::Wie::Eigen { id } => id.clone(),
             },
             |g| g.naam.clone(),
         ),
-        Graphic::Eigen { velden, .. } => velden.values().find(|v| !v.trim().is_empty()).cloned().unwrap_or_default(),
+        Graphic::Eigen { velden, .. } => velden
+            .values()
+            .find(|v| !v.trim().is_empty())
+            .cloned()
+            .unwrap_or_default(),
     };
     format!("{sjabloon} \"{kop}\"")
 }
@@ -466,13 +515,20 @@ impl Stand {
     pub fn gebruik_van_standpunt(&self, letter: &str) -> Vec<StandpuntGebruik> {
         let mut gebruik = Vec::new();
         if let Some(k) = self.klaar.as_ref().filter(|k| k.standpunt() == letter) {
-            gebruik.push(StandpuntGebruik::KlaargezetteGraphic { naam: graphic_naam(&k.graphic) });
+            gebruik.push(StandpuntGebruik::KlaargezetteGraphic {
+                naam: graphic_naam(&k.graphic),
+            });
         }
         if let Some(e) = self.ether.as_ref().filter(|e| e.standpunt() == letter) {
-            gebruik.push(StandpuntGebruik::GraphicInEther { naam: graphic_naam(&e.graphic) });
+            gebruik.push(StandpuntGebruik::GraphicInEther {
+                naam: graphic_naam(&e.graphic),
+            });
         }
         for p in self.presets.iter().filter(|p| p.standpunt() == letter) {
-            gebruik.push(StandpuntGebruik::Preset { nummer: p.nummer, naam: graphic_naam(&p.graphic) });
+            gebruik.push(StandpuntGebruik::Preset {
+                nummer: p.nummer,
+                naam: graphic_naam(&p.graphic),
+            });
         }
         if !self.camera.vrij && self.camera.standpunt == letter {
             gebruik.push(StandpuntGebruik::CameraVanDeEther);
@@ -480,11 +536,18 @@ impl Stand {
         gebruik
     }
 
-    pub(crate) fn bewaar_standpunt(&mut self, naam: &str, stand: Option<Camerastand>) -> Result<(), Weigering> {
+    pub(crate) fn bewaar_standpunt(
+        &mut self,
+        naam: &str,
+        stand: Option<Camerastand>,
+    ) -> Result<(), Weigering> {
         let naam = geldige_naam(naam)?;
         let stand = geldige_stand(stand)?;
         let bezet = |l: &str| self.standpunten.iter().any(|s| s.letter == l);
-        let letter = (1..).map(|n| format!("E{n}")).find(|l| !bezet(l)).expect("oneindig");
+        let letter = (1..)
+            .map(|n| format!("E{n}"))
+            .find(|l| !bezet(l))
+            .expect("oneindig");
         let toets = self.eerste_vrije_toets();
         self.standpunten.push(Standpunt {
             letter,
@@ -498,7 +561,11 @@ impl Stand {
         Ok(())
     }
 
-    pub(crate) fn overschrijf_standpunt(&mut self, letter: &str, stand: Option<Camerastand>) -> Result<(), Weigering> {
+    pub(crate) fn overschrijf_standpunt(
+        &mut self,
+        letter: &str,
+        stand: Option<Camerastand>,
+    ) -> Result<(), Weigering> {
         let stand = geldige_stand(stand)?;
         self.standpunt_mut(letter)?.stand = stand;
         Ok(())
@@ -508,9 +575,15 @@ impl Stand {
     pub(crate) fn eerste_vrije_toets(&self) -> Option<String> {
         let bezet = |t: &str| {
             self.standpunten.iter().any(|s| s.toets() == Some(t))
-                || self.cameraritten.iter().any(|r| r.toets.as_deref() == Some(t))
+                || self
+                    .cameraritten
+                    .iter()
+                    .any(|r| r.toets.as_deref() == Some(t))
         };
-        EIGEN_TOETSEN.iter().find(|t| !bezet(t)).map(|t| t.to_string())
+        EIGEN_TOETSEN
+            .iter()
+            .find(|t| !bezet(t))
+            .map(|t| t.to_string())
     }
 
     /// Hernoemt een eigen Standpunt of een Camerarit.
@@ -525,7 +598,11 @@ impl Stand {
     }
 
     /// Geeft een eigen Standpunt of een Camerarit een toets; wie hem had, raakt hem kwijt.
-    pub(crate) fn zet_standpunt_toets(&mut self, letter: &str, toets: Option<&str>) -> Result<(), Weigering> {
+    pub(crate) fn zet_standpunt_toets(
+        &mut self,
+        letter: &str,
+        toets: Option<&str>,
+    ) -> Result<(), Weigering> {
         match self.camerarit(letter) {
             Some(r) if r.vast => return Err(Weigering::VasteCamerarit(letter.into())),
             Some(_) => {}
@@ -536,8 +613,16 @@ impl Stand {
         if let Some(t) = toets.filter(|t| !EIGEN_TOETSEN.contains(t)) {
             return Err(Weigering::OnbekendeToets(t.into()));
         }
-        let eigen = self.standpunten.iter_mut().filter(|s| !s.vast).map(|s| (&s.letter, &mut s.toets));
-        let ritten = self.cameraritten.iter_mut().filter(|r| !r.vast).map(|r| (&r.letter, &mut r.toets));
+        let eigen = self
+            .standpunten
+            .iter_mut()
+            .filter(|s| !s.vast)
+            .map(|s| (&s.letter, &mut s.toets));
+        let ritten = self
+            .cameraritten
+            .iter_mut()
+            .filter(|r| !r.vast)
+            .map(|r| (&r.letter, &mut r.toets));
         for (l, t) in eigen.chain(ritten) {
             if l == letter {
                 *t = toets.map(Into::into);
@@ -558,11 +643,19 @@ impl Stand {
         let gebruik = self.gebruik_van_standpunt(letter);
         if !gebruik.is_empty() {
             let waar: Vec<String> = gebruik.iter().map(ToString::to_string).collect();
-            return Err(Weigering::StandpuntInGebruik { standpunt: kenmerk, waar: waar.join(" en ") });
+            return Err(Weigering::StandpuntInGebruik {
+                standpunt: kenmerk,
+                waar: waar.join(" en "),
+            });
         }
         self.standpunten.retain(|s| s.letter != letter);
         self.cameraritten.retain(|r| r.letter != letter);
-        if self.camera.proef.as_ref().is_some_and(|p| p.letter == letter) {
+        if self
+            .camera
+            .proef
+            .as_ref()
+            .is_some_and(|p| p.letter == letter)
+        {
             self.camera.proef = None;
         }
         Ok(())
@@ -597,7 +690,12 @@ fn geldige_naam(naam: &str) -> Result<String, Weigering> {
 
 fn geldige_stand(stand: Option<Camerastand>) -> Result<Camerastand, Weigering> {
     stand
-        .filter(|s| s.positie.iter().chain([&s.draai, &s.helling, &s.beeldhoek]).all(|v| v.is_finite()))
+        .filter(|s| {
+            s.positie
+                .iter()
+                .chain([&s.draai, &s.helling, &s.beeldhoek])
+                .all(|v| v.is_finite())
+        })
         .ok_or(Weigering::GeenCamerastand)
 }
 

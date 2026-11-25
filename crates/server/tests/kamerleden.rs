@@ -15,7 +15,11 @@ use gedeeld::cijfers::{Invoer, TIJDELIJKE_KLEUREN};
 use gedeeld::kamer::Foto;
 use gedeeld::{BerichtVanServer, GenummerdeStand, Herkomst, Opdracht, Stand};
 
-const H: Herkomst = Herkomst { door: "Proef", volgnummer: 1, tijd_ms: 0 };
+const H: Herkomst = Herkomst {
+    door: "Proef",
+    volgnummer: 1,
+    tijd_ms: 0,
+};
 use jiff::civil::{Date, date};
 use server::opendata::{OpgehaaldeKamer, kamer_op, lees_pagina};
 use server::{Instellingen, OpenData, Server};
@@ -41,12 +45,15 @@ fn kamer(antwoord: &str, peildatum: Date) -> OpgehaaldeKamer {
 
 fn lees_kamer(stand: &mut Stand, k: &OpgehaaldeKamer, peildatum: &str) {
     stand
-        .voer_uit(&Opdracht::LeesKamer {
-            opgehaald: format!("{peildatum}T12:00:00+01:00"),
-            peildatum: peildatum.into(),
-            kamerleden: k.kamerleden.clone(),
-            fracties: k.fracties.clone(),
-        }, &H)
+        .voer_uit(
+            &Opdracht::LeesKamer {
+                opgehaald: format!("{peildatum}T12:00:00+01:00"),
+                peildatum: peildatum.into(),
+                kamerleden: k.kamerleden.clone(),
+                fracties: k.fracties.clone(),
+            },
+            &H,
+        )
         .expect("Kamer gelezen");
 }
 
@@ -109,7 +116,10 @@ fn de_eerste_dag_in_de_kamer_is_de_vroegste_fractiezetel_ook_uit_een_eerdere_per
         ]}]}"#;
     let k = kamer(antwoord, date(2026, 11, 22));
     let lid = &k.kamerleden[0];
-    assert_eq!((lid.fractie.as_str(), lid.van.as_str()), ("f-nu", "2023-12-06"));
+    assert_eq!(
+        (lid.fractie.as_str(), lid.van.as_str()),
+        ("f-nu", "2023-12-06")
+    );
     assert!(lid.fractievoorzitter);
     assert_eq!(lid.in_de_kamer_sinds.as_deref(), Some("2010-06-17"));
     assert_eq!(k.fracties.len(), 1, "alleen de Fractie van nu");
@@ -117,7 +127,10 @@ fn de_eerste_dag_in_de_kamer_is_de_vroegste_fractiezetel_ook_uit_een_eerdere_per
     // de vraag aan de API haalt de hele geschiedenis van FractieZetelPersoon op
     let (_, parameters) = server::opendata::vraag("https://api", date(2026, 11, 22));
     let expand = &parameters.iter().find(|(k, _)| *k == "$expand").unwrap().1;
-    assert!(expand.starts_with("FractieZetelPersoon($filter=Verwijderd eq false;"), "{expand}");
+    assert!(
+        expand.starts_with("FractieZetelPersoon($filter=Verwijderd eq false;"),
+        "{expand}"
+    );
 }
 
 #[test]
@@ -181,11 +194,14 @@ fn een_fractie_die_niet_in_de_partijlijst_staat_krijgt_een_tijdelijke_kleur_de_k
     // en Lid Keijzer nog niet.
     let mut stand = Stand::default();
     stand
-        .voer_uit(&Opdracht::LeesInvoer {
-            bestand: "uitslag-tk2025.json".into(),
-            ontvangen: "12.00".into(),
-            invoer: Invoer::uit_json(include_str!("../../../cijfers/uitslag-tk2025.json")),
-        }, &H)
+        .voer_uit(
+            &Opdracht::LeesInvoer {
+                bestand: "uitslag-tk2025.json".into(),
+                ontvangen: "12.00".into(),
+                invoer: Invoer::uit_json(include_str!("../../../cijfers/uitslag-tk2025.json")),
+            },
+            &H,
+        )
         .unwrap();
     let k = kamer(OP_22_NOV, date(2026, 11, 22));
     lees_kamer(&mut stand, &k, "2026-11-22");
@@ -478,5 +494,9 @@ fn elk_kamerlid_krijgt_zijn_plek_op_de_lijst_van_de_fractie_uit_de_open_data() {
     let k = kamer(OP_22_NOV, date(2026, 11, 22));
     assert!(k.kamerleden.iter().all(|l| l.kieslijst.is_some()));
     let el_abassi = k.kamerleden.iter().find(|l| l.id == EL_ABASSI).unwrap();
-    assert_eq!(el_abassi.kieslijst, Some(3), "DENK: Van Baarle 1, Ergin 2, El Abassi 3");
+    assert_eq!(
+        el_abassi.kieslijst,
+        Some(3),
+        "DENK: Van Baarle 1, Ergin 2, El Abassi 3"
+    );
 }

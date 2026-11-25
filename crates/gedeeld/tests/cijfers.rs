@@ -4,7 +4,11 @@
 use gedeeld::cijfers::{Aanvulling, Invoer, Regel, Soort};
 use gedeeld::{Herkomst, Opdracht, Stand, Weigering};
 
-const H: Herkomst = Herkomst { door: "Proef", volgnummer: 1, tijd_ms: 0 };
+const H: Herkomst = Herkomst {
+    door: "Proef",
+    volgnummer: 1,
+    tijd_ms: 0,
+};
 
 /// Een Stand na het inlezen van dit invoerbestand.
 fn stand_uit(json: &str) -> Stand {
@@ -15,11 +19,14 @@ fn stand_uit(json: &str) -> Stand {
 
 fn lees(stand: &mut Stand, json: &str) {
     stand
-        .voer_uit(&Opdracht::LeesInvoer {
-            bestand: "cijfers.json".into(),
-            ontvangen: "21.00".into(),
-            invoer: Invoer::uit_json(json),
-        }, &H)
+        .voer_uit(
+            &Opdracht::LeesInvoer {
+                bestand: "cijfers.json".into(),
+                ontvangen: "21.00".into(),
+                invoer: Invoer::uit_json(json),
+            },
+            &H,
+        )
         .expect("invoer gelezen");
 }
 
@@ -73,10 +80,13 @@ fn winst_en_verlies_telt_voorgangers_op_toont_nieuw_en_min_n_voor_wie_weg_is() {
 fn een_tweede_koppeling_van_dezelfde_voorganger_weigert_met_de_partij_waar_hij_al_bij_hoort() {
     let mut stand = stand_uit(VOORBEELD);
     let fout = stand
-        .voer_uit(&Opdracht::KoppelVoorganger {
-            partij: "delta".into(),
-            voorganger: "rood".into(),
-        }, &H)
+        .voer_uit(
+            &Opdracht::KoppelVoorganger {
+                partij: "delta".into(),
+                voorganger: "rood".into(),
+            },
+            &H,
+        )
         .unwrap_err();
     assert!(matches!(fout, Weigering::Cijfers(_)));
     assert_eq!(
@@ -316,21 +326,36 @@ fn voer_uit(stand: &mut Stand, o: Opdracht) -> Result<(), Weigering> {
 }
 
 #[test]
-fn een_live_toegevoegde_partij_zonder_kleur_krijgt_een_tijdelijke_kleur_en_kan_meteen_zetels_krijgen() {
+fn een_live_toegevoegde_partij_zonder_kleur_krijgt_een_tijdelijke_kleur_en_kan_meteen_zetels_krijgen()
+ {
     let mut stand = stand_uit(VOORBEELD);
-    voer_uit(&mut stand, Opdracht::VoegPartijToe {
-        naam: "Epsilon Beweging".into(),
-        kort: "EPS".into(),
-        kleur: None,
-        logo: None,
-        fractie_zonder_lijst: false,
-    })
+    voer_uit(
+        &mut stand,
+        Opdracht::VoegPartijToe {
+            naam: "Epsilon Beweging".into(),
+            kort: "EPS".into(),
+            kleur: None,
+            logo: None,
+            fractie_zonder_lijst: false,
+        },
+    )
     .unwrap();
     let p = stand.cijfers.partijen.last().unwrap();
-    assert_eq!((p.sleutel.as_str(), p.naam.as_str(), p.kort.as_str()), ("eps", "Epsilon Beweging", "EPS"));
+    assert_eq!(
+        (p.sleutel.as_str(), p.naam.as_str(), p.kort.as_str()),
+        ("eps", "Epsilon Beweging", "EPS")
+    );
     assert!(p.kleur_tijdelijk, "zonder kleur een tijdelijke kleur");
     assert!(p.logo.is_none());
-    voer_uit(&mut stand, Opdracht::ZetZetels { set: "exit".into(), partij: "eps".into(), zetels: 3 }).unwrap();
+    voer_uit(
+        &mut stand,
+        Opdracht::ZetZetels {
+            set: "exit".into(),
+            partij: "eps".into(),
+            zetels: 3,
+        },
+    )
+    .unwrap();
     assert_eq!(stand.cijfers.set("exit").unwrap().zetels_van("eps"), 3);
     assert!(regels(&stand, "exit").contains(&("eps".into(), "+3 nieuw".into())));
 }
@@ -338,13 +363,16 @@ fn een_live_toegevoegde_partij_zonder_kleur_krijgt_een_tijdelijke_kleur_en_kan_m
 #[test]
 fn een_partij_die_er_al_is_kan_niet_nog_een_keer_erbij() {
     let mut stand = stand_uit(VOORBEELD);
-    let fout = voer_uit(&mut stand, Opdracht::VoegPartijToe {
-        naam: "Nog een Alfa".into(),
-        kort: "Alfa".into(),
-        kleur: None,
-        logo: None,
-        fractie_zonder_lijst: false,
-    })
+    let fout = voer_uit(
+        &mut stand,
+        Opdracht::VoegPartijToe {
+            naam: "Nog een Alfa".into(),
+            kort: "Alfa".into(),
+            kleur: None,
+            logo: None,
+            fractie_zonder_lijst: false,
+        },
+    )
     .unwrap_err();
     assert_eq!(fout.to_string(), "ALFA staat al in de partijlijst");
     assert_eq!(stand.cijfers.partijen.len(), 7);
@@ -353,17 +381,41 @@ fn een_partij_die_er_al_is_kan_niet_nog_een_keer_erbij() {
 #[test]
 fn aanvullen_verandert_alleen_de_velden_die_meegaan_en_een_eigen_kleur_vervangt_de_tijdelijke() {
     let mut stand = stand_uit(VOORBEELD);
-    let vul_aan = |aanvulling| Opdracht::VulPartijAan { partij: "delta".into(), aanvulling };
+    let vul_aan = |aanvulling| Opdracht::VulPartijAan {
+        partij: "delta".into(),
+        aanvulling,
+    };
     assert!(stand.cijfers.partij("delta").unwrap().kleur_tijdelijk);
     // Twee Werkplekken vullen elk een ander veld aan: allebei blijven staan.
-    voer_uit(&mut stand, vul_aan(Aanvulling { kleur: Some("#7b2d8e".into()), ..Default::default() })).unwrap();
-    voer_uit(&mut stand, vul_aan(Aanvulling { logo: Some("logos/delta.png".into()), ..Default::default() })).unwrap();
+    voer_uit(
+        &mut stand,
+        vul_aan(Aanvulling {
+            kleur: Some("#7b2d8e".into()),
+            ..Default::default()
+        }),
+    )
+    .unwrap();
+    voer_uit(
+        &mut stand,
+        vul_aan(Aanvulling {
+            logo: Some("logos/delta.png".into()),
+            ..Default::default()
+        }),
+    )
+    .unwrap();
     let p = stand.cijfers.partij("delta").unwrap();
     assert_eq!((p.kleur.as_str(), p.kleur_tijdelijk), ("#7B2D8E", false));
     assert_eq!(p.logo.as_deref(), Some("logos/delta.png"));
     assert_eq!((p.naam.as_str(), p.kort.as_str()), ("Delta Nieuw", "DEL"));
 
-    let fout = voer_uit(&mut stand, vul_aan(Aanvulling { kleur: Some("paars".into()), ..Default::default() })).unwrap_err();
+    let fout = voer_uit(
+        &mut stand,
+        vul_aan(Aanvulling {
+            kleur: Some("paars".into()),
+            ..Default::default()
+        }),
+    )
+    .unwrap_err();
     assert_eq!(fout.to_string(), "kleur \"paars\" is geen #RRGGBB");
     assert_eq!(stand.cijfers.partij("delta").unwrap().kleur, "#7B2D8E");
 }
@@ -371,20 +423,63 @@ fn aanvullen_verandert_alleen_de_velden_die_meegaan_en_een_eigen_kleur_vervangt_
 #[test]
 fn een_nieuwe_set_begint_leeg_en_de_vergelijkingsset_bepaalt_winst_en_verlies() {
     let mut stand = stand_uit(VOORBEELD);
-    voer_uit(&mut stand, Opdracht::MaakSet { setsoort: Soort::Prognose, label: "Prognose 22:00".into() }).unwrap();
-    voer_uit(&mut stand, Opdracht::MaakSet { setsoort: Soort::Prognose, label: "Prognose 22.00".into() }).unwrap();
+    voer_uit(
+        &mut stand,
+        Opdracht::MaakSet {
+            setsoort: Soort::Prognose,
+            label: "Prognose 22:00".into(),
+        },
+    )
+    .unwrap();
+    voer_uit(
+        &mut stand,
+        Opdracht::MaakSet {
+            setsoort: Soort::Prognose,
+            label: "Prognose 22.00".into(),
+        },
+    )
+    .unwrap();
     let ids: Vec<&str> = stand.cijfers.sets.iter().map(|s| s.id.as_str()).collect();
     assert_eq!(ids, ["vorige", "exit", "prognose2200", "prognose2200-2"]);
     let nieuw = stand.cijfers.set("prognose2200").unwrap();
-    assert_eq!((nieuw.totaal(), nieuw.vergrendeld, nieuw.soort), (0, false, Soort::Prognose));
+    assert_eq!(
+        (nieuw.totaal(), nieuw.vergrendeld, nieuw.soort),
+        (0, false, Soort::Prognose)
+    );
 
-    voer_uit(&mut stand, Opdracht::ZetZetels { set: "prognose2200".into(), partij: "alfa".into(), zetels: 64 }).unwrap();
-    voer_uit(&mut stand, Opdracht::KiesVergelijkingsset { set: Some("exit".into()) }).unwrap();
-    assert_eq!(regels(&stand, "prognose2200")[0], ("alfa".into(), "+2".into()));
+    voer_uit(
+        &mut stand,
+        Opdracht::ZetZetels {
+            set: "prognose2200".into(),
+            partij: "alfa".into(),
+            zetels: 64,
+        },
+    )
+    .unwrap();
+    voer_uit(
+        &mut stand,
+        Opdracht::KiesVergelijkingsset {
+            set: Some("exit".into()),
+        },
+    )
+    .unwrap();
+    assert_eq!(
+        regels(&stand, "prognose2200")[0],
+        ("alfa".into(), "+2".into())
+    );
 
-    let fout = voer_uit(&mut stand, Opdracht::KiesVergelijkingsset { set: Some("weg".into()) }).unwrap_err();
+    let fout = voer_uit(
+        &mut stand,
+        Opdracht::KiesVergelijkingsset {
+            set: Some("weg".into()),
+        },
+    )
+    .unwrap_err();
     assert_eq!(fout.to_string(), "er is geen set \"weg\"");
     assert_eq!(stand.cijfers.vergelijk_met.as_deref(), Some("exit"));
     voer_uit(&mut stand, Opdracht::KiesVergelijkingsset { set: None }).unwrap();
-    assert!(stand.cijfers.winst_en_verlies("exit").is_none(), "zonder vergelijkingsset geen winst en verlies");
+    assert!(
+        stand.cijfers.winst_en_verlies("exit").is_none(),
+        "zonder vergelijkingsset geen winst en verlies"
+    );
 }

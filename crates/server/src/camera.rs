@@ -15,8 +15,8 @@ use std::sync::{Arc, LazyLock};
 use gedeeld::Stand;
 use gedeeld::camera::{
     CameraOvergang, Camerabeeld, Camerakeuze, Camerapunt, Camerastand, NaAankomst, OvergangSoort,
-    SCHUIVEN_S, Standpunt, TIKKEN_PER_SECONDE, aanschuif_overgang, aanschuif_stand, aanschuif_uit_sleutel,
-    shot_op_stoel, stoel_uit_sleutel,
+    SCHUIVEN_S, Standpunt, TIKKEN_PER_SECONDE, aanschuif_overgang, aanschuif_stand,
+    aanschuif_uit_sleutel, shot_op_stoel, stoel_uit_sleutel,
 };
 use gedeeld::camerarit::{Camerarit, OPNAME_MAX_S, RitBegin, Ritbaan, als_opnamepunt};
 use serde::Deserialize;
@@ -57,6 +57,22 @@ static ZAAL: LazyLock<Ruimte> = LazyLock::new(|| {
 /// Over zoveel meter rond z = 0 gaan de vloer achter en voor in elkaar over.
 const VLOER_OVERGANG: f32 = 1.0;
 
+/// De studio boven en achter de Voorzitter: daar staat Totaal vanaf voorzitter (Standpunt A),
+/// hoog boven het plafond en achter de voorwand. De Renderer laat het plafond en wat erboven
+/// hangt weg zolang de camera daar is (`crates/renderer/src/schil.rs`), zoals in een virtuele
+/// studio.
+///
+/// - Voor de Voorzitter (vanaf [`STUDIO_HELLING_VAN`]) loopt het plafond van de ruimte zacht op
+///   tot [`STUDIO_HOOGTE`] bij de voorwand van de ruimte. Zo glijdt de camera van de studio de
+///   Zaal in zonder sprong. Boven de halve cirkel, waar de hanglampen hangen, blijft het plafond
+///   zoals het was.
+/// - Achter de voorwand van de ruimte (tot [`STUDIO_DIEPTE`]) mag de camera alleen boven
+///   [`STUDIO_VLOER`]: lager staat de echte voorwand in de weg.
+const STUDIO_HELLING_VAN: f32 = 0.0;
+const STUDIO_HOOGTE: f32 = 11.0;
+const STUDIO_DIEPTE: f32 = 10.0;
+const STUDIO_VLOER: f32 = 5.0;
+
 impl Ruimte {
     /// De ruimte in de Zaal, zoals getekend in Blender.
     pub fn zaal() -> Ruimte {
@@ -94,6 +110,25 @@ impl Ruimte {
         }
     }
 
+    /// Hoe hoog de camera op deze z mag: het plafond van de ruimte, voor de Voorzitter schuin
+    /// oplopend naar de studio.
+    pub fn plafond_op(&self, z: f32) -> f32 {
+        let t =
+            ((z - STUDIO_HELLING_VAN) / (self.voor_diepte - STUDIO_HELLING_VAN)).clamp(0.0, 1.0);
+        // zacht begin en eind: wie langs het plafond glijdt, voelt geen knik
+        self.plafond + (STUDIO_HOOGTE - self.plafond) * t * t * (3.0 - 2.0 * t)
+    }
+
+    /// Of een punt in de studio achter de voorwand van de ruimte ligt.
+    fn in_studio_achter(&self, p: [f32; 3], marge: f32) -> bool {
+        let [x, y, z] = p;
+        z > self.voor_diepte - marge
+            && z <= STUDIO_DIEPTE - marge
+            && x.abs() <= self.voor_halve_breedte - marge
+            && y >= STUDIO_VLOER + marge
+            && y <= STUDIO_HOOGTE - marge
+    }
+
     fn binnen_wanden(&self, x: f32, z: f32, marge: f32) -> bool {
         let in_cirkel = z <= 0.0 && x * x + z * z <= (self.straal - marge).powi(2);
         let voor = z >= -marge
@@ -105,13 +140,17 @@ impl Ruimte {
     /// Of een punt in de ruimte ligt, met `marge` meter afstand tot elke rand.
     pub fn bevat(&self, p: [f32; 3], marge: f32) -> bool {
         let [x, y, z] = p;
-        self.binnen_wanden(x, z, marge)
+        let binnen = self.binnen_wanden(x, z, marge)
             && y >= self.vloer_op(x, z) + marge
-            && y <= self.plafond - marge
+            && y <= self.plafond_op(z) - marge;
+        binnen || self.in_studio_achter(p, marge)
     }
 
     /// Het dichtstbijzijnde punt in de ruimte, met `marge` meter afstand tot elke rand.
     fn klem_binnen(&self, p: [f32; 3], marge: f32) -> [f32; 3] {
+        if self.in_studio_achter(p, marge) {
+            return p;
+        }
         let [mut x, y, mut z] = p;
         if !self.binnen_wanden(x, z, marge) {
             // naar de rechthoek voor de Voorzitter, of naar de halve cirkel; de dichtstbijzijnde
@@ -137,7 +176,7 @@ impl Ruimte {
             };
         }
         let vloer = self.vloer_op(x, z) + marge;
-        let y = y.clamp(vloer, (self.plafond - marge).max(vloer));
+        let y = y.clamp(vloer, (self.plafond_op(z) - marge).max(vloer));
         [x, y, z]
     }
 
@@ -337,6 +376,10 @@ impl Route {
         // en in de hoogte naar het midden: hoog onder de lampen door duikt hij omlaag
         let hoogte = (MIDDEN[1] - midden[1]).clamp(-0.5 * BOOG * lengte, 0.5 * BOOG * lengte);
         let bocht = add(scale(opzij, BOOG * lengte), [0.0, hoogte, 0.0]);
+        // De grootste boog die in de ruimte blijft. Blijft geen enkele erin (van of naar de
+        // studio boven het plafond), dan de boog die er het minst buiten komt: de camera glijdt
+        // daar langs de rand (zie [`Ruimte::klem`]).
+        let mut beste: Option<(f32, Route)> = None;
         for factor in [1.0, 0.5, 0.25, 0.0] {
             let b = scale(bocht, factor);
             let route = Route {
@@ -347,20 +390,20 @@ impl Route {
                     naar,
                 ],
             };
-            let binnen = (0..=CONTROLEPUNTEN)
-                .all(|i| ruimte.bevat(route.punt(i as f32 / CONTROLEPUNTEN as f32), 0.0));
-            if binnen {
+            let buiten: f32 = (0..=CONTROLEPUNTEN)
+                .map(|i| {
+                    let p = route.punt(i as f32 / CONTROLEPUNTEN as f32);
+                    len(sub(ruimte.klem(p), p))
+                })
+                .sum();
+            if buiten <= 0.0 {
                 return route;
             }
+            if beste.as_ref().is_none_or(|(b, _)| buiten < *b - 1e-3) {
+                beste = Some((buiten, route));
+            }
         }
-        Route {
-            punten: [
-                van,
-                lerp3(van, naar, 1.0 / 3.0),
-                lerp3(van, naar, 2.0 / 3.0),
-                naar,
-            ],
-        }
+        beste.expect("vier bogen geprobeerd").1
     }
 
     /// Het punt bij `s` van 0 (begin) tot 1 (eind).
@@ -405,7 +448,13 @@ impl Beweging {
     }
 
     /// Van `van` in een boog naar `naar`, volgens de overgang.
-    fn overgang(tik: u64, van: Camerastand, naar: Camerastand, overgang: CameraOvergang, ruimte: &Ruimte) -> Self {
+    fn overgang(
+        tik: u64,
+        van: Camerastand,
+        naar: Camerastand,
+        overgang: CameraOvergang,
+        ruimte: &Ruimte,
+    ) -> Self {
         Beweging {
             begin: tik,
             van,
@@ -534,7 +583,13 @@ impl Doel {
     }
 
     /// De beweging erheen vanaf `van`, en of dat een knip is.
-    fn beweging(&self, tik: u64, van: Camerastand, knip: bool, ruimte: &Ruimte) -> (Beweging, bool) {
+    fn beweging(
+        &self,
+        tik: u64,
+        van: Camerastand,
+        knip: bool,
+        ruimte: &Ruimte,
+    ) -> (Beweging, bool) {
         match self {
             Doel::Standpunt(s) => {
                 if knip || s.overgang.soort == OvergangSoort::Knippen {
@@ -672,7 +727,8 @@ impl Cameraregie {
         self.keuze = nieuw.clone();
         if ander_standpunt && let Some(doel) = Doel::van(stand, &stand.camera.standpunt) {
             let van = self.ether.stand(tik, &self.ruimte);
-            self.ether.ga_naar(tik, van, &doel, stand.camera.knip, &self.ruimte);
+            self.ether
+                .ga_naar(tik, van, &doel, stand.camera.knip, &self.ruimte);
         }
         if vrij_anders || ander_standpunt {
             if stand.camera.vrij {
@@ -711,7 +767,11 @@ impl Cameraregie {
             self.voorbeeld.beweging = self.ether.beweging.clone();
             self.voorbeeld.vrij = self.ether.vrij.clone();
         }
-        if let Some(p) = c.proef.as_ref().filter(|p| self.laatste_proef != Some(p.sinds)) {
+        if let Some(p) = c
+            .proef
+            .as_ref()
+            .filter(|p| self.laatste_proef != Some(p.sinds))
+        {
             self.laatste_proef = Some(p.sinds);
             if let Some(doel) = Doel::van(stand, &p.letter) {
                 let van = self.ether.stand(tik, &self.ruimte);
@@ -735,7 +795,9 @@ impl Cameraregie {
         let letter = stand
             .klaar
             .as_ref()
-            .map_or(std::borrow::Cow::Borrowed(c.standpunt.as_str()), |k| k.standpunt());
+            .map_or(std::borrow::Cow::Borrowed(c.standpunt.as_str()), |k| {
+                k.standpunt()
+            });
         let doel = Doel::of_a(stand, &letter);
         if self.bron != Voorbeeldbron::Doel(doel.clone()) {
             let van = self.voorbeeld.stand(tik, &self.ruimte);
@@ -781,7 +843,11 @@ impl Cameraregie {
             ),
             _ => (
                 self.voorbeeld.punt(tik, &self.ruimte),
-                self.voorbeeld.vrij.is_none().then(|| self.voorbeeld.beweging.opname_s(tik)).flatten(),
+                self.voorbeeld
+                    .vrij
+                    .is_none()
+                    .then(|| self.voorbeeld.beweging.opname_s(tik))
+                    .flatten(),
             ),
         };
         Camerabeeld {
@@ -972,11 +1038,23 @@ mod tests {
         let a = Standpunt::vaste()[0].stand.positie;
         for (i, stoel) in Stoel::alle().enumerate() {
             let s = shot_op_stoel(stoel).expect("elke Stoel heeft een shot");
-            assert!(ruimte().bevat(s.positie, 0.05), "Stoel {stoel:?}: {:?}", s.positie);
+            assert!(
+                ruimte().bevat(s.positie, 0.05),
+                "Stoel {stoel:?}: {:?}",
+                s.positie
+            );
             assert!(onder_de_lampen(s.positie), "Stoel {stoel:?} tegen een lamp");
-            let [x, y] = s.in_beeld(STOELPLEKKEN[i]).expect("de Stoel ligt voor de camera");
-            assert!((-0.85..kaart - 0.15).contains(&x), "Stoel {stoel:?} niet links in beeld: x {x}");
-            assert!((-0.6..0.6).contains(&y), "Stoel {stoel:?} te hoog of te laag in beeld: y {y}");
+            let [x, y] = s
+                .in_beeld(STOELPLEKKEN[i])
+                .expect("de Stoel ligt voor de camera");
+            assert!(
+                (-0.85..kaart - 0.15).contains(&x),
+                "Stoel {stoel:?} niet links in beeld: x {x}"
+            );
+            assert!(
+                (-0.6..0.6).contains(&y),
+                "Stoel {stoel:?} te hoog of te laag in beeld: y {y}"
+            );
             // schuin van voren: de camera staat aan de kant van het midden van de Zaal, waar het
             // Kamerlid naartoe kijkt
             let p = STOELPLEKKEN[i];
@@ -986,10 +1064,20 @@ mod tests {
             let route = Route::boog(a, s.positie, &ruimte());
             for t in 0..=50 {
                 let p = ruimte().klem(route.punt(t as f32 / 50.0));
-                assert!(onder_de_lampen(p), "Stoel {stoel:?}: route tegen een lamp bij {p:?}");
+                assert!(
+                    onder_de_lampen(p),
+                    "Stoel {stoel:?}: route tegen een lamp bij {p:?}"
+                );
             }
         }
-        assert!(shot_op_stoel(Stoel { vak: 7, rij: 1, nummer: 1 }).is_none());
+        assert!(
+            shot_op_stoel(Stoel {
+                vak: 7,
+                rij: 1,
+                nummer: 1
+            })
+            .is_none()
+        );
     }
 
     #[test]
@@ -1019,20 +1107,46 @@ mod tests {
             in_de_kamer_sinds: None,
             kieslijst: None,
         };
-        let fractie = Fractie { id: "f".into(), afkorting: "F".into(), naam: "F".into(), zetels: 1 };
-        doe(&mut stand, &mut v, Opdracht::LeesKamer {
-            opgehaald: "nu".into(),
-            peildatum: "2026-11-22".into(),
-            kamerleden: vec![lid],
-            fracties: vec![fractie],
-        });
-        let stoel = Stoel { vak: 4, rij: 5, nummer: 2 };
+        let fractie = Fractie {
+            id: "f".into(),
+            afkorting: "F".into(),
+            naam: "F".into(),
+            zetels: 1,
+        };
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::LeesKamer {
+                opgehaald: "nu".into(),
+                peildatum: "2026-11-22".into(),
+                kamerleden: vec![lid],
+                fracties: vec![fractie],
+            },
+        );
+        let stoel = Stoel {
+            vak: 4,
+            rij: 5,
+            nummer: 2,
+        };
         let zaalindeling = Zaalindeling {
             kamerperiode: "2025".into(),
             bron: String::new(),
-            stoelen: vec![Bezetting { vak: 4, rij: 5, nummer: 2, kamerlid: Some("proef".into()), naam: String::new() }],
+            stoelen: vec![Bezetting {
+                vak: 4,
+                rij: 5,
+                nummer: 2,
+                kamerlid: Some("proef".into()),
+                naam: String::new(),
+            }],
         };
-        doe(&mut stand, &mut v, Opdracht::LeesZaalindeling { bestand: "proef".into(), zaalindeling });
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::LeesZaalindeling {
+                bestand: "proef".into(),
+                zaalindeling,
+            },
+        );
         let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
         let graphic = Graphic::Persoonskaart {
             wie: Wie::Kamerlid { id: "proef".into() },
@@ -1040,7 +1154,14 @@ mod tests {
             extra: Extra::default(),
             gegevens: None,
         };
-        doe(&mut stand, &mut v, Opdracht::ZetKlaar { graphic, standpunt: None });
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::ZetKlaar {
+                graphic,
+                standpunt: None,
+            },
+        );
         regie.volg(&stand, 10);
         let shot = shot_op_stoel(stoel).unwrap();
         // het Voorbeeld knipt naar het shot, de Ether blijft tot Toon
@@ -1050,7 +1171,46 @@ mod tests {
         let halverwege = regie.beeld(20 + T).ether.stand;
         assert!(!ongeveer(halverwege, shot) && !ongeveer(halverwege, standpunt(&stand, "A")));
         assert!(ongeveer(regie.beeld(20 + 2 * T).ether.stand, shot));
-        assert!(ongeveer(regie.beeld(20 + 30 * T).ether.stand, shot), "daarna staat hij stil");
+        assert!(
+            ongeveer(regie.beeld(20 + 30 * T).ether.stand, shot),
+            "daarna staat hij stil"
+        );
+    }
+
+    #[test]
+    fn van_de_studio_glijdt_de_camera_zonder_sprong_de_zaal_in() {
+        use gedeeld::Stoel;
+        let a = Standpunt::vaste()[0].stand.positie;
+        assert!(
+            a[1] > 5.2 && a[2] > ruimte().voor_diepte,
+            "A staat in de studio: {a:?}"
+        );
+        let mut doelen: Vec<[f32; 3]> =
+            Standpunt::vaste().iter().map(|s| s.stand.positie).collect();
+        doelen.extend(Stoel::alle().filter_map(|s| shot_op_stoel(s).map(|s| s.positie)));
+        for doel in doelen {
+            for (van, naar) in [(a, doel), (doel, a)] {
+                let route = Route::boog(van, naar, &ruimte());
+                let n = 400;
+                let punten: Vec<[f32; 3]> = (0..=n)
+                    .map(|i| ruimte().klem(route.punt(i as f32 / n as f32)))
+                    .collect();
+                // een stap van een vierhonderdste van de route, nooit een sprong
+                let stap = len(sub(naar, van)) / n as f32;
+                for w in punten.windows(2) {
+                    let d = len(sub(w[1], w[0]));
+                    assert!(
+                        d < 4.0 * stap + 0.01,
+                        "{van:?} naar {naar:?}: sprong van {d} m bij {:?}",
+                        w[0]
+                    );
+                }
+                assert!(
+                    punten.iter().all(|p| onder_de_lampen(*p)),
+                    "{van:?} naar {naar:?} tegen een lamp"
+                );
+            }
+        }
     }
 
     #[test]
@@ -1595,10 +1755,21 @@ mod tests {
         let a = standpunt(&stand, "A");
         oefen(&mut stand, &mut v, &mut regie, 0, true);
         let mut tik = 0;
-        let standen = stuur_beide(&mut regie, &mut tik, 3 * T, Stuur { snel: true, ..VOORUIT });
+        let standen = stuur_beide(
+            &mut regie,
+            &mut tik,
+            3 * T,
+            Stuur {
+                snel: true,
+                ..VOORUIT
+            },
+        );
         assert!(standen.iter().all(|(e, _)| *e == a), "de Ether blijft op A");
         let (_, voorbeeld) = standen.last().unwrap();
-        assert!(len(sub(voorbeeld.positie, a.positie)) > 1.0, "de gamepad stuurt het Voorbeeld");
+        assert!(
+            len(sub(voorbeeld.positie, a.positie)) > 1.0,
+            "de gamepad stuurt het Voorbeeld"
+        );
 
         // een Standpunt kiezen voor de Ether werkt nog, en de Ether beweegt precies zoals zonder
         // gamepad
@@ -1608,7 +1779,10 @@ mod tests {
         let mut tik2 = tik;
         let met = stuur_beide(&mut regie, &mut tik, 3 * T, wild(7));
         let los = stuur_beide(&mut zonder, &mut tik2, 3 * T, Stuur::LOS);
-        assert!(met.iter().zip(&los).all(|(a, b)| a.0 == b.0), "de stick raakt de Ether niet");
+        assert!(
+            met.iter().zip(&los).all(|(a, b)| a.0 == b.0),
+            "de stick raakt de Ether niet"
+        );
         assert!(ongeveer(met.last().unwrap().0, standpunt(&stand, "G")));
         assert!(stand.camera.oefenen);
     }
@@ -1622,9 +1796,16 @@ mod tests {
         let mut tik = 0;
         stuur_beide(&mut regie, &mut tik, T, VOORUIT);
         oefen(&mut stand, &mut v, &mut regie, tik, false);
-        assert!(ongeveer(regie.beeld(tik).voorbeeld.stand, standpunt(&stand, "A")));
+        assert!(ongeveer(
+            regie.beeld(tik).voorbeeld.stand,
+            standpunt(&stand, "A")
+        ));
         let na = stuur_beide(&mut regie, &mut tik, T, VOORUIT);
-        assert!(na.iter().all(|(_, vb)| ongeveer(*vb, standpunt(&stand, "A"))), "de stick doet niets meer");
+        assert!(
+            na.iter()
+                .all(|(_, vb)| ongeveer(*vb, standpunt(&stand, "A"))),
+            "de stick doet niets meer"
+        );
     }
 
     /// Een rit van vier seconden langs x, vanaf (-2, 3, -4), en zijn sleutel.
@@ -1633,13 +1814,36 @@ mod tests {
             .map(|i| [-2.0 + i as f32 / 100.0, 3.0, -4.0, 0.0, -0.3, 0.9])
             .collect();
         doe(stand, v, Opdracht::ZetOefenen { aan: true });
-        doe(stand, v, Opdracht::ZetOpnemen { aan: true, voor: None, opname: None });
-        doe(stand, v, Opdracht::ZetOpnemen { aan: false, voor: None, opname: Some(opname) });
+        doe(
+            stand,
+            v,
+            Opdracht::ZetOpnemen {
+                aan: true,
+                voor: None,
+                opname: None,
+            },
+        );
+        doe(
+            stand,
+            v,
+            Opdracht::ZetOpnemen {
+                aan: false,
+                voor: None,
+                opname: Some(opname),
+            },
+        );
         doe(stand, v, Opdracht::ZetOefenen { aan: false });
         let r = stand.cameraritten.last().unwrap().letter.clone();
         let mut b = stand.camerarit(&r).unwrap().bijschaving;
         b.gladheid = 0.0;
-        doe(stand, v, Opdracht::BijschaafCamerarit { letter: r.clone(), bijschaving: b });
+        doe(
+            stand,
+            v,
+            Opdracht::BijschaafCamerarit {
+                letter: r.clone(),
+                bijschaving: b,
+            },
+        );
         r
     }
 
@@ -1660,7 +1864,11 @@ mod tests {
         assert!((x(6 * T)[0] - 2.0).abs() < 1e-3);
         // en hij stopt aan het eind
         assert_eq!(x(6 * T), x(20 * T));
-        assert_eq!(regie.beeld(20 * T).ether.snede, regie.beeld(0).ether.snede, "geen knip");
+        assert_eq!(
+            regie.beeld(20 * T).ether.snede,
+            regie.beeld(0).ether.snede,
+            "geen knip"
+        );
     }
 
     #[test]
@@ -1678,7 +1886,14 @@ mod tests {
 
         let mut b = stand.camerarit(&r).unwrap().bijschaving;
         b.begin = gedeeld::camerarit::RitBegin::Knippen;
-        doe(&mut stand, &mut v, Opdracht::BijschaafCamerarit { letter: r.clone(), bijschaving: b });
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::BijschaafCamerarit {
+                letter: r.clone(),
+                bijschaving: b,
+            },
+        );
         doe(&mut stand, &mut v, kies("A", true));
         regie.volg(&stand, 20 * T);
         doe(&mut stand, &mut v, kies(&r, false));
@@ -1693,14 +1908,29 @@ mod tests {
         for van in 0..150 {
             for tot in van..150 {
                 let s = aanschuif_stand(van, tot).unwrap();
-                assert!(r.bevat(s.positie, 0.1), "{van}-{tot}: {:?} buiten de ruimte", s.positie);
+                assert!(
+                    r.bevat(s.positie, 0.1),
+                    "{van}-{tot}: {:?} buiten de ruimte",
+                    s.positie
+                );
                 // het midden van het blok staat in beeld
                 let n = (tot - van + 1) as f32;
-                let m: [f32; 3] = std::array::from_fn(|k| volgorde[van..=tot].iter().map(|&i| STOELPLEKKEN[i][k]).sum::<f32>() / n);
+                let m: [f32; 3] = std::array::from_fn(|k| {
+                    volgorde[van..=tot]
+                        .iter()
+                        .map(|&i| STOELPLEKKEN[i][k])
+                        .sum::<f32>()
+                        / n
+                });
                 let d = sub(m, s.positie);
                 let draai = (-d[0]).atan2(-d[2]);
-                let verschil = (draai - s.draai + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
-                assert!(verschil.abs() < 0.05, "{van}-{tot}: kijkt {verschil} rad naast het blok");
+                let verschil = (draai - s.draai + std::f32::consts::PI)
+                    .rem_euclid(std::f32::consts::TAU)
+                    - std::f32::consts::PI;
+                assert!(
+                    verschil.abs() < 0.05,
+                    "{van}-{tot}: kijkt {verschil} rad naast het blok"
+                );
             }
         }
     }
@@ -1714,16 +1944,37 @@ mod tests {
         doe(&mut stand, &mut v, kies(&sleutel, false));
         regie.volg(&stand, 0);
         let doel = aanschuif_stand(40, 65).unwrap();
-        assert!(len(sub(regie.beeld(4 * T).ether.stand.positie, doel.positie)) > 0.1, "na 4 s nog onderweg");
-        assert!(len(sub(regie.beeld(8 * T + 2).ether.stand.positie, doel.positie)) < 1e-3, "na 8 s aangekomen");
+        assert!(
+            len(sub(regie.beeld(4 * T).ether.stand.positie, doel.positie)) > 0.1,
+            "na 4 s nog onderweg"
+        );
+        assert!(
+            len(sub(
+                regie.beeld(8 * T + 2).ether.stand.positie,
+                doel.positie
+            )) < 1e-3,
+            "na 8 s aangekomen"
+        );
     }
 
     #[test]
     fn elke_vaste_camerarit_blijft_in_de_ruimte() {
         let r = ruimte();
         for rit in gedeeld::vaste_ritten::vaste() {
-            let buiten: Vec<usize> = rit.punten().iter().enumerate().filter(|(_, p)| !r.bevat([p[0], p[1], p[2]], 0.1)).map(|(i, _)| i).collect();
-            assert!(buiten.is_empty(), "{}: {} standen buiten de ruimte, de eerste op tik {:?}", rit.naam, buiten.len(), buiten.first());
+            let buiten: Vec<usize> = rit
+                .punten()
+                .iter()
+                .enumerate()
+                .filter(|(_, p)| !r.bevat([p[0], p[1], p[2]], 0.1))
+                .map(|(i, _)| i)
+                .collect();
+            assert!(
+                buiten.is_empty(),
+                "{}: {} standen buiten de ruimte, de eerste op tik {:?}",
+                rit.naam,
+                buiten.len(),
+                buiten.first()
+            );
         }
     }
 
@@ -1735,18 +1986,48 @@ mod tests {
         let rond: Vec<[f32; 6]> = (0..=400)
             .map(|i| {
                 let a = i as f32 / 400.0 * std::f32::consts::TAU;
-                [1.5 * a.sin(), 3.0, -4.0 + 1.5 * (1.0 - a.cos()), 0.0, -0.3, 0.9]
+                [
+                    1.5 * a.sin(),
+                    3.0,
+                    -4.0 + 1.5 * (1.0 - a.cos()),
+                    0.0,
+                    -0.3,
+                    0.9,
+                ]
             })
             .collect();
         doe(&mut stand, &mut v, Opdracht::ZetOefenen { aan: true });
-        doe(&mut stand, &mut v, Opdracht::ZetOpnemen { aan: true, voor: None, opname: None });
-        doe(&mut stand, &mut v, Opdracht::ZetOpnemen { aan: false, voor: None, opname: Some(rond) });
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::ZetOpnemen {
+                aan: true,
+                voor: None,
+                opname: None,
+            },
+        );
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::ZetOpnemen {
+                aan: false,
+                voor: None,
+                opname: Some(rond),
+            },
+        );
         let eigen = stand.cameraritten.iter().find(|r| !r.vast).unwrap();
         let r = eigen.letter.clone();
         let mut b = eigen.bijschaving;
         b.eind = gedeeld::camerarit::RitEind::Herhalen;
         b.begin = gedeeld::camerarit::RitBegin::Knippen;
-        doe(&mut stand, &mut v, Opdracht::BijschaafCamerarit { letter: r.clone(), bijschaving: b });
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::BijschaafCamerarit {
+                letter: r.clone(),
+                bijschaving: b,
+            },
+        );
         let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
         doe(&mut stand, &mut v, kies(&r, false));
         regie.volg(&stand, 0);
@@ -1756,7 +2037,11 @@ mod tests {
             assert!(len(sub(p(ronde * 4 * T), p(0))) < 1e-3, "ronde {ronde}");
             assert!(len(sub(p(ronde * 4 * T + T), p(T))) < 1e-3, "ronde {ronde}");
         }
-        assert_eq!(regie.beeld(13 * T).ether.snede, snede, "herhalen is geen knip");
+        assert_eq!(
+            regie.beeld(13 * T).ether.snede,
+            snede,
+            "herhalen is geen knip"
+        );
     }
 
     #[test]
@@ -1766,17 +2051,43 @@ mod tests {
         let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
         oefen(&mut stand, &mut v, &mut regie, 0, true);
         let mut tik = 0;
-        doe(&mut stand, &mut v, Opdracht::ZetOpnemen { aan: true, voor: None, opname: None });
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::ZetOpnemen {
+                aan: true,
+                voor: None,
+                opname: None,
+            },
+        );
         regie.volg(&stand, tik);
         let rijden = stuur_beide(&mut regie, &mut tik, 2 * T, VOORUIT);
-        assert_eq!(regie.beeld(tik).opname, Some(2 * T as u32), "100 standen per seconde");
+        assert_eq!(
+            regie.beeld(tik).opname,
+            Some(2 * T as u32),
+            "100 standen per seconde"
+        );
         let opname = regie.opname().unwrap().to_vec();
         assert_eq!(opname.len(), 2 * T as usize);
         let eerste = rijden[0].1;
-        assert!((opname[0][2] - eerste.positie[2]).abs() < 1e-3, "de stand van het Voorbeeld");
-        assert!(rijden.iter().all(|(e, _)| *e == standpunt(&stand, "A")), "de Ether blijft staan");
+        assert!(
+            (opname[0][2] - eerste.positie[2]).abs() < 1e-3,
+            "de stand van het Voorbeeld"
+        );
+        assert!(
+            rijden.iter().all(|(e, _)| *e == standpunt(&stand, "A")),
+            "de Ether blijft staan"
+        );
 
-        doe(&mut stand, &mut v, Opdracht::ZetOpnemen { aan: false, voor: None, opname: Some(opname.clone()) });
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::ZetOpnemen {
+                aan: false,
+                voor: None,
+                opname: Some(opname.clone()),
+            },
+        );
         regie.volg(&stand, tik);
         assert_eq!(regie.beeld(tik).opname, None);
         // het Voorbeeld gaat vanaf de Ether (A) naar het begin van de rit en rijdt hem
@@ -1785,8 +2096,16 @@ mod tests {
         let eind = gedeeld::camerarit::als_stand(opname.last().unwrap());
         let r = stand.cameraritten.iter().find(|r| !r.vast).unwrap();
         let klaar = tik + 2 * T + (r.duur_s() * T as f32) as u64;
-        assert!(len(sub(regie.beeld(klaar + 1).voorbeeld.stand.positie, eind.positie)) < 0.02);
-        assert!(regie.beeld(tik + 3 * T).voorbeeld_rit.is_some(), "de groene streep op de balk");
+        assert!(
+            len(sub(
+                regie.beeld(klaar + 1).voorbeeld.stand.positie,
+                eind.positie
+            )) < 0.02
+        );
+        assert!(
+            regie.beeld(tik + 3 * T).voorbeeld_rit.is_some(),
+            "de groene streep op de balk"
+        );
         // de Ether stond al die tijd stil
         assert_eq!(regie.beeld(klaar).ether.stand, standpunt(&stand, "A"));
     }
@@ -1798,7 +2117,11 @@ mod tests {
         let r = met_rit(&mut stand, &mut v);
         let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
         oefen(&mut stand, &mut v, &mut regie, 0, true);
-        doe(&mut stand, &mut v, Opdracht::ProbeerInVoorbeeld { letter: r });
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::ProbeerInVoorbeeld { letter: r },
+        );
         regie.volg(&stand, 0);
         let mut tik = 0;
         let los = stuur_beide(&mut regie, &mut tik, T, Stuur::LOS);
@@ -1807,11 +2130,19 @@ mod tests {
         let na = stuur_beide(&mut regie, &mut tik, 2, VOORUIT);
         // de camera was midden in de overgang (een paar cm per tik): hooguit één tik verder
         let tik_eerder = len(sub(hier.positie, los[los.len() - 2].1.positie));
-        assert!(len(sub(na[0].1.positie, hier.positie)) < 1.5 * tik_eerder, "geen sprong");
+        assert!(
+            len(sub(na[0].1.positie, hier.positie)) < 1.5 * tik_eerder,
+            "geen sprong"
+        );
         // nog een Stand erbij: het afspelen begint niet opnieuw
         doe(&mut stand, &mut v, kies("D", false));
         regie.volg(&stand, tik);
-        assert!(len(sub(regie.beeld(tik).voorbeeld.stand.positie, na[1].1.positie)) < 1e-4);
+        assert!(
+            len(sub(
+                regie.beeld(tik).voorbeeld.stand.positie,
+                na[1].1.positie
+            )) < 1e-4
+        );
     }
 
     #[test]
@@ -1821,17 +2152,43 @@ mod tests {
         let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
         doe(&mut stand, &mut v, kies("D", true));
         regie.volg(&stand, 0);
-        doe(&mut stand, &mut v, Opdracht::ProbeerInVoorbeeld { letter: "F".into() });
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::ProbeerInVoorbeeld { letter: "F".into() },
+        );
         regie.volg(&stand, 10);
-        assert!(ongeveer(regie.beeld(10).voorbeeld.stand, standpunt(&stand, "D")));
+        assert!(ongeveer(
+            regie.beeld(10).voorbeeld.stand,
+            standpunt(&stand, "D")
+        ));
         let half = regie.beeld(10 + T).voorbeeld.stand;
         assert!(!ongeveer(half, standpunt(&stand, "D")) && !ongeveer(half, standpunt(&stand, "F")));
-        assert!(ongeveer(regie.beeld(10 + 2 * T).voorbeeld.stand, standpunt(&stand, "F")));
-        assert!(ongeveer(regie.beeld(10 + 2 * T).ether.stand, standpunt(&stand, "D")));
+        assert!(ongeveer(
+            regie.beeld(10 + 2 * T).voorbeeld.stand,
+            standpunt(&stand, "F")
+        ));
+        assert!(ongeveer(
+            regie.beeld(10 + 2 * T).ether.stand,
+            standpunt(&stand, "D")
+        ));
         // een nieuwe klaargezette Graphic stopt het afspelen
-        let graphic = Graphic::Titelkaart { kop: "Voorbeeldgegevens".into(), regel: String::new() };
-        doe(&mut stand, &mut v, Opdracht::ZetKlaar { graphic, standpunt: Some("G".into()) });
+        let graphic = Graphic::Titelkaart {
+            kop: "Voorbeeldgegevens".into(),
+            regel: String::new(),
+        };
+        doe(
+            &mut stand,
+            &mut v,
+            Opdracht::ZetKlaar {
+                graphic,
+                standpunt: Some("G".into()),
+            },
+        );
         regie.volg(&stand, 3 * T);
-        assert!(ongeveer(regie.beeld(3 * T).voorbeeld.stand, standpunt(&stand, "G")));
+        assert!(ongeveer(
+            regie.beeld(3 * T).voorbeeld.stand,
+            standpunt(&stand, "G")
+        ));
     }
 }

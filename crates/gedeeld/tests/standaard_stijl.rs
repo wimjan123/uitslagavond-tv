@@ -2,8 +2,8 @@
 //! typen: `cargo test -p gedeeld` schrijft ze naar `dashboard/src/typen/standaardStijl.ts`.
 
 use gedeeld::sjabloon::{
-    INGEBOUWD, Kleurovergang, MAX_KLEUROVERGANG_MS, MAX_LOGOTEKST, MAX_SNELHEID, MIN_KLEUROVERGANG_MS, MIN_SNELHEID,
-    Overgangsvorm, Stijl,
+    INGEBOUWD, Kleurovergang, MAX_KLEUROVERGANG_MS, MAX_LOGOTEKST, MAX_SNELHEID,
+    MIN_KLEUROVERGANG_MS, MIN_SNELHEID, Overgangsvorm, Stijl,
 };
 
 fn inhoud() -> String {
@@ -33,7 +33,9 @@ fn inhoud() -> String {
 
 #[test]
 fn schrijf_de_standaard_stijl_voor_het_dashboard() {
-    let Some(map) = std::env::var_os("TS_RS_EXPORT_DIR") else { return };
+    let Some(map) = std::env::var_os("TS_RS_EXPORT_DIR") else {
+        return;
+    };
     let pad = std::path::Path::new(&map).join("standaardStijl.ts");
     let nieuw = inhoud();
     if std::fs::read_to_string(&pad).ok().as_deref() != Some(nieuw.as_str()) {

@@ -13,10 +13,19 @@ fn inhoud() -> String {
     let mut opnames = String::new();
     for r in vaste_ritten::vaste() {
         let punten = r.punten();
-        assert_eq!((punten.len() - 1) % STAP, 0, "{}: een hele tiende seconde", r.naam);
+        assert_eq!(
+            (punten.len() - 1) % STAP,
+            0,
+            "{}: een hele tiende seconde",
+            r.naam
+        );
         let rond = |v: f32| (v * 1000.0).round() / 1000.0;
         let dun: Vec<[f32; 6]> = punten.iter().step_by(STAP).map(|p| p.map(rond)).collect();
-        opnames.push_str(&format!("  {:?}: {},\n", r.letter, serde_json::to_string(&dun).unwrap()));
+        opnames.push_str(&format!(
+            "  {:?}: {},\n",
+            r.letter,
+            serde_json::to_string(&dun).unwrap()
+        ));
     }
     format!(
         "// Gemaakt door `cargo test -p gedeeld` (crates/gedeeld/tests/vaste_ritten.rs). Niet met de hand wijzigen.\n\
@@ -32,7 +41,9 @@ fn inhoud() -> String {
 
 #[test]
 fn schrijf_de_vaste_ritten_voor_het_dashboard() {
-    let Some(map) = std::env::var_os("TS_RS_EXPORT_DIR") else { return };
+    let Some(map) = std::env::var_os("TS_RS_EXPORT_DIR") else {
+        return;
+    };
     let pad = std::path::Path::new(&map).join("vasteRitten.ts");
     let nieuw = inhoud();
     if std::fs::read_to_string(&pad).ok().as_deref() != Some(nieuw.as_str()) {

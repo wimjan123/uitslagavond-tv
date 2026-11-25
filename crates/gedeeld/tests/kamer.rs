@@ -5,7 +5,11 @@
 use gedeeld::kamer::{Foto, Fractie, Kamerlid};
 use gedeeld::{Herkomst, Opdracht, Stand, Weigering};
 
-const H: Herkomst = Herkomst { door: "Proef", volgnummer: 1, tijd_ms: 0 };
+const H: Herkomst = Herkomst {
+    door: "Proef",
+    volgnummer: 1,
+    tijd_ms: 0,
+};
 
 fn kamerlid(id: &str, roepnaam: &str, tussenvoegsel: Option<&str>, achternaam: &str) -> Kamerlid {
     Kamerlid {
@@ -46,17 +50,20 @@ fn voorletters_zijn_de_eerste_letter_van_roepnaam_en_achternaam() {
 fn stand_met(kamerleden: Vec<Kamerlid>) -> Stand {
     let mut stand = Stand::default();
     stand
-        .voer_uit(&Opdracht::LeesKamer {
-            opgehaald: "2026-11-22T12:00:00+01:00".into(),
-            peildatum: "2026-11-22".into(),
-            kamerleden,
-            fracties: vec![Fractie {
-                id: "f-vvd".into(),
-                afkorting: "VVD".into(),
-                naam: "Volkspartij voor Vrijheid en Democratie".into(),
-                zetels: 22,
-            }],
-        }, &H)
+        .voer_uit(
+            &Opdracht::LeesKamer {
+                opgehaald: "2026-11-22T12:00:00+01:00".into(),
+                peildatum: "2026-11-22".into(),
+                kamerleden,
+                fracties: vec![Fractie {
+                    id: "f-vvd".into(),
+                    afkorting: "VVD".into(),
+                    naam: "Volkspartij voor Vrijheid en Democratie".into(),
+                    zetels: 22,
+                }],
+            },
+            &H,
+        )
         .expect("Kamer gelezen");
     stand
 }
@@ -74,18 +81,24 @@ fn een_kamerlid_zonder_foto_staat_op_de_lijst_tot_de_omroep_een_eigen_foto_geeft
     assert_eq!(namen(&stand), ["Iem Al Biyati"]);
 
     stand
-        .voer_uit(&Opdracht::ZetFoto {
-            kamerlid: "1".into(),
-            foto: Foto::Eigen,
-        }, &H)
+        .voer_uit(
+            &Opdracht::ZetFoto {
+                kamerlid: "1".into(),
+                foto: Foto::Eigen,
+            },
+            &H,
+        )
         .unwrap();
     assert!(namen(&stand).is_empty());
     assert_eq!(stand.kamer.kamerlid("1").unwrap().foto, Foto::Eigen);
 
-    let fout = stand.voer_uit(&Opdracht::ZetFoto {
-        kamerlid: "onbekend".into(),
-        foto: Foto::Eigen,
-    }, &H);
+    let fout = stand.voer_uit(
+        &Opdracht::ZetFoto {
+            kamerlid: "onbekend".into(),
+            foto: Foto::Eigen,
+        },
+        &H,
+    );
     assert!(matches!(fout, Err(Weigering::Kamer(_))), "{fout:?}");
 }
 
@@ -102,12 +115,15 @@ fn komt_de_partijlijst_na_de_kamer_dan_hoort_de_fractie_daarna_bij_de_echte_part
         let mut k = kamerlid("1", "Mirjam", None, "Bikker");
         k.fractie = "f-cu".into();
         stand
-            .voer_uit(&Opdracht::LeesKamer {
-                opgehaald: "2026-11-22T12:00:00+01:00".into(),
-                peildatum: "2026-11-22".into(),
-                kamerleden: vec![k],
-                fracties: vec![cu.clone()],
-            }, &H)
+            .voer_uit(
+                &Opdracht::LeesKamer {
+                    opgehaald: "2026-11-22T12:00:00+01:00".into(),
+                    peildatum: "2026-11-22".into(),
+                    kamerleden: vec![k],
+                    fracties: vec![cu.clone()],
+                },
+                &H,
+            )
             .unwrap();
     };
     lees(&mut stand);

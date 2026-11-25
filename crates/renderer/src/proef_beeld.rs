@@ -517,7 +517,15 @@ fn alle_blokken(erin: Erin, eruit: Eruit) -> Sjabloon {
                 Tekst,
                 80,
             ),
-            blok(320, 640, 6, 150, Bloksoort::Lijn { dekking: 100 }, Accent, 120),
+            blok(
+                320,
+                640,
+                6,
+                150,
+                Bloksoort::Lijn { dekking: 100 },
+                Accent,
+                120,
+            ),
             blok(
                 350,
                 640,
@@ -821,7 +829,11 @@ fn een_kleurverloop_in_beeld_heeft_op_elk_punt_de_berekende_kleur() {
     let Inhoud::Vlak {
         verloop: Some(v), ..
     } = sjabloon
-        .vul_in(&Invulling::default(), &Default::default(), &Stijl::default())
+        .vul_in(
+            &Invulling::default(),
+            &Default::default(),
+            &Stijl::default(),
+        )
         .remove(0)
         .inhoud
     else {
@@ -840,7 +852,14 @@ fn een_kleurverloop_in_beeld_heeft_op_elk_punt_de_berekende_kleur() {
         beeld.save(m.join("verloop.png")).unwrap();
     }
     let mut afwijkingen = Vec::new();
-    for (x, y) in [(20, 20), (400, 100), (800, 300), (1000, 450), (1300, 500), (1580, 580)] {
+    for (x, y) in [
+        (20, 20),
+        (400, 100),
+        (800, 300),
+        (1000, 450),
+        (1300, 500),
+        (1580, 580),
+    ] {
         let t = v.positie(x as f32 + 0.5, y as f32 + 0.5, b as f32, h as f32);
         let k = v.op(t);
         let p = beeld.get_pixel((x0 + x) as u32, (y0 + y) as u32).0;
@@ -851,7 +870,10 @@ fn een_kleurverloop_in_beeld_heeft_op_elk_punt_de_berekende_kleur() {
             afwijkingen.push(((x, y), t, p, k.map(|c| (c * 255.0).round())));
         }
     }
-    assert!(afwijkingen.is_empty(), "(punt, t, beeld, berekend): {afwijkingen:?}");
+    assert!(
+        afwijkingen.is_empty(),
+        "(punt, t, beeld, berekend): {afwijkingen:?}"
+    );
 }
 
 #[test]
@@ -872,7 +894,10 @@ fn de_naambalk_van_de_titelkaart_past_om_de_tekst() {
         )
     };
     let kort = titel("balk-kort", "Kort");
-    let lang = titel("balk-lang", "Een heel lange kop die niet op één regel past bij deze letter");
+    let lang = titel(
+        "balk-lang",
+        "Een heel lange kop die niet op één regel past bij deze letter",
+    );
     if let Some(m) = bewijs() {
         std::fs::create_dir_all(&m).unwrap();
         kort.save(m.join("naambalk-kort.png")).unwrap();
@@ -893,15 +918,32 @@ fn de_naambalk_van_de_titelkaart_past_om_de_tekst() {
     let tekst = |b: &Rgb| {
         (140..1920u32)
             .rev()
-            .find(|&x| (770..935).any(|y| b.get_pixel(x, y).0.iter().map(|&c| u32::from(c)).sum::<u32>() > 420))
+            .find(|&x| {
+                (770..935).any(|y| {
+                    b.get_pixel(x, y)
+                        .0
+                        .iter()
+                        .map(|&c| u32::from(c))
+                        .sum::<u32>()
+                        > 420
+                })
+            })
             .unwrap_or(0)
     };
     let (rk, tk) = (rand(&kort), tekst(&kort));
     assert!(rk > tk, "de balk is smaller dan de tekst: {rk} {tk}");
-    assert!((rk - tk).abs_diff(48) <= 6, "marge achter de tekst: {}", rk - tk);
+    assert!(
+        (rk - tk).abs_diff(48) <= 6,
+        "marge achter de tekst: {}",
+        rk - tk
+    );
     // Een te lange kop krimpt op één regel; de balk komt niet verder dan zijn Plek.
     let (rl, tl) = (rand(&lang), tekst(&lang));
     assert!(rl <= 1824, "rand bij een lange kop: {rl}");
     assert!(tl < 1782, "de kop steekt uit: {tl}");
-    assert!((rl - tl).abs_diff(48) <= 6, "marge achter een lange kop: {}", rl - tl);
+    assert!(
+        (rl - tl).abs_diff(48) <= 6,
+        "marge achter een lange kop: {}",
+        rl - tl
+    );
 }

@@ -36,7 +36,9 @@ pub fn voortgang(vorm: Overgangsvorm, rang: usize, laatste: usize, t: f32, duur:
             ((t - start) / (OVERVLOEI * duur)).clamp(0.0, 1.0)
         }
         // de Opbouw rekent zelf (zie [`Opbouw`]); hier telt hij als Vervagen
-        Overgangsvorm::Vervagen | Overgangsvorm::Opbouw => zacht((t / duur.max(1e-3)).clamp(0.0, 1.0)),
+        Overgangsvorm::Vervagen | Overgangsvorm::Opbouw => {
+            zacht((t / duur.max(1e-3)).clamp(0.0, 1.0))
+        }
     }
 }
 
@@ -81,8 +83,15 @@ impl Opbouw {
         }
         groepen.sort_by_key(|&(_, n, links)| (std::cmp::Reverse(n), links));
         let stappen: Vec<Kleur> = groepen.into_iter().map(|g| g.0).collect();
-        let stap_van = naar.iter().map(|k| k.and_then(|k| stappen.iter().position(|s| *s == k))).collect();
-        Opbouw { stappen, stap_van, per_stap }
+        let stap_van = naar
+            .iter()
+            .map(|k| k.and_then(|k| stappen.iter().position(|s| *s == k)))
+            .collect();
+        Opbouw {
+            stappen,
+            stap_van,
+            per_stap,
+        }
     }
 
     fn inleiding(&self) -> f32 {
@@ -102,7 +111,9 @@ impl Opbouw {
     /// Hoe ver Stoel `i` op `t` seconden gedimd is (0 tot [`DIMMEN`]): na zijn stap zakt hij,
     /// zodat alleen de Partij van het label vol oplicht; na de laatste stap komt alles tegelijk terug.
     pub fn gedimd(&self, i: usize, t: f32) -> f32 {
-        let Some(k) = self.stap_van.get(i).copied().flatten() else { return 0.0 };
+        let Some(k) = self.stap_van.get(i).copied().flatten() else {
+            return 0.0;
+        };
         let einde = self.inleiding() + (k + 1) as f32 * self.per_stap;
         let (alle, overgang) = (self.alle_stappen(), NAGLOED * self.per_stap);
         if t < einde || einde >= alle {
@@ -118,7 +129,9 @@ impl Opbouw {
     /// extra op, zodat je ook bij een donkere partijkleur ziet welk blok bij het label hoort. Na
     /// zijn stap zakt hij terug naar zijn eigen kleur.
     pub fn gloed(&self, i: usize, t: f32) -> f32 {
-        let Some(k) = self.stap_van.get(i).copied().flatten() else { return 0.0 };
+        let Some(k) = self.stap_van.get(i).copied().flatten() else {
+            return 0.0;
+        };
         let start = self.inleiding() + k as f32 * self.per_stap;
         let einde = start + self.per_stap;
         if t < start {
@@ -136,7 +149,9 @@ impl Opbouw {
         match self.stap_van.get(i).copied().flatten() {
             Some(k) if t >= inleiding => {
                 let start = inleiding + k as f32 * self.per_stap;
-                Opbouwdeel::Oplichten(zacht(((t - start) / (OPLICHTEN * self.per_stap)).clamp(0.0, 1.0)))
+                Opbouwdeel::Oplichten(zacht(
+                    ((t - start) / (OPLICHTEN * self.per_stap)).clamp(0.0, 1.0),
+                ))
             }
             _ => Opbouwdeel::Donker(zacht((t / inleiding.max(1e-3)).clamp(0.0, 1.0))),
         }
@@ -204,8 +219,23 @@ mod tests {
         let rang: Vec<usize> = (0..naar.len()).collect();
         let o = Opbouw::nieuw(&naar, &rang, 1.0);
         assert_eq!(o.stappen, [k(2), k(1), k(3)].map(Option::unwrap));
-        assert_eq!(o.stap_van, [Some(1), Some(1), Some(0), Some(0), Some(0), None, Some(2), Some(2)]);
-        assert!((o.duur() - 3.9).abs() < 1e-6, "een halve stap donker, drie stappen en de nagloed");
+        assert_eq!(
+            o.stap_van,
+            [
+                Some(1),
+                Some(1),
+                Some(0),
+                Some(0),
+                Some(0),
+                None,
+                Some(2),
+                Some(2)
+            ]
+        );
+        assert!(
+            (o.duur() - 3.9).abs() < 1e-6,
+            "een halve stap donker, drie stappen en de nagloed"
+        );
     }
 
     #[test]
@@ -233,7 +263,10 @@ mod tests {
         // stap 0 loopt van 0,5 tot 1,5 seconde
         assert_eq!(o.gloed(0, 0.4), 0.0);
         assert_eq!(o.gloed(0, 1.0), 1.0);
-        assert!(o.gloed(0, 1.6) > 0.0 && o.gloed(0, 1.6) < 1.0, "na zijn stap zakt hij terug");
+        assert!(
+            o.gloed(0, 1.6) > 0.0 && o.gloed(0, 1.6) < 1.0,
+            "na zijn stap zakt hij terug"
+        );
         assert_eq!(o.gloed(0, 1.75), 0.0);
         assert_eq!(o.gloed(1, 1.0), 0.0, "de volgende wacht nog");
     }
@@ -256,7 +289,11 @@ mod tests {
         assert_eq!(d, 1.5);
         for rang in [0, 75, 149] {
             assert_eq!(voortgang(Vervagen, rang, 149, 0.0, d), 0.0);
-            assert_eq!(voortgang(Vervagen, rang, 149, 0.75, d), 0.5, "halverwege, links en rechts gelijk");
+            assert_eq!(
+                voortgang(Vervagen, rang, 149, 0.75, d),
+                0.5,
+                "halverwege, links en rechts gelijk"
+            );
             assert_eq!(voortgang(Vervagen, rang, 149, d, d), 1.0);
         }
         // zacht: in het eerste tiende nog maar een paar procent

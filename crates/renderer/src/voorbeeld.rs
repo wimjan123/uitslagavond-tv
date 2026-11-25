@@ -84,12 +84,14 @@ fn maak_ether_camera(mut commands: Commands, doel: Res<EtherDoel>) {
     commands.spawn((
         EtherCamera,
         zaalcamera(),
-        Camera { order: 1, ..default() },
+        Camera {
+            order: 1,
+            ..default()
+        },
         doel.0.0.clone(),
         Bron::Ether,
     ));
 }
-
 
 fn vang(
     mut commands: Commands,
@@ -97,9 +99,12 @@ fn vang(
     ether: Res<EtherDoel>,
     mut vangsten: ResMut<Vangsten>,
 ) {
-    for (i, (monitor, doel)) in [(Monitor::Voorbeeld, &voorbeeld.0), (Monitor::Ether, &ether.0.0)]
-        .into_iter()
-        .enumerate()
+    for (i, (monitor, doel)) in [
+        (Monitor::Voorbeeld, &voorbeeld.0),
+        (Monitor::Ether, &ether.0.0),
+    ]
+    .into_iter()
+    .enumerate()
     {
         if vangsten.onderweg[i] >= ONDERWEG {
             continue;

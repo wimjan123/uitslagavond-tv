@@ -40,7 +40,10 @@ const MINSTE_KANT: f32 = 260.0;
 
 /// Een vlak in een kleur dat meedoet met de animatie.
 fn gekleurd(kl: Color, dekking: f32) -> (BackgroundColor, Deel) {
-    (BackgroundColor(kl.with_alpha(kl.alpha() * dekking)), Deel { kleur: kl })
+    (
+        BackgroundColor(kl.with_alpha(kl.alpha() * dekking)),
+        Deel { kleur: kl },
+    )
 }
 
 /// Een knoop op een vaste plek in `ouder`.
@@ -58,7 +61,11 @@ fn op(left: f32, top: f32, width: Val, height: Val) -> Node {
 /// Waar voor overgaat in tegen, als deel van de breedte.
 fn wissel(voor: u16, tegen: u16) -> f32 {
     let totaal = f32::from(voor) + f32::from(tegen);
-    if totaal == 0.0 { 0.5 } else { f32::from(voor) / totaal }
+    if totaal == 0.0 {
+        0.5
+    } else {
+        f32::from(voor) / totaal
+    }
 }
 
 /// "101 voor": het getal in de cijferletter, het woord in de tekstletter, op één basislijn.
@@ -75,7 +82,17 @@ fn getal_en_woord(
     dekking: f32,
 ) {
     for (t, l, g) in [(getal, letter, groot), (woord, tekstletter, klein)] {
-        let e = tekst_deel(commands, bestanden, ouder, t, l, g, kl, Uitlijning::Links, dekking);
+        let e = tekst_deel(
+            commands,
+            bestanden,
+            ouder,
+            t,
+            l,
+            g,
+            kl,
+            Uitlijning::Links,
+            dekking,
+        );
         commands.entity(e).insert(TextLayout::no_wrap());
     }
 }
@@ -113,13 +130,25 @@ pub fn bouw(
         } => {
             let tk = kleur(*tekstkleur);
             let w = wissel(*voor, *tegen);
-            let breed_voor = if *tegen == 0 { b } else { (b * w - TUSSEN / 2.0).max(0.0) };
+            let breed_voor = if *tegen == 0 {
+                b
+            } else {
+                (b * w - TUSSEN / 2.0).max(0.0)
+            };
             if *voor > 0 {
-                commands.spawn((ChildOf(binnen), op(0.0, 0.0, Val::Px(breed_voor.round()), Val::Px(h)), gekleurd(kleur(STEM_VOOR), dekking)));
+                commands.spawn((
+                    ChildOf(binnen),
+                    op(0.0, 0.0, Val::Px(breed_voor.round()), Val::Px(h)),
+                    gekleurd(kleur(STEM_VOOR), dekking),
+                ));
             }
             if *tegen > 0 {
                 let links = if *voor == 0 { 0.0 } else { breed_voor + TUSSEN };
-                commands.spawn((ChildOf(binnen), op(links, 0.0, Val::Px((b - links).round()), Val::Px(h)), gekleurd(kleur(STEM_TEGEN), dekking)));
+                commands.spawn((
+                    ChildOf(binnen),
+                    op(links, 0.0, Val::Px((b - links).round()), Val::Px(h)),
+                    gekleurd(kleur(STEM_TEGEN), dekking),
+                ));
             }
             let letters = (letter.as_str(), tekstletter.as_str());
             // de getallen 50 en de woorden 34 pixels bij een balk van 72 hoog
@@ -136,17 +165,45 @@ pub fn bouw(
             if *voor > 0 {
                 let l = label(commands, false);
                 let r = commands.spawn((ChildOf(l), rij(12.0))).id();
-                let woord = if *algemene_stemmen { "voor, met algemene stemmen" } else { "voor" };
-                getal_en_woord(commands, bestanden, r, &voor.to_string(), woord, letters, maten, tk, dekking);
+                let woord = if *algemene_stemmen {
+                    "voor, met algemene stemmen"
+                } else {
+                    "voor"
+                };
+                getal_en_woord(
+                    commands,
+                    bestanden,
+                    r,
+                    &voor.to_string(),
+                    woord,
+                    letters,
+                    maten,
+                    tk,
+                    dekking,
+                );
             }
             if *tegen > 0 {
                 let l = label(commands, true);
                 let r = commands.spawn((ChildOf(l), rij(12.0))).id();
-                getal_en_woord(commands, bestanden, r, &tegen.to_string(), "tegen", letters, maten, tk, dekking);
+                getal_en_woord(
+                    commands,
+                    bestanden,
+                    r,
+                    &tegen.to_string(),
+                    "tegen",
+                    letters,
+                    maten,
+                    tk,
+                    dekking,
+                );
             }
             // de lijn bij 76, 8 breed, 14 pixels boven en onder de balk uit
             let x = b * 76.0 / gedeeld::cijfers::ZETELS as f32;
-            commands.spawn((ChildOf(binnen), op(x - 4.0, -14.0, Val::Px(8.0), Val::Px(h + 28.0)), gekleurd(blokkleur, dekking)));
+            commands.spawn((
+                ChildOf(binnen),
+                op(x - 4.0, -14.0, Val::Px(8.0), Val::Px(h + 28.0)),
+                gekleurd(blokkleur, dekking),
+            ));
         }
         Inhoud::Uitkomst {
             tekst,
@@ -166,13 +223,28 @@ pub fn bouw(
                 .spawn((
                     ChildOf(binnen),
                     Node {
-                        padding: UiRect::new(Val::Px(28.0), Val::Px(28.0), Val::Px(14.0), Val::Px(12.0)),
+                        padding: UiRect::new(
+                            Val::Px(28.0),
+                            Val::Px(28.0),
+                            Val::Px(14.0),
+                            Val::Px(12.0),
+                        ),
                         ..default()
                     },
                     gekleurd(kleur(*achter), dekking),
                 ))
                 .id();
-            let t = tekst_deel(commands, bestanden, vlak, tekst, letter, f32::from(*grootte), blokkleur, Uitlijning::Links, dekking);
+            let t = tekst_deel(
+                commands,
+                bestanden,
+                vlak,
+                tekst,
+                letter,
+                f32::from(*grootte),
+                blokkleur,
+                Uitlijning::Links,
+                dekking,
+            );
             commands.entity(t).insert(TextLayout::no_wrap());
         }
         Inhoud::Fractielijst {
@@ -192,7 +264,13 @@ pub fn bouw(
                 // daar niet in de rijen, dan krijgt elke kant ruimte naar zijn labels.
                 let w = grens_onder_balk(b, wissel(*aantal_voor, *aantal_tegen));
                 let kanten = [(voor, 0.0, w - 30.0), (tegen, w + 20.0, b - w - 20.0)];
-                let kanten = if tegen.is_empty() { &kanten[..1] } else if voor.is_empty() { &[(tegen, 0.0, b)][..] } else { &kanten[..] };
+                let kanten = if tegen.is_empty() {
+                    &kanten[..1]
+                } else if voor.is_empty() {
+                    &[(tegen, 0.0, b)][..]
+                } else {
+                    &kanten[..]
+                };
                 for (n, (labels, links, breed)) in kanten.iter().copied().enumerate() {
                     // tegen rechts uitgelijnd, tegen de rand van zijn kant van de balk
                     let rechts = n == 1 || voor.is_empty();
@@ -202,17 +280,34 @@ pub fn bouw(
                             Node {
                                 flex_direction: FlexDirection::Row,
                                 flex_wrap: FlexWrap::Wrap,
-                                justify_content: if rechts { JustifyContent::FlexEnd } else { JustifyContent::FlexStart },
+                                justify_content: if rechts {
+                                    JustifyContent::FlexEnd
+                                } else {
+                                    JustifyContent::FlexStart
+                                },
                                 column_gap: Val::Px(LABEL_TUSSEN.0),
                                 row_gap: Val::Px(LABEL_TUSSEN.1),
                                 align_content: AlignContent::FlexStart,
                                 ..op(links, 0.0, Val::Px(breed.max(0.0).round()), Val::Auto)
                             },
-                            Passend { basis: 0.0, ruimte: Vec2::new(breed, h), schaal: 1.0 },
+                            Passend {
+                                basis: 0.0,
+                                ruimte: Vec2::new(breed, h),
+                                schaal: 1.0,
+                            },
                         ))
                         .id();
                     for f in labels.iter() {
-                        label(commands, bestanden, kolom, f, letter, g, (14.0, LABEL_RAND), dekking);
+                        label(
+                            commands,
+                            bestanden,
+                            kolom,
+                            f,
+                            letter,
+                            g,
+                            (14.0, LABEL_RAND),
+                            dekking,
+                        );
                     }
                 }
                 return;
@@ -222,8 +317,12 @@ pub fn bouw(
             let kolombreed = (b - 48.0) / 2.0;
             let meeste = f32::from((*aantal_voor).max(*aantal_tegen).max(1));
             let tk = kleur(*tekstkleur);
-            for (n, (labels, aantal, woord, achter)) in
-                [(voor, aantal_voor, "voor", STEM_VOOR), (tegen, aantal_tegen, "tegen", STEM_TEGEN)].into_iter().enumerate()
+            for (n, (labels, aantal, woord, achter)) in [
+                (voor, aantal_voor, "voor", STEM_VOOR),
+                (tegen, aantal_tegen, "tegen", STEM_TEGEN),
+            ]
+            .into_iter()
+            .enumerate()
             {
                 let kolom = commands
                     .spawn((
@@ -231,7 +330,12 @@ pub fn bouw(
                         Node {
                             flex_direction: FlexDirection::Column,
                             row_gap: Val::Px(24.0),
-                            ..op(n as f32 * (kolombreed + 48.0), 0.0, Val::Px(kolombreed.round()), Val::Px(h))
+                            ..op(
+                                n as f32 * (kolombreed + 48.0),
+                                0.0,
+                                Val::Px(kolombreed.round()),
+                                Val::Px(h),
+                            )
                         },
                     ))
                     .id();
@@ -250,7 +354,17 @@ pub fn bouw(
                     ))
                     .id();
                 let r = commands.spawn((ChildOf(kop), rij(12.0))).id();
-                getal_en_woord(commands, bestanden, r, &aantal.to_string(), woord, (letter, tekstletter), (50.0, 34.0), tk, dekking);
+                getal_en_woord(
+                    commands,
+                    bestanden,
+                    r,
+                    &aantal.to_string(),
+                    woord,
+                    (letter, tekstletter),
+                    (50.0, 34.0),
+                    tk,
+                    dekking,
+                );
                 let raster = commands
                     .spawn((
                         ChildOf(kolom),
@@ -279,38 +393,89 @@ pub fn bouw(
                             },
                         ))
                         .id();
-                    let tekstkleur = match f.logo.as_deref().and_then(|l| beeld_of_wacht(commands, bestanden, knoop, l)) {
+                    let tekstkleur = match f
+                        .logo
+                        .as_deref()
+                        .and_then(|l| beeld_of_wacht(commands, bestanden, knoop, l))
+                    {
                         Some(beeld) => {
-                            beeld_deel(commands, vak, beeld, beelden, tegel - 16.0, 64.0, false, dekking, 1.0);
+                            beeld_deel(
+                                commands,
+                                vak,
+                                beeld,
+                                beelden,
+                                tegel - 16.0,
+                                64.0,
+                                false,
+                                dekking,
+                                1.0,
+                            );
                             tk
                         }
                         None => {
-                            commands.entity(vak).insert(gekleurd(kleur(f.kleur), dekking));
+                            commands
+                                .entity(vak)
+                                .insert(gekleurd(kleur(f.kleur), dekking));
                             // een lange naam met een spatie loopt over twee regels in dezelfde
                             // letter; een lang woord krimpt
                             let twee_regels = f.kort.contains(' ');
                             let grootte = if twee_regels {
                                 // het langste woord moet op een regel passen
-                                let woord = f.kort.split(' ').map(|w| w.chars().count()).max().unwrap_or(1) as f32;
-                                g.min(TWEE_REGELS).min(((tegel - 24.0) / (woord * 0.62)).floor())
+                                let woord =
+                                    f.kort
+                                        .split(' ')
+                                        .map(|w| w.chars().count())
+                                        .max()
+                                        .unwrap_or(1) as f32;
+                                g.min(TWEE_REGELS)
+                                    .min(((tegel - 24.0) / (woord * 0.62)).floor())
                             } else {
                                 g
                             };
-                            let t = tekst_deel(commands, bestanden, vak, &f.kort, letter, grootte, kleur(f.tekstkleur), Uitlijning::Midden, dekking);
+                            let t = tekst_deel(
+                                commands,
+                                bestanden,
+                                vak,
+                                &f.kort,
+                                letter,
+                                grootte,
+                                kleur(f.tekstkleur),
+                                Uitlijning::Midden,
+                                dekking,
+                            );
                             if twee_regels {
-                                commands.entity(t).insert(Node { max_width: Val::Px(tegel - 24.0), ..default() });
+                                commands.entity(t).insert(Node {
+                                    max_width: Val::Px(tegel - 24.0),
+                                    ..default()
+                                });
                             } else {
                                 commands.entity(t).insert((
                                     TextLayout::no_wrap(),
-                                    Node { flex_shrink: 0.0, ..default() },
-                                    Krimp { grootte: g, breedte: tegel - 24.0 },
+                                    Node {
+                                        flex_shrink: 0.0,
+                                        ..default()
+                                    },
+                                    Krimp {
+                                        grootte: g,
+                                        breedte: tegel - 24.0,
+                                    },
                                 ));
                             }
                             kleur(f.tekstkleur)
                         }
                     };
                     if f.stemmen > 0 {
-                        let t = tekst_deel(commands, bestanden, vak, &f.stemmen.to_string(), letter, (g * 0.75).round().max(30.0), tekstkleur, Uitlijning::Midden, dekking);
+                        let t = tekst_deel(
+                            commands,
+                            bestanden,
+                            vak,
+                            &f.stemmen.to_string(),
+                            letter,
+                            (g * 0.75).round().max(30.0),
+                            tekstkleur,
+                            Uitlijning::Midden,
+                            dekking,
+                        );
                         commands.entity(t).insert(TextLayout::no_wrap());
                     }
                 }
@@ -326,7 +491,10 @@ pub fn bouw(
             grootte,
         } => {
             let g = f32::from(*grootte);
-            commands.entity(binnen).insert(Node { overflow: Overflow::clip(), ..op(0.0, 0.0, Val::Px(b), Val::Px(h)) });
+            commands.entity(binnen).insert(Node {
+                overflow: Overflow::clip(),
+                ..op(0.0, 0.0, Val::Px(b), Val::Px(h))
+            });
             // Twee kolommen, voor links en tegen rechts, als een tabel: elke Fractie op een eigen
             // regel met haar label (en aantal) en daarachter de namen van wie anders stemde. Past
             // het niet, dan krimpt alles.
@@ -339,12 +507,19 @@ pub fn bouw(
                         align_items: AlignItems::FlexStart,
                         ..op(0.0, 0.0, Val::Px(b), Val::Auto)
                     },
-                    Passend { basis: 0.0, ruimte: Vec2::new(b, h), schaal: 1.0 },
+                    Passend {
+                        basis: 0.0,
+                        ruimte: Vec2::new(b, h),
+                        schaal: 1.0,
+                    },
                 ))
                 .id();
             let kolombreed = ((b - 48.0) / 2.0).floor();
             let tk = blokkleur;
-            for (groepen, aantal, woord, achter) in [(voor, aantal_voor, "voor", STEM_VOOR), (tegen, aantal_tegen, "tegen", STEM_TEGEN)] {
+            for (groepen, aantal, woord, achter) in [
+                (voor, aantal_voor, "voor", STEM_VOOR),
+                (tegen, aantal_tegen, "tegen", STEM_TEGEN),
+            ] {
                 let kolom = commands
                     .spawn((
                         ChildOf(lijst),
@@ -364,8 +539,17 @@ pub fn bouw(
                     .spawn((
                         ChildOf(kolom),
                         Node {
-                            width: Val::Px(kop_breedte(kolombreed, f32::from(*aantal) / f32::from((*aantal_voor).max(*aantal_tegen).max(1)))),
-                            padding: UiRect::new(Val::Px(18.0), Val::Px(22.0), Val::Px(4.0), Val::Px(4.0)),
+                            width: Val::Px(kop_breedte(
+                                kolombreed,
+                                f32::from(*aantal)
+                                    / f32::from((*aantal_voor).max(*aantal_tegen).max(1)),
+                            )),
+                            padding: UiRect::new(
+                                Val::Px(18.0),
+                                Val::Px(22.0),
+                                Val::Px(4.0),
+                                Val::Px(4.0),
+                            ),
                             margin: UiRect::bottom(Val::Px(8.0)),
                             ..default()
                         },
@@ -373,9 +557,24 @@ pub fn bouw(
                     ))
                     .id();
                 let r = commands.spawn((ChildOf(kop), rij(10.0))).id();
-                for (t, l, s) in [(aantal.to_string(), letter.as_str(), g * 1.4), (woord.to_string(), naamletter.as_str(), g)] {
-                    let e = tekst_deel(commands, bestanden, r, &t, l, s.round(), Color::WHITE, Uitlijning::Links, dekking);
-                    commands.entity(e).insert((TextLayout::no_wrap(), Passend::basis(s.round())));
+                for (t, l, s) in [
+                    (aantal.to_string(), letter.as_str(), g * 1.4),
+                    (woord.to_string(), naamletter.as_str(), g),
+                ] {
+                    let e = tekst_deel(
+                        commands,
+                        bestanden,
+                        r,
+                        &t,
+                        l,
+                        s.round(),
+                        Color::WHITE,
+                        Uitlijning::Links,
+                        dekking,
+                    );
+                    commands
+                        .entity(e)
+                        .insert((TextLayout::no_wrap(), Passend::basis(s.round())));
                 }
                 for Naamgroep { fractie, namen } in groepen.iter() {
                     let regel = commands
@@ -408,12 +607,34 @@ pub fn bouw(
                         .id();
                     let aantal = fractie.stemmen.to_string();
                     for t in [fractie.kort.as_str(), aantal.as_str()] {
-                        let e = tekst_deel(commands, bestanden, vak, t, letter, g, kleur(fractie.tekstkleur), Uitlijning::Links, dekking);
-                        commands.entity(e).insert((TextLayout::no_wrap(), Passend::basis(g)));
+                        let e = tekst_deel(
+                            commands,
+                            bestanden,
+                            vak,
+                            t,
+                            letter,
+                            g,
+                            kleur(fractie.tekstkleur),
+                            Uitlijning::Links,
+                            dekking,
+                        );
+                        commands
+                            .entity(e)
+                            .insert((TextLayout::no_wrap(), Passend::basis(g)));
                     }
                     let namen = namen.join(", ");
                     if !namen.is_empty() {
-                        let e = tekst_deel(commands, bestanden, regel, &namen, naamletter, g, tk, Uitlijning::Links, dekking);
+                        let e = tekst_deel(
+                            commands,
+                            bestanden,
+                            regel,
+                            &namen,
+                            naamletter,
+                            g,
+                            tk,
+                            Uitlijning::Links,
+                            dekking,
+                        );
                         commands.entity(e).insert(Passend::basis(g));
                     }
                 }
@@ -447,8 +668,20 @@ fn label(
             gekleurd(kleur(f.kleur), dekking),
         ))
         .id();
-    let t = tekst_deel(commands, bestanden, vak, &naam_met_aantal(f), letter, grootte.round(), kleur(f.tekstkleur), Uitlijning::Links, dekking);
-    commands.entity(t).insert((TextLayout::no_wrap(), Passend::basis(grootte.round())));
+    let t = tekst_deel(
+        commands,
+        bestanden,
+        vak,
+        &naam_met_aantal(f),
+        letter,
+        grootte.round(),
+        kleur(f.tekstkleur),
+        Uitlijning::Links,
+        dekking,
+    );
+    commands
+        .entity(t)
+        .insert((TextLayout::no_wrap(), Passend::basis(grootte.round())));
     vak
 }
 
@@ -472,7 +705,11 @@ pub struct Passend {
 
 impl Passend {
     fn basis(grootte: f32) -> Passend {
-        Passend { basis: grootte, ruimte: Vec2::ZERO, schaal: 1.0 }
+        Passend {
+            basis: grootte,
+            ruimte: Vec2::ZERO,
+            schaal: 1.0,
+        }
     }
 }
 

@@ -41,15 +41,23 @@ fn de_lijst_van_dinsdag_24_november_telt_129_moties_op_volgorde_van_de_agenda() 
     assert_eq!(eerste.indieners.as_deref(), Some("Bamenga"));
     assert_eq!(
         eerste.agendapunt.as_deref(),
-        Some("Moties ingediend bij het wetgevingsoverleg over het begrotingsonderdeel Inburgering en Integratie")
+        Some(
+            "Moties ingediend bij het wetgevingsoverleg over het begrotingsonderdeel Inburgering en Integratie"
+        )
     );
 
     // Een nader gewijzigde motie heeft geen Kamerstukdossier en dus geen nummer.
-    let ceder = p.iter().find(|p| p.id == "54562db0-fa01-4caf-ab01-53de16c2a903").unwrap();
+    let ceder = p
+        .iter()
+        .find(|p| p.id == "54562db0-fa01-4caf-ab01-53de16c2a903")
+        .unwrap();
     assert_eq!(ceder.nummer, None);
     assert_eq!(ceder.indieners.as_deref(), Some("Ceder"));
 
-    let leden = p.iter().find(|p| p.id == "d49223a3-ea8c-4c8d-a4e0-4d106c147796").unwrap();
+    let leden = p
+        .iter()
+        .find(|p| p.id == "d49223a3-ea8c-4c8d-a4e0-4d106c147796")
+        .unwrap();
     assert_eq!(leden.indieners.as_deref(), Some("Keijzer en Nanninga"));
 }
 
@@ -63,18 +71,28 @@ fn een_dag_met_wetsvoorstellen_zet_de_amendementen_voor_het_wetsvoorstel() {
     assert_eq!(p[0].nummer.as_deref(), Some("37022, nr. 14"));
     assert_eq!(p[0].indieners.as_deref(), Some("Grinwis"));
     // De tweede Activiteit (21.05 uur) met alleen de wetsvoorstellen komt als laatste.
-    let laatste: Vec<(&str, Option<&str>)> =
-        p[77..].iter().map(|p| (p.soort.as_deref().unwrap(), p.nummer.as_deref())).collect();
+    let laatste: Vec<(&str, Option<&str>)> = p[77..]
+        .iter()
+        .map(|p| (p.soort.as_deref().unwrap(), p.nummer.as_deref()))
+        .collect();
     assert_eq!(
         laatste,
-        [("Wetgeving", Some("37022")), ("Wetgeving", Some("37023")), ("Wetgeving", Some("37024")), ("Wetgeving", Some("37053"))]
+        [
+            ("Wetgeving", Some("37022")),
+            ("Wetgeving", Some("37023")),
+            ("Wetgeving", Some("37024")),
+            ("Wetgeving", Some("37053"))
+        ]
     );
     // Een amendement "ter vervanging van": de indieners stoppen daar.
     let vervanging = p
         .iter()
         .find(|p| p.titel.starts_with("Nader gewijzigd amendement van de leden Grinwis en Van Brenk ter vervanging van nr. 27"))
         .unwrap();
-    assert_eq!(vervanging.indieners.as_deref(), Some("Grinwis en Van Brenk"));
+    assert_eq!(
+        vervanging.indieners.as_deref(),
+        Some("Grinwis en Van Brenk")
+    );
 }
 
 #[test]
@@ -86,8 +104,14 @@ fn alleen_stemmingen_van_de_gevraagde_dag_tellen() {
 
 #[test]
 fn indieners_uit_de_titel() {
-    assert_eq!(indieners("Motie van het lid Nanninga c.s. over iets").as_deref(), Some("Nanninga c.s."));
-    assert_eq!(indieners("Wijziging van de Wet minimumbelasting 2024"), None);
+    assert_eq!(
+        indieners("Motie van het lid Nanninga c.s. over iets").as_deref(),
+        Some("Nanninga c.s.")
+    );
+    assert_eq!(
+        indieners("Wijziging van de Wet minimumbelasting 2024"),
+        None
+    );
 }
 
 #[test]
@@ -96,7 +120,10 @@ fn de_vraag_zoekt_de_stemmingen_rond_de_dag() {
     assert_eq!(adres, "https://voorbeeld/OData/v4/2.0/Activiteit");
     let filter = &p.iter().find(|(k, _)| *k == "$filter").unwrap().1;
     assert!(filter.contains("Soort eq 'Stemmingen'"));
-    assert!(filter.contains("Datum ge 2026-11-23T12:00:00Z and Datum lt 2026-11-25T12:00:00Z"), "{filter}");
+    assert!(
+        filter.contains("Datum ge 2026-11-23T12:00:00Z and Datum lt 2026-11-25T12:00:00Z"),
+        "{filter}"
+    );
 }
 
 /// Een nep-API: `/Activiteit` geeft het antwoord dat nu in `antwoord` staat; `/Persoon` niets.
@@ -104,12 +131,25 @@ async fn nep_api(antwoord: Arc<Mutex<&'static str>>) -> String {
     let app = Router::new()
         .route(
             "/Activiteit",
-            get(|State(a): State<Arc<Mutex<&'static str>>>, RawQuery(q): RawQuery| async move {
-                assert!(q.unwrap_or_default().contains("Stemmingen"));
-                ([(header::CONTENT_TYPE, "application/json")], *a.lock().unwrap())
+            get(
+                |State(a): State<Arc<Mutex<&'static str>>>, RawQuery(q): RawQuery| async move {
+                    assert!(q.unwrap_or_default().contains("Stemmingen"));
+                    (
+                        [(header::CONTENT_TYPE, "application/json")],
+                        *a.lock().unwrap(),
+                    )
+                },
+            ),
+        )
+        .route(
+            "/Persoon",
+            get(|| async {
+                (
+                    [(header::CONTENT_TYPE, "application/json")],
+                    r#"{"value":[]}"#,
+                )
             }),
         )
-        .route("/Persoon", get(|| async { ([(header::CONTENT_TYPE, "application/json")], r#"{"value":[]}"#) }))
         .with_state(antwoord);
     let l = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
     let adres = l.local_addr().unwrap();

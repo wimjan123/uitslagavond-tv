@@ -9,10 +9,10 @@ use bevy::prelude::*;
 use bevy::render::view::{ColorGrading, ColorGradingGlobal, ColorGradingSection};
 
 use crate::Rolinfo;
-use crate::occlusie::Occlusie;
-use bevy::render::render_resource::TextureUsages;
 use crate::graphic::Bron;
+use crate::occlusie::Occlusie;
 use crate::volging::{Standen, Verbinding};
+use bevy::render::render_resource::TextureUsages;
 
 pub struct BeeldPlugin;
 
@@ -136,7 +136,9 @@ pub fn zaalcamera() -> impl Bundle {
     (
         Camera3d {
             // de occlusie leest de diepte van de hoofdpas
-            depth_texture_usages: (TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING).into(),
+            depth_texture_usages: (TextureUsages::RENDER_ATTACHMENT
+                | TextureUsages::TEXTURE_BINDING)
+                .into(),
             ..default()
         },
         Hdr,
@@ -147,6 +149,9 @@ pub fn zaalcamera() -> impl Bundle {
         b.vignet(),
         Occlusie::new(b.occlusie_straal, b.occlusie),
         Msaa::Sample4,
+        crate::schil::ZietSchil,
+        // tot de eerste keuze van de schil: binnen, alles in beeld
+        bevy::camera::visibility::RenderLayers::from_layers(&[0, 1]),
     )
 }
 
@@ -167,7 +172,11 @@ pub fn bouw(
         include_bytes!("../assets/fonts/DejaVuSans.ttf").to_vec(),
     ));
     // Het Voorbeeld toont de klaargezette Graphic, de andere rollen de Ether.
-    let bron = if rolinfo.rol == gedeeld::Rol::Voorbeeld { Bron::Klaar } else { Bron::Ether };
+    let bron = if rolinfo.rol == gedeeld::Rol::Voorbeeld {
+        Bron::Klaar
+    } else {
+        Bron::Ether
+    };
     // tot de eerste stand van de server: Totaal vanaf voorzitter
     let a = gedeeld::camera::Standpunt::vaste()[0].stand;
     let mut camera = commands.spawn((

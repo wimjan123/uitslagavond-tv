@@ -282,7 +282,10 @@ mod tests {
         c.neem(beeld(0, 40.0, 0), ms(4000));
         for t in [4000, 4005, 4030] {
             let (e, _) = c.op(ms(t)).unwrap();
-            assert_eq!(e.positie[0], 40.0, "op {t} ms: geen overgang vanaf de oude plek");
+            assert_eq!(
+                e.positie[0], 40.0,
+                "op {t} ms: geen overgang vanaf de oude plek"
+            );
         }
         c.neem(beeld(1, 41.0, 0), ms(4010));
         let (e, _) = c.op(ms(4100)).unwrap();
