@@ -246,7 +246,7 @@ fn de_uitslag_van_een_stemming_vult_balk_uitkomst_en_fracties_voor_en_tegen() {
 }
 
 #[test]
-fn de_namenlijst_zet_de_namen_per_fractie_bij_hun_eigen_stem() {
+fn de_namenlijst_toont_elke_fractie_met_haar_aantal_en_alleen_de_namen_van_afwijkers() {
     let mut p = Proef::nieuw();
     let g = p.stem_en_leg_vast(true);
     let blokken = vul_in(&g, &p.stand);
@@ -258,19 +258,19 @@ fn de_namenlijst_zet_de_namen_per_fractie_bij_hun_eigen_stem() {
         })
         .expect("een Namenlijst");
     let groepen = |g: &[gedeeld::sjabloon::Naamgroep]| {
-        g.iter().map(|n| (n.fractie.kort.clone(), n.namen.clone())).collect::<Vec<_>>()
+        g.iter().map(|n| (n.fractie.kort.clone(), n.fractie.aantal, n.namen.clone())).collect::<Vec<_>>()
     };
-    // Eerste (SP) stemt voor en staat bij voor onder SP; PVV en SP hebben Kamerleden, de andere
-    // Fracties alleen hun naam.
+    let heel = |k: &str, n: u16| (k.to_string(), Some(n), Vec::<String>::new());
+    // SP stemt tegen, maar Eerste (SP) stemt voor: alleen die naam staat erbij
     assert_eq!(
         groepen(&voor),
         [
-            ("PVV".to_string(), vec!["Zonderlijst".to_string()]),
-            ("GL-PvdA".to_string(), vec![]),
-            ("VVD".to_string(), vec![]),
-            ("D66".to_string(), vec![]),
-            ("SP".to_string(), vec!["Eerste".to_string()]),
+            heel("PVV", 40),
+            heel("GL-PvdA", 35),
+            heel("VVD", 30),
+            heel("D66", 25),
+            ("SP".to_string(), Some(1), vec!["Eerste".to_string()]),
         ]
     );
-    assert_eq!(groepen(&tegen), [("SP".to_string(), vec!["Tweede".to_string(), "Derde".to_string()])]);
+    assert_eq!(groepen(&tegen), [heel("SP", 19)]);
 }

@@ -255,11 +255,11 @@ fn de_coalitiebalk_zet_de_coalitie_vooraan_en_de_rest_zonder_label_erachter() {
         [
             ("ROOD", 50, 100),
             ("GEEL", 20, 100),
-            // de rest in Hoofd op 20 procent, zonder label (geen korte naam)
-            ("", 30, 20),
-            ("", 40, 20),
+            // de rest in Tekst op 14 procent (neutraal grijs), zonder label (geen korte naam)
+            ("", 30, 14),
+            ("", 40, 14),
             // nog niet verdeeld
-            ("", 10, 20),
+            ("", 10, 14),
         ]
     );
     // elk deel houdt een eigen sleutel, zodat een Partij die erbij komt vloeiend naar links schuift

@@ -367,7 +367,7 @@ pub fn bouw(
                     ))
                     .id();
                 for Naamgroep { fractie, namen } in groepen.iter() {
-                    let chip = label(commands, bestanden, stroom, fractie, letter, g * 0.9, (10.0, 3.0), dekking);
+                    let chip = label(commands, bestanden, stroom, fractie, letter, g, (10.0, 3.0), dekking);
                     commands.entity(chip).insert(Node {
                         margin: UiRect::left(Val::Px(8.0)),
                         padding: UiRect::axes(Val::Px(10.0), Val::Px(3.0)),
