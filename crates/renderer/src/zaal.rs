@@ -38,9 +38,9 @@ const STOEL_LEER: &str = "stoel_leer";
 const STOEL_WAPEN: &str = "stoel_wapen";
 const WAPEN_STRAALT: LinearRgba = LinearRgba::rgb(0.22, 0.22, 0.21);
 /// Het groene bordje van de nooduitgang: in het model zo fel dat het in een close-up de aandacht
-/// trekt (council-ronde 3). Dit deel van zijn licht blijft over.
+/// trekt (council-ronde 3), en met een groene gloed bij de deur (ronde 4). Dit deel van zijn licht blijft over.
 const NOODUITGANG: &str = "nooduitgang";
-const NOODUITGANG_LICHT: f32 = 0.2;
+const NOODUITGANG_LICHT: f32 = 0.03;
 
 pub struct ZaalPlugin {
     /// Map met de bestanden uit `zaal/maak.sh`; `None` voor een Renderer zonder Zaal.
@@ -59,7 +59,7 @@ impl Plugin for ZaalPlugin {
                 Update,
                 (
                     stel_stof_en_hout_bij,
-                    ((herken_stoelen, kleur_stoelen, licht_stoel_op, verlicht_de_opbouw).chain(), dim_zaal, geef_stoelen_licht),
+                    ((herken_stoelen, kleur_stoelen, licht_stoel_op, verlicht_de_opbouw, zet_sleutellicht).chain(), dim_zaal, geef_stoelen_licht),
                 )
                     .chain()
                     .after(Afgewerkt),
@@ -569,8 +569,8 @@ const KALIBRATIE: Kalibratie = Kalibratie {
     kleur_l: 3.1,
     kleur_c: -1.5,
     albedo: 0.6,
-    straalt: 0.15,
-    nabij_licht: 0.88,
+    straalt: 0.11,
+    nabij_licht: 0.78,
     nabij_kleur: 0.25,
     nabij_straalt: 0.0,
 };
@@ -632,8 +632,15 @@ fn gekalibreerd(k: Kleur, nabij: f32) -> LinearRgba {
     let (licht, kleur) = kalibratie_per_kleur().get(&k).copied().unwrap_or_else(|| factoren(k));
     let licht = licht * (1.0 - (1.0 - kal.nabij_licht) * nabij);
     let kleur = 1.0 + (kleur - 1.0) * (1.0 - (1.0 - kal.nabij_kleur) * nabij);
-    in_oklab(k, licht, kleur)
+    let vol = 1.0 - (1.0 - BREED_VERZADIGING) * (1.0 - nabij) - (1.0 - NABIJ_VERZADIGING) * nabij;
+    in_oklab(k, licht, kleur * vol)
 }
+
+/// In een wijd shot is de kleur van het leer iets minder vol dan de kalibratie zegt: met de volle
+/// kleur lazen de Stoelen als snoepkleurig (council-ronde 4). Van dichtbij geldt dit niet.
+const BREED_VERZADIGING: f32 = 0.88;
+/// Van dichtbij: zoveel van de kleurigheid van het leer.
+const NABIJ_VERZADIGING: f32 = 0.8;
 
 /// De kleur van het leer bij een kleur uit de Stand (lineair), in het totaalbeeld.
 #[cfg(test)]
@@ -957,6 +964,82 @@ fn verlicht_de_opbouw(
     zicht.set_if_neq(Visibility::Inherited);
 }
 
+/// Het sleutellicht van een close-up: schuin van boven en opzij van de camera, zoals een lamp in
+/// een studio. Het gebakken licht in de Zaal komt van alle kanten tegelijk, dus van dichtbij was
+/// een Stoel één egale kleur en leek hij zelf licht te geven (council-ronde 4). Met dit licht en
+/// minder gebakken licht op het leer loopt een Stoel van licht naar schaduw. Het komt op met de nabijheid van de camera ([`crate::lens::Nabijheid`]);
+/// in een wijd shot is het uit.
+#[derive(Component)]
+struct Sleutellicht;
+
+/// De verlichtingssterkte van het sleutellicht bij een volle close-up.
+const SLEUTEL_LUX: f32 = 5.0;
+/// Waar het vandaan komt, gezien vanaf de camera: zoveel graden naar links en omhoog.
+const SLEUTEL_OPZIJ: f32 = 40.0;
+const SLEUTEL_OMHOOG: f32 = 45.0;
+/// Hoeveel van het gebakken licht het leer van de Stoelen bij een volle close-up houdt.
+const SLEUTEL_GEBAKKEN: f32 = 0.5;
+
+/// De richting van het sleutellicht (waar het heen schijnt) bij een camera met deze stand.
+fn sleutelrichting(camera: &Transform) -> Vec3 {
+    let vooruit = camera.forward().as_vec3().with_y(0.0).normalize_or(Vec3::NEG_Z);
+    let draai = Quat::from_rotation_y(SLEUTEL_OPZIJ.to_radians());
+    let vlak = draai * vooruit;
+    let (s, c) = SLEUTEL_OMHOOG.to_radians().sin_cos();
+    (vlak * c - Vec3::Y * s).normalize()
+}
+
+#[allow(clippy::type_complexity)]
+fn zet_sleutellicht(
+    mut commands: Commands,
+    nabijheid: Option<Res<crate::lens::Nabijheid>>,
+    camera: Query<&Transform, (With<crate::beeld::HoofdCamera>, Without<Sleutellicht>)>,
+    mut licht: Query<(&mut DirectionalLight, &mut Transform), With<Sleutellicht>>,
+    leer: Query<&MeshMaterial3d<StandardMaterial>, With<StoelLeer>>,
+    mut materialen: ResMut<Assets<StandardMaterial>>,
+    mut vorig: Local<Option<f32>>,
+) {
+    let nabij = nabijheid.map_or(0.0, |n| n.0);
+    let Ok((mut l, mut plek)) = licht.single_mut() else {
+        commands.spawn((
+            Sleutellicht,
+            DirectionalLight {
+                illuminance: 0.0,
+                color: Color::linear_rgb(1.0, 0.95, 0.88),
+                // zonder schaduw: het plafond en het dak liggen tussen de Stoelen en elke
+                // richting van boven, en zouden alles in de schaduw zetten
+                shadow_maps_enabled: false,
+                affects_lightmapped_mesh_diffuse: true,
+                ..default()
+            },
+            Transform::IDENTITY,
+        ));
+        return;
+    };
+    if let Some(c) = camera.iter().next() {
+        let doel = Transform::IDENTITY.looking_to(sleutelrichting(c), Vec3::Y);
+        if plek.rotation != doel.rotation {
+            plek.rotation = doel.rotation;
+        }
+    }
+    let lux = SLEUTEL_LUX * nabij;
+    if l.illuminance != lux {
+        l.illuminance = lux;
+    }
+    // het gebakken licht op het leer, ook van materialen die er later bij komen (een nieuwe
+    // kleur, een Stoel midden in de golf)
+    let gebakken = 1.0 - (1.0 - SLEUTEL_GEBAKKEN) * nabij;
+    let nieuw = *vorig != Some(gebakken);
+    *vorig = Some(gebakken);
+    for m in &leer {
+        if materialen.get(&m.0).is_some_and(|m| m.lightmap_exposure != gebakken || nieuw)
+            && let Some(mut m) = materialen.get_mut(&m.0)
+        {
+            m.lightmap_exposure = gebakken;
+        }
+    }
+}
+
 /// Hoe licht de rest van de Zaal is (alles behalve het leer van de Stoelen): 1 zoals gebakken,
 /// lager zolang er Stoelen gekleurd zijn, naar de Kleurkracht. Het licht verandert mee met de
 /// Kleurovergang.
@@ -1025,7 +1108,7 @@ fn dim_zaal(
     mut licht: ParamSet<(
         Query<(Entity, &mut PointLight)>,
         Query<(Entity, &mut SpotLight), Without<Opbouwlicht>>,
-        Query<(Entity, &mut DirectionalLight)>,
+        Query<(Entity, &mut DirectionalLight), Without<Sleutellicht>>,
         Query<(Entity, &mut EnvironmentMapLight)>,
         Query<(), Or<(Added<PointLight>, Added<SpotLight>, Added<DirectionalLight>, Added<EnvironmentMapLight>)>>,
     )>,

@@ -32,15 +32,15 @@ pub struct Nabijheid(pub f32);
 const VANAF_GRADEN: f32 = 46.0;
 const HELEMAAL_GRADEN: f32 = 40.0;
 /// Het diafragma bij een volle close-up: een groot diafragma geeft weinig scherptediepte. Met de
-/// sensor van Bevy (Super 35) en de lens van de Persoonskaart is een Stoel twee rijen verder zo'n
-/// 10 pixels onscherp, en het bureau ervoor zo'n 8.
-const DIAFRAGMA: f32 = 0.7;
+/// sensor van Bevy (Super 35) en de lens van Partij uitgelicht zijn de rijen voor en achter het
+/// blok merkbaar zacht; met 0,7 zag je in ronde 4 bijna geen scherptediepte.
+const DIAFRAGMA: f32 = 0.25;
 /// Bij een volle close-up is de occlusie sterker en dichter bij: contactschaduw onder bureaus en
 /// Stoelen, die in een wijd shot te zwaar zou zijn.
 const OCCLUSIE_EXTRA: f32 = 0.3;
 const OCCLUSIE_STRAAL_DICHTBIJ: f32 = 0.35;
 /// Nooit onscherper dan dit, in pixels.
-const MEESTE_ONSCHERPTE: f32 = 14.0;
+const MEESTE_ONSCHERPTE: f32 = 20.0;
 /// Alleen in de Zaal: onder het plafond.
 const ONDER_Y: f32 = 5.0;
 

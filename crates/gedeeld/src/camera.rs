@@ -216,18 +216,20 @@ impl Standpunt {
             // daar vliegen (de studio in `crates/server/src/camera.rs`).
             //
             // Van hoog en ver, met een lens van 48 graden (council-ronde 3: 58 gaf te veel
-            // lege ruimte rond de banken): alle 150 Stoelen staan van x 30 tot 1890 en van y 426
-            // (de rugleuningen van de achterste rij, 66 px onder de kaartjes van de
-            // Zetelverdeling tot y 360) tot ongeveer 787 (de voorste Stoelen helemaal opzij; in
-            // het midden, waar het Opbouwlabel vanaf y 760 staat, tot y 643). Iets minder steil
-            // dan in ronde 4 (-28 graden): toen zaten de kaartjes strak tegen de achterste rij en
-            // vulden lege kabinetsbanken het onderste derde (council-ronde 4). De Stoelen
-            // achterin zijn groter dan van dichtbij met een wijde lens, en het plafond is uit
-            // beeld. Sjablonen met een paneel onderin kiezen [`BOVEN_HET_PANEEL`].
+            // lege ruimte rond de banken): alle 150 Stoelen staan van x 39 tot 1881 en van y 433
+            // (de rugleuningen van de achterste rij, 73 px onder de kaartjes van de
+            // Zetelverdeling tot y 360) tot ongeveer 860 (de voorste Stoelen helemaal opzij; in
+            // het midden, waar het Opbouwlabel vanaf y 760 staat, tot y 686). Hoger en steiler
+            // dan in ronde 4 (10,5 m hoog, 12,5 m achter het midden, -28 graden): toen zaten de
+            // kaartjes strak tegen de achterste rij en vulden lege kabinetsbanken het onderste
+            // derde (council-ronde 4). Van hoger oogt het halfrond ronder, dus vult het meer van
+            // de hoogte bij dezelfde breedte. De Stoelen achterin zijn groter dan van dichtbij
+            // met een wijde lens, en het plafond is uit beeld. Sjablonen met een paneel onderin
+            // kiezen [`BOVEN_HET_PANEEL`].
             vast(
                 "A",
                 "Totaal vanaf voorzitter",
-                Camerastand::uit_graden([0.0, 10.5, 12.5], 0.0, -25.5, 48.0),
+                Camerastand::uit_graden([0.0, 13.0, 11.0], 0.0, -31.5, 48.0),
             ),
             vast(
                 "S",
@@ -310,8 +312,9 @@ const SHOT_OPZIJ: f32 = 28.0;
 /// Hoe hoog boven de rugleuning de camera staat, en waar hij naar kijkt (het hoofd van wie er zit).
 const SHOT_HOOGTE: f32 = 0.95;
 const SHOT_HOOFD: f32 = 0.1;
-/// Verticale beeldhoek van het shot, in graden.
-const SHOT_BEELDHOEK: f32 = 34.0;
+/// Verticale beeldhoek van het shot, in graden: krap op de Stoel, met zijn buren half in beeld
+/// (council-ronde 4; met 34 graden was de Stoel klein tussen veel bureaus).
+const SHOT_BEELDHOEK: f32 = 26.0;
 /// Waar de Stoel in beeld komt: links van het midden, want de Persoonskaart staat rechts
 /// (x -1 tot 1 over de breedte; de kaart begint bij 0,21).
 const SHOT_PLEK_X: f32 = -0.42;
