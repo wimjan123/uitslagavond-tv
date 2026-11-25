@@ -670,7 +670,13 @@ impl Stand {
             }
             Opdracht::KiesStandpunt { letter, knip } => {
                 self.controleer_standpunt(Some(letter))?;
-                self.kies_standpunt(letter, *knip, h);
+                // Aanschuiven gaat naar de Partij van de Graphic in de Ether
+                let letter = match (letter.as_str(), &self.ether) {
+                    (camera::AANSCHUIVEN, Some(e)) => e.graphic.standpunt_bij(Some(camera::AANSCHUIVEN)).into_owned(),
+                    (camera::AANSCHUIVEN, None) => return Err(Weigering::NietsInBeeld),
+                    _ => letter.clone(),
+                };
+                self.kies_standpunt(&letter, *knip, h);
             }
             Opdracht::ZetVrijeCamera { aan } => self.zet_vrije_camera(*aan)?,
             Opdracht::ZetOefenen { aan } => self.zet_oefenen(*aan)?,
@@ -1110,6 +1116,7 @@ impl Stand {
             .map(|s| s.stand)
             .or_else(|| self.camerarit(letter).and_then(Camerarit::beginstand))
             .or_else(|| camera::stoel_uit_sleutel(letter).and_then(camera::shot_op_stoel))
+            .or_else(|| camera::aanschuif_uit_sleutel(letter).and_then(|(van, tot)| camera::aanschuif_stand(van, tot)))
     }
 
     /// Of er een Standpunt, Camerarit of Stoel met deze sleutel is (geen sleutel mag ook).
@@ -1118,7 +1125,9 @@ impl Stand {
             Some(l)
                 if self.standpunt(l).is_none()
                     && self.camerarit(l).is_none()
-                    && camera::stoel_uit_sleutel(l).is_none() =>
+                    && camera::stoel_uit_sleutel(l).is_none()
+                    && l != camera::AANSCHUIVEN
+                    && camera::aanschuif_uit_sleutel(l).is_none() =>
             {
                 Err(Weigering::OnbekendStandpunt(l.into()))
             }

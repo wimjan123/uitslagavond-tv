@@ -51,9 +51,10 @@ const TOETSEN: Record<string, TakeActie | CameraActie> = {
 
 /**
  * De zes vaste Standpunten (Totaal vanaf voorzitter, Laag over de banken, Linkerflank, Rechterflank,
- * Bovenaf, Katheder), dan J, K en L voor eigen Standpunten (gelijk aan `EIGEN_TOETSEN` in crates/gedeeld).
+ * Bovenaf, Katheder), J, K en L voor eigen Standpunten (gelijk aan `EIGEN_TOETSEN` in crates/gedeeld), en Q, W, E,
+ * T, Y en U voor de zes vaste Cameraritten (`VASTE_TOETSEN`).
  */
-export const STANDPUNT_TOETSEN = ["a", "s", "d", "f", "g", "h", "j", "k", "l"];
+export const STANDPUNT_TOETSEN = ["a", "s", "d", "f", "g", "h", "j", "k", "l", "q", "w", "e", "t", "y", "u"];
 
 /** Het Standpunt of de Camerarit die deze toets nu heeft, of `null`. */
 export function standpuntVoorToets<T extends { letter: string; toets?: string; vast?: boolean }>(lijst: T[], toets: string): T | null {

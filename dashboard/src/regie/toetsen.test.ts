@@ -85,7 +85,7 @@ test("O zet Oefenen aan of uit en R neemt op; B blijft Bijwerken", () => {
 });
 
 test("andere letters doen niets", () => {
-  for (const key of ["q", "p", "Enter"]) assert.equal(actieVoorToets(toets(key)), null);
+  for (const key of ["i", "p", "Enter"]) assert.equal(actieVoorToets(toets(key)), null);
 });
 
 test("een toets hoort bij het Standpunt dat hem nu heeft", () => {

@@ -183,3 +183,14 @@ fn winst_en_verlies_zonder_vergelijkingsset_of_tegen_zichzelf_wordt_geweigerd() 
     let g = Graphic::WinstEnVerlies { set: "uitslag".into(), vergelijk_met: Some("uitslag".into()), cijfers: None };
     assert_eq!(p.doe(Opdracht::ZetKlaar { graphic: g, standpunt: None }), Err(Weigering::TweeKeerDezelfdeSet));
 }
+
+#[test]
+fn partij_uitgelicht_schuift_aan_naar_het_blok_van_die_partij() {
+    let mut p = Proef::new();
+    p.toon(Graphic::PartijUitgelicht { set: "uitslag".into(), partij: "blauw".into(), cijfers: None });
+    let (van, tot) = gedeeld::camera::aanschuif_uit_sleutel(&p.stand.camera.standpunt).expect("Aanschuiven");
+    // de Stoelen van links naar rechts in dat blok zijn precies de gekleurde
+    let volgorde = gedeeld::uitslagindeling::stoelen_van_links_naar_rechts();
+    let gekleurd: Vec<usize> = (0..150).filter(|&r| p.stand.stoelkleuren[volgorde[r]] == kleur("#12357a")).collect();
+    assert_eq!((gekleurd[0], *gekleurd.last().unwrap()), (van, tot));
+}

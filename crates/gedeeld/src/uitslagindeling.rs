@@ -377,6 +377,29 @@ impl Zetelstand {
         }))
     }
 
+    /// De plaatsen van links naar rechts ([`stoelen_van_links_naar_rechts`]) van de eerste en de
+    /// laatste Stoel van `partij`, tot en met. In de Uitslagindeling is dat haar blok; in de
+    /// Zaalindeling alles van haar meest linkse tot haar meest rechtse Kamerlid. `None` zonder
+    /// Zetels.
+    pub fn plaatsen_van(&self, partij: &str) -> Option<(usize, usize)> {
+        if let Some(stoelen) = &self.stoelen {
+            let volgorde = stoelen_van_links_naar_rechts();
+            let van_haar: Vec<usize> = (0..volgorde.len())
+                .filter(|&r| stoelen.get(volgorde[r]).and_then(|p| p.as_deref()) == Some(partij))
+                .collect();
+            return Some((*van_haar.first()?, *van_haar.last()?));
+        }
+        let mut begin = 0;
+        for p in &self.partijen {
+            let zetels = self.set.zetels_van(&p.sleutel) as usize;
+            if p.sleutel == partij {
+                return (zetels > 0).then(|| (begin, begin + zetels - 1));
+            }
+            begin += zetels;
+        }
+        None
+    }
+
     /// De kleur per Stoel bij Partij uitgelicht: de Stoelen van `partij` op hun plek in de
     /// Uitslagindeling en in haar kleur, alle andere grijs.
     pub fn stoelkleuren_van(&self, partij: &str) -> Vec<Kleur> {

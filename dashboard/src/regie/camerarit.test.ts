@@ -1,7 +1,7 @@
 // Cameraritten in het dashboard: `npm test` (node --test).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cameraKeuzes, kanHerhalen, opnameTijd, ritTiming, routeVan, stukS } from "./camerarit.ts";
+import { cameraKeuzes, kanHerhalen, opnameS, opnameTijd, ritAangepast, ritTiming, routeVan, standaardRit, stukS } from "./camerarit.ts";
 import type { Camerarit } from "../typen/Camerarit";
 import type { Standpunt } from "../typen/Standpunt";
 
@@ -12,6 +12,7 @@ function rit(sec: number, plek: (t: number) => [number, number, number], extra: 
   return {
     letter: "R1",
     naam: "Camerarit 1",
+    vast: false,
     opname,
     bijschaving: {
       gladheid: 0.2,
@@ -86,4 +87,14 @@ test("waar je een Standpunt kiest, kies je ook een Camerarit, met toets en naam"
       ["R1", "K", "K · Camerarit 1", "Camerarit"],
     ],
   );
+});
+
+test("een vaste Camerarit krijgt zijn opname uit de software, 100 standen per seconde", () => {
+  const w = standaardRit("W")!;
+  assert.equal(w.opname.length, 0, "niet in de Stand");
+  assert.equal(opnameS(w), w.bijschaving.duur_s);
+  assert.equal(kanHerhalen(w) === null, false);
+  assert.equal(kanHerhalen(standaardRit("E")!), null, "het rondje herhaalt");
+  assert.ok(!ritAangepast(w));
+  assert.ok(ritAangepast({ ...w, bijschaving: { ...w.bijschaving, duur_s: 30 } }));
 });

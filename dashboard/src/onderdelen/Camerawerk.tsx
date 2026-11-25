@@ -13,6 +13,7 @@ import {
   kanHerhalen,
   komma,
   opnameS,
+  ritAangepast,
   ritTiming,
   standpuntTiming,
   stukS,
@@ -92,9 +93,13 @@ export function Camerawerk() {
       rijen: standpunten.filter((p) => !p.vast).map((p) => ({ letter: p.letter, toets: toetsVan(p), naam: p.naam, tijd: standpuntTiming(p) })),
     },
     {
-      naam: "Cameraritten",
+      naam: "Vaste Cameraritten",
+      rijen: ritten.filter((r) => r.vast).map((r) => ({ letter: r.letter, toets: toetsVan(r), naam: r.naam, tijd: ritTiming(r) })),
+    },
+    {
+      naam: "Eigen Cameraritten",
       leeg: "Zet Oefenen aan en neem een rit op met R.",
-      rijen: ritten.map((r) => ({ letter: r.letter, toets: toetsVan(r), naam: r.naam, tijd: ritTiming(r) })),
+      rijen: ritten.filter((r) => !r.vast).map((r) => ({ letter: r.letter, toets: toetsVan(r), naam: r.naam, tijd: ritTiming(r) })),
     },
   ];
   const p = standpunten.find((x) => x.letter === gekozen);
@@ -645,7 +650,7 @@ function RitDetail({ r }: { r: Camerarit }) {
   return (
     <section className="paneel-detail">
       <header>
-        <Naam letter={r.letter} naam={r.naam} vast={false} soort="Camerarit" />
+        <Naam letter={r.letter} naam={r.naam} vast={r.vast} soort="Camerarit" />
       </header>
       <div className="knoppen">
         <button className="knop knop-hoofd" disabled={!verbonden} onClick={() => kiesStandpunt(regie, r.letter)}>
@@ -731,11 +736,22 @@ function RitDetail({ r }: { r: Camerarit }) {
         {herhalen && <p className="zacht">Herhalen kan niet: {herhalen}.</p>}
       </div>
       <div className="knoppen">
-        <button className="knop" disabled={!verbonden || !!s?.camera.vrij} title={s?.camera.vrij ? "Zet eerst Vrij uit" : "Zet Oefenen aan en neem deze rit opnieuw op"} onClick={() => void opnieuw()}>
-          Opnieuw opnemen
-        </button>
+        {r.vast ? (
+          <button
+            className="knop"
+            disabled={!verbonden || !ritAangepast(r)}
+            title={ritAangepast(r) ? "Zet de naam en de schuifjes terug zoals de rit meekwam" : "Deze rit staat zoals hij meekwam"}
+            onClick={() => stuur({ soort: "HerstelCamerarit", letter: r.letter })}
+          >
+            Terug naar standaard
+          </button>
+        ) : (
+          <button className="knop" disabled={!verbonden || !!s?.camera.vrij} title={s?.camera.vrij ? "Zet eerst Vrij uit" : "Zet Oefenen aan en neem deze rit opnieuw op"} onClick={() => void opnieuw()}>
+            Opnieuw opnemen
+          </button>
+        )}
       </div>
-      <Beheer letter={r.letter} naam={r.naam} toets={toetsVan(r)} vast={false} />
+      <Beheer letter={r.letter} naam={r.naam} toets={toetsVan(r)} vast={r.vast} />
       <Melding />
     </section>
   );

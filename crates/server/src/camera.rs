@@ -15,7 +15,8 @@ use std::sync::{Arc, LazyLock};
 use gedeeld::Stand;
 use gedeeld::camera::{
     CameraOvergang, Camerabeeld, Camerakeuze, Camerapunt, Camerastand, NaAankomst, OvergangSoort,
-    SCHUIVEN_S, Standpunt, TIKKEN_PER_SECONDE, shot_op_stoel, stoel_uit_sleutel,
+    SCHUIVEN_S, Standpunt, TIKKEN_PER_SECONDE, aanschuif_overgang, aanschuif_stand, aanschuif_uit_sleutel,
+    shot_op_stoel, stoel_uit_sleutel,
 };
 use gedeeld::camerarit::{Camerarit, OPNAME_MAX_S, RitBegin, Ritbaan, als_opnamepunt};
 use serde::Deserialize;
@@ -509,6 +510,19 @@ impl Doel {
                     toets: None,
                     stand: shot_op_stoel(stoel)?,
                     overgang: CameraOvergang::default(),
+                    na_aankomst: NaAankomst::Stil,
+                }))
+            })
+            .or_else(|| {
+                // Aanschuiven: langzaam naar het blok van een Partij, en daarna stil
+                let (van, tot) = aanschuif_uit_sleutel(letter)?;
+                Some(Doel::Standpunt(Standpunt {
+                    letter: letter.into(),
+                    naam: "Aanschuiven".into(),
+                    vast: true,
+                    toets: None,
+                    stand: aanschuif_stand(van, tot)?,
+                    overgang: aanschuif_overgang(),
                     na_aankomst: NaAankomst::Stil,
                 }))
             })
@@ -1670,6 +1684,38 @@ mod tests {
         doe(&mut stand, &mut v, kies(&r, false));
         regie.volg(&stand, 21 * T);
         assert!((regie.beeld(21 * T).ether.stand.positie[0] + 2.0).abs() < 1e-3);
+    }
+
+    #[test]
+    fn aanschuiven_eindigt_voor_elk_blok_in_de_ruimte_en_kijkt_naar_het_blok() {
+        let r = ruimte();
+        let volgorde = gedeeld::uitslagindeling::stoelen_van_links_naar_rechts();
+        for van in 0..150 {
+            for tot in van..150 {
+                let s = aanschuif_stand(van, tot).unwrap();
+                assert!(r.bevat(s.positie, 0.1), "{van}-{tot}: {:?} buiten de ruimte", s.positie);
+                // het midden van het blok staat in beeld
+                let n = (tot - van + 1) as f32;
+                let m: [f32; 3] = std::array::from_fn(|k| volgorde[van..=tot].iter().map(|&i| STOELPLEKKEN[i][k]).sum::<f32>() / n);
+                let d = sub(m, s.positie);
+                let draai = (-d[0]).atan2(-d[2]);
+                let verschil = (draai - s.draai + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+                assert!(verschil.abs() < 0.05, "{van}-{tot}: kijkt {verschil} rad naast het blok");
+            }
+        }
+    }
+
+    #[test]
+    fn aanschuiven_duurt_acht_seconden() {
+        let mut stand = Stand::default();
+        let mut v = 0;
+        let sleutel = gedeeld::camera::aanschuifsleutel(40, 65);
+        let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
+        doe(&mut stand, &mut v, kies(&sleutel, false));
+        regie.volg(&stand, 0);
+        let doel = aanschuif_stand(40, 65).unwrap();
+        assert!(len(sub(regie.beeld(4 * T).ether.stand.positie, doel.positie)) > 0.1, "na 4 s nog onderweg");
+        assert!(len(sub(regie.beeld(8 * T + 2).ether.stand.positie, doel.positie)) < 1e-3, "na 8 s aangekomen");
     }
 
     #[test]

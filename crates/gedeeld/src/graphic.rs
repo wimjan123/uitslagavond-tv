@@ -443,6 +443,26 @@ impl Graphic {
         }
     }
 
+    /// De sleutel van Aanschuiven naar het blok van de gekozen Partij, als de Graphic een Partij
+    /// en Zetels heeft ([`crate::camera::aanschuifsleutel`]).
+    pub fn aanschuifsleutel(&self) -> Option<String> {
+        let (van, tot) = self.zetelstand()?.plaatsen_van(self.partij()?)?;
+        Some(crate::camera::aanschuifsleutel(van, tot))
+    }
+
+    /// Het Standpunt bij een keuze: Aanschuiven wordt het blok van de gekozen Partij, of zonder
+    /// Partij het Standpunt van de soort Graphic. Elke andere keuze blijft wat hij is.
+    pub fn standpunt_bij<'a>(&self, keuze: Option<&'a str>) -> Cow<'a, str> {
+        match keuze {
+            Some(crate::camera::AANSCHUIVEN) => match self.aanschuifsleutel() {
+                Some(s) => Cow::Owned(s),
+                None => Cow::Owned(self.standaard_standpunt().into_owned()),
+            },
+            Some(l) => Cow::Borrowed(l),
+            None => Cow::Owned(self.standaard_standpunt().into_owned()),
+        }
+    }
+
     /// De letter van het standaard Standpunt van het Sjabloon. Een Graphic kan een ander kiezen
     /// (zie [`KlaargezetteGraphic::standpunt`]). Een Persoonskaart van een Kamerlid met een Stoel
     /// kiest het shot van die Stoel ([`crate::camera::stoelsleutel`]).
@@ -455,12 +475,16 @@ impl Graphic {
             | Graphic::TweeSets { .. }
             | Graphic::UitslagPerPartij { .. }
             | Graphic::WinstEnVerlies { .. }
-            | Graphic::PartijUitgelicht { .. }
             | Graphic::Coalitie { .. }
             | Graphic::Coalitiebalk { .. }
             | Graphic::Eigen { .. } => Cow::Borrowed("A"),
             // Bovenaf: alle Stoelen met hun eigen kleur, en het paneel dekt het beeld bijna.
             Graphic::HoofdelijkeStemming { .. } | Graphic::FractiesVoorEnTegen { .. } => Cow::Borrowed("G"),
+            // langzaam naar het blok van de gekozen Partij
+            Graphic::PartijUitgelicht { .. } => match self.aanschuifsleutel() {
+                Some(s) => Cow::Owned(s),
+                None => Cow::Borrowed("A"),
+            },
             Graphic::Persoonskaart { .. } => match self.uitgelichte_stoel() {
                 Some(stoel) => Cow::Owned(crate::camera::stoelsleutel(stoel)),
                 None => Cow::Borrowed(STANDPUNT_ZONDER_STOEL),
@@ -584,10 +608,7 @@ pub struct GraphicInBeeld {
 impl KlaargezetteGraphic {
     /// De letter van het Standpunt: de keuze voor deze Graphic, anders die van het Sjabloon.
     pub fn standpunt(&self) -> Cow<'_, str> {
-        match self.standpunt.as_deref().or(self.standpunt_van_sjabloon.as_deref()) {
-            Some(l) => Cow::Borrowed(l),
-            None => self.graphic.standaard_standpunt(),
-        }
+        self.graphic.standpunt_bij(self.standpunt.as_deref().or(self.standpunt_van_sjabloon.as_deref()))
     }
 }
 
@@ -595,10 +616,7 @@ impl GraphicInBeeld {
     /// De letter van het Standpunt: de keuze voor deze Graphic, anders die van het Sjabloon.
     pub fn standpunt(&self) -> Cow<'_, str> {
         let van_sjabloon = self.sjabloon.as_ref().and_then(|s| s.standpunt.as_deref());
-        match self.standpunt.as_deref().or(van_sjabloon) {
-            Some(l) => Cow::Borrowed(l),
-            None => self.graphic.standaard_standpunt(),
-        }
+        self.graphic.standpunt_bij(self.standpunt.as_deref().or(van_sjabloon))
     }
 
     /// De kleuren van de Stoelen zoals het Sjabloon van deze Graphic zegt. `None`: de Zaal houdt

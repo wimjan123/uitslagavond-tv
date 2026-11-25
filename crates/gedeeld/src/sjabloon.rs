@@ -2017,7 +2017,8 @@ fn zetelverdeling() -> Sjabloon {
         snelheid: 100,
         achtergrond: Achtergrond::Zaal,
         stoelen: Stoelen::Gegevens,
-        standpunt: None,
+        // de Onthulling: van boven de banken de Zaal in (vaste Camerarit Q)
+        standpunt: Some("Q".into()),
         blokken: vec![
             naambalk(plek(96, 54, 1100, 166), vec![2, 3]),
             streepje,
