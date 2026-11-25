@@ -85,10 +85,11 @@ function Schil() {
       const el = e.target instanceof Element ? e.target.closest("button, [role=tab]") : null;
       if (!el || (el as HTMLButtonElement).disabled) return;
       e.preventDefault();
-      // Stond je nog in een veld (zoals een Zetelaantal), dan rondt dat veld eerst af: zo komt de laatste
-      // waarde vóór de klik binnen (Opdrachten gaan op volgorde), en is Spatie daarna weer Toon.
+      // De focus gaat ook weg van wat hem nog had. Een veld (zoals een Zetelaantal) rondt zo eerst af, zodat
+      // de laatste waarde vóór de klik binnenkomt (Opdrachten gaan op volgorde). En een knop waar je eerder
+      // met Tab op kwam (zoals Uit beeld) drukt Spatie daarna niet meer: Spatie is weer Take.
       const actief = document.activeElement;
-      if (actief instanceof HTMLElement && doelVan(actief) === "tekstveld") actief.blur();
+      if (actief instanceof HTMLElement && doelVan(actief) !== "elders") actief.blur();
     };
     window.addEventListener("mousedown", geenFocus);
     return () => window.removeEventListener("mousedown", geenFocus);
