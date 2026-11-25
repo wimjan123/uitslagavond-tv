@@ -2030,7 +2030,7 @@ pub fn kicker(x: i32, y: i32, breedte: u32, bron: Tekstbron) -> [Blok; 2] {
 /// Het programmalogo als bug rechtsboven, zoals on-air: 196 pixels breed op 90 procent. Zonder logo: de tekst ervan in wit.
 pub fn programmabug() -> Blok {
     Blok {
-        plek: plek(1448, 46, 400, 131),
+        plek: plek(1424, 46, 400, 131),
         soort: Bloksoort::Programmalogo {
             letter: Letterkeuze::Stijl(Stijlletter::Kop),
             dekking: 90,
@@ -2041,7 +2041,7 @@ pub fn programmabug() -> Blok {
 }
 
 /// De Titelkaart: een kop en een regel in een naambalk linksonder, over een waas in de kleur
-/// Achtergrond die naar rechts doorzichtig wordt, en het programmalogo rechtsboven.
+/// Vlak die naar boven doorzichtig wordt, en het programmalogo rechtsboven.
 fn titelkaart() -> Sjabloon {
     let veld = |v: &str| Tekstbron::Veld(v.into());
     let naambalk_tekst = |p, bron, letter, grootte, kleur| Blok {
@@ -2059,23 +2059,24 @@ fn titelkaart() -> Sjabloon {
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken: vec![
-            // 0: de waas over de linkerkant van het beeld
+            // 0: een waas onderin, van Vlak naar doorzichtig, zodat de naambalk rustig staat en
+            // de Zaal erboven helder blijft
             Blok {
-                plek: plek(0, 0, 1300, 1080),
+                plek: plek(0, 560, 1920, 520),
                 soort: vlak_met(
-                    97,
+                    85,
                     Some(Verloop {
-                        naar: Kleurkeuze::Stijl(Stijlkleur::Achtergrond),
+                        naar: Kleurkeuze::Stijl(Stijlkleur::Vlak),
                         naar_dekking: 0,
-                        richting: 90,
-                        van: 30,
-                        tot: 92,
+                        richting: 0,
+                        van: 0,
+                        tot: 100,
                     }),
                     0,
                     None,
                     None,
                 ),
-                kleur: Kleurkeuze::Stijl(Stijlkleur::Achtergrond),
+                kleur: Kleurkeuze::Stijl(Stijlkleur::Vlak),
                 animatie: animatie(Erin::Vervagen, Eruit::Vervagen, 0),
             },
             // 1 tot 3: de naambalk met kop en regel
@@ -2269,7 +2270,26 @@ fn persoonskaart() -> Sjabloon {
             Stijlkleur::Tekst,
             false,
         ),
-        // 18: het programmalogo
+        // de onderkant van de foto loopt over in het paneel, zodat hij er niet op geplakt lijkt
+        Blok {
+            plek: plek(1214, 450, 400, 180),
+            soort: vlak_met(
+                0,
+                Some(Verloop {
+                    naar: Kleurkeuze::Stijl(Stijlkleur::Vlak),
+                    naar_dekking: 100,
+                    richting: 180,
+                    van: 0,
+                    tot: 100,
+                }),
+                0,
+                None,
+                None,
+            ),
+            kleur: Kleurkeuze::Stijl(Stijlkleur::Vlak),
+            animatie: animatie(Erin::Vervagen, Eruit::Vervagen, 260),
+        },
+        // het programmalogo
         programmabug(),
     ]);
     Sjabloon {
