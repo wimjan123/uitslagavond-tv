@@ -135,6 +135,25 @@ impl Opbouw {
         }
     }
 
+    /// Hoe ver Stoel `i` op `t` seconden de Partij is die aan de beurt is (0 tot 1): dat komt op
+    /// met haar kleur, blijft de hele stap, en zakt daarna weg terwijl ze dimt (of, bij de laatste
+    /// stap, terwijl de rest terugkomt). Zolang dat zo is, is ze het lichtst en gloeit ze na de
+    /// flits zacht na (council-ronde 6).
+    pub fn actief(&self, i: usize, t: f32) -> f32 {
+        let Some(k) = self.stap_van.get(i).copied().flatten() else { return 0.0 };
+        let start = self.inleiding() + k as f32 * self.per_stap;
+        let (top, einde) = (start + OPLICHTEN * self.per_stap, start + self.per_stap);
+        if t < start {
+            0.0
+        } else if t < top {
+            zacht((t - start) / (OPLICHTEN * self.per_stap))
+        } else if t < einde {
+            1.0
+        } else {
+            1.0 - zacht(((t - einde) / (NAGLOED * self.per_stap)).min(1.0))
+        }
+    }
+
     /// Waar Stoel `i` is op `t` seconden.
     pub fn deel(&self, i: usize, t: f32) -> Opbouwdeel {
         let inleiding = self.inleiding();
@@ -254,6 +273,21 @@ mod tests {
         assert_eq!(o.gedimd(0, 2.7), 0.0, "de laatste stap dimt nooit");
         assert_eq!(o.gedimd(1, o.duur()), 0.0, "aan het eind komt alles terug");
         assert_eq!(o.gedimd(3, 2.0), 0.0, "zonder kleur niets");
+    }
+
+    #[test]
+    fn de_partij_van_de_stap_blijft_de_hele_stap_actief_en_zakt_daarna_weg() {
+        let o = Opbouw::nieuw(&[k(1), k(2), k(2), None], &[0, 1, 2, 3], 1.0);
+        // stap 0 (kleur 2) van 0,5 tot 1,5, stap 1 (kleur 1) van 1,5 tot 2,5
+        assert_eq!(o.actief(1, 0.4), 0.0, "voor haar stap niet");
+        assert_eq!(o.actief(1, 0.75), 1.0, "op met haar kleur");
+        assert_eq!(o.actief(1, 1.4), 1.0, "ook na de flits, tot het eind van de stap");
+        assert_eq!(o.gloed(1, 1.4), 0.0, "de flits zelf is dan weg");
+        assert!(o.actief(1, 1.6) > 0.0 && o.actief(1, 1.6) < 1.0, "zakt weg terwijl ze dimt");
+        assert_eq!(o.actief(1, 2.0), 0.0);
+        assert_eq!(o.actief(0, 2.4), 1.0, "de laatste stap tot zijn eind");
+        assert_eq!(o.actief(0, o.duur()), 0.0, "aan het eind is niemand meer actief");
+        assert_eq!(o.actief(3, 1.0), 0.0, "zonder kleur niets");
     }
 
     #[test]

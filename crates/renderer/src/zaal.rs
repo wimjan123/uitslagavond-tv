@@ -56,11 +56,12 @@ impl Plugin for ZaalPlugin {
             .init_resource::<Zaaldimmer>()
             .init_resource::<Uitlichting>()
             .init_resource::<Titelsterkte>()
+            .init_resource::<crate::occlusie::Vloerlicht>()
             .add_systems(
                 Update,
                 (
                     stel_stof_en_hout_bij,
-                    ((herken_stoelen, kleur_stoelen, licht_stoel_op, verlicht_de_opbouw, zet_sleutellicht, zet_titellicht).chain(), dim_zaal, geef_stoelen_licht),
+                    ((herken_stoelen, kleur_stoelen, licht_stoel_op, kleur_de_bies, verlicht_de_opbouw, zet_sleutellicht, zet_titellicht).chain(), dim_zaal, geef_stoelen_licht),
                 )
                     .chain()
                     .after(Afgewerkt),
@@ -74,7 +75,7 @@ impl Plugin for ZaalPlugin {
                     brightness: crate::beeld::BEELD.omgeving,
                     affects_lightmapped_meshes: false,
                 })
-                .add_systems(Startup, (laad.after(crate::beeld::bouw), zet_lijn_bij_76, zet_titelbundel))
+                .add_systems(Startup, (laad.after(crate::beeld::bouw), zet_lijn_bij_76))
                 .add_systems(Update, (stel_materialen_bij, spots_stralen.before(dim_zaal), meld_klaar, toon_lijn_bij_76));
         }
     }
@@ -108,6 +109,17 @@ pub struct ZaalStoel;
 pub struct StoelLeer {
     pub index: usize,
 }
+
+/// De bies langs de rand van de rugleuning: een donkere tint van het leer van zijn Stoel. In het
+/// model is hij donkerblauw, en dat bleef hij op een groene of grijze Stoel (council-ronde 6).
+#[derive(Component, Debug)]
+struct StoelBies {
+    index: usize,
+}
+
+/// Het materiaal van de bies, en hoeveel donkerder dan het leer hij is (zoals in het model).
+const STOEL_BIES: &str = "stoel_bies";
+const BIES_DONKER: f32 = 0.45;
 
 /// Eén materiaal per kleur, gedeeld door alle Stoelen met die kleur.
 #[derive(Resource, Default)]
@@ -396,14 +408,73 @@ fn herken_stoelen(
         }
     }
     for (e, materiaal) in &nieuwe_materialen {
-        if materiaal.0 != STOEL_LEER {
+        if materiaal.0 != STOEL_LEER && materiaal.0 != STOEL_BIES {
             continue;
         }
         let stoel = ouders
             .iter_ancestors(e)
             .find_map(|a| namen.get(a).ok().and_then(|n| stoel_uit_naam(n.as_str())));
         if let Some(index) = stoel.and_then(|s| s.index()) {
-            commands.entity(e).insert(StoelLeer { index });
+            if materiaal.0 == STOEL_LEER {
+                commands.entity(e).insert(StoelLeer { index });
+            } else {
+                commands.entity(e).insert(StoelBies { index });
+            }
+        }
+    }
+}
+
+/// Geeft de bies van elke Stoel een donkere tint van zijn leer, ook midden in een kleurgolf: per
+/// materiaal van het leer één materiaal voor de bies.
+fn kleur_de_bies(
+    leer: Query<(&StoelLeer, &MeshMaterial3d<StandardMaterial>)>,
+    mut bies: Query<(&StoelBies, &mut MeshMaterial3d<StandardMaterial>), Without<StoelLeer>>,
+    mut materialen: ResMut<Assets<StandardMaterial>>,
+    mut per_leer: Local<HashMap<AssetId<StandardMaterial>, Handle<StandardMaterial>>>,
+    mut origineel: Local<Option<Handle<StandardMaterial>>>,
+    mut leer_van: Local<Vec<Option<AssetId<StandardMaterial>>>>,
+) {
+    if bies.is_empty() {
+        return;
+    }
+    if origineel.is_none() {
+        *origineel = bies.iter().next().map(|(_, m)| m.0.clone());
+    }
+    let Some(basis) = origineel.clone() else { return };
+    leer_van.resize(AANTAL_STOELEN, None);
+    leer_van.iter_mut().for_each(|l| *l = None);
+    for (s, m) in &leer {
+        if let Some(l) = leer_van.get_mut(s.index) {
+            *l = Some(m.0.id());
+        }
+    }
+    // materialen van leer dat niet meer gebruikt wordt, kunnen weg
+    per_leer.retain(|id, _| leer_van.contains(&Some(*id)));
+    for id in leer_van.iter().flatten() {
+        let Some((kleur, straling)) = materialen.get(*id).map(|m| (LinearRgba::from(m.base_color), m.emissive)) else {
+            continue;
+        };
+        let (kleur, straling) = ((kleur * BIES_DONKER).with_alpha(1.0), straling * BIES_DONKER);
+        let h = match per_leer.get(id) {
+            Some(h) => h.clone(),
+            None => {
+                let Some(m) = materialen.get(&basis).cloned() else { return };
+                let h = materialen.add(m);
+                per_leer.insert(*id, h.clone());
+                h
+            }
+        };
+        if materialen.get(&h).is_some_and(|m| LinearRgba::from(m.base_color) != kleur || m.emissive != straling)
+            && let Some(mut m) = materialen.get_mut(&h)
+        {
+            m.base_color = kleur.into();
+            m.emissive = straling;
+        }
+    }
+    for (s, mut m) in &mut bies {
+        let Some(h) = leer_van.get(s.index).copied().flatten().and_then(|id| per_leer.get(&id)) else { continue };
+        if m.0 != *h {
+            m.0 = h.clone();
         }
     }
 }
@@ -483,18 +554,21 @@ impl Golf {
                         Stoelstand::Onderweg(van.mix(&wacht, f), van_straalt.mix(&LinearRgba::BLACK, f))
                     }
                     Opbouwdeel::Oplichten(f) => {
-                        let (g, d) = (self.opbouw.gloed(i, self.tijd), self.opbouw.gedimd(i, self.tijd));
-                        if f >= 1.0 && g <= 0.0 && d <= 0.0 {
+                        let t = self.tijd;
+                        let (g, d, a) = (self.opbouw.gloed(i, t), self.opbouw.gedimd(i, t), self.opbouw.actief(i, t));
+                        if f >= 1.0 && g <= 0.0 && d <= 0.0 && a <= 0.0 {
                             return Stoelstand::Klaar;
                         }
-                        // eerst de kleur, dan gedimd naar middengrijs, dan de flits van de stap
+                        // eerst de kleur (zolang ze aan de beurt is lichter), dan gedimd naar
+                        // grijs, dan de flits van de stap
                         let gedimd = naar.map_or(lineair(None), gedimd_leer);
+                        let kleur = naar.map_or(lineair(None), |k| lineair(Some(k)).mix(&actief_leer(k, self.nabij), a));
                         let leer = wacht
-                            .mix(&lineair(naar), f)
+                            .mix(&kleur, f)
                             .mix(&gedimd, d)
                             .mix(&lineair(Some(Kleur { r: 255, g: 255, b: 255 })), GLOED_LICHT * g);
                         let eigen = naar.filter(|k| *k != GRIJS).map_or(LinearRgba::BLACK, |k| gekalibreerd(k, 0.0));
-                        let straling = LinearRgba::BLACK.mix(&straalt(naar), f) * (1.0 - d) + eigen * (GLOED_STRAALT * g);
+                        let straling = LinearRgba::BLACK.mix(&straalt(naar), f) * (1.0 - d) + eigen * (GLOED_STRAALT * g + NAGLOED_STRAALT * a);
                         Stoelstand::Onderweg(leer, straling)
                     }
                 }
@@ -668,20 +742,25 @@ fn straling_bij(k: Kleur, kracht: f32, nabij: f32) -> LinearRgba {
     gekalibreerd(k, nabij) * ((kal.straalt + kracht * KLEUR_STRAALT) * (1.0 - (1.0 - kal.nabij_straalt) * nabij))
 }
 
-/// Bij de Opbouw staan de Stoelen op drie lichtheden: leeg (nog niet aan de beurt) donker, "al
-/// geweest" middengrijs, en de Partij die aan de beurt is vol in haar kleur. Met "al geweest"
-/// donker leken gedimde donkere Partijen (PVV, JA21) op lege Stoelen en was de actieve Partij niet
-/// meteen te vinden (council-ronde 4). Het grijs is voor elke Partij even licht (Oklab-lichtheid
-/// [`GEDIMD_L`]), met [`GEDIMD_ZWEEM`] van haar kleurigheid, nooit meer dan [`GEDIMD_HOOGSTE_C`].
-/// Met een zweem tot 0,03 lazen de gedimde Partijen als nieuwe pastelkleuren (GL-PvdA
-/// roze-beige, CDA mint, council-ronde 5): nu is het grijs in beeld hoogstens 15 procent verzadigd.
-const GEDIMD_L: f32 = 0.56;
+/// Bij de Opbouw staan de Stoelen op drie lichtheden: de Partij die aan de beurt is het lichtst en
+/// vol in haar kleur, "al geweest" daaronder in grijs, en leeg (nog niet aan de beurt) het
+/// donkerst, in blauwgrijs. Met "al geweest" donker leken gedimde donkere Partijen (PVV, JA21) op
+/// lege Stoelen (council-ronde 4); met middengrijs (lichtheid 0,56) was het grijs het lichtste vlak
+/// in de Zaal en kwam JA21-blauw er nauwelijks bovenuit (ronde 6). Nu is het grijs voor elke Partij
+/// even licht (Oklab-lichtheid [`GEDIMD_L`], ongeveer 60 procent van de actieve Partij), met
+/// [`GEDIMD_ZWEEM`] van haar kleurigheid, nooit meer dan [`GEDIMD_HOOGSTE_C`]: met een zweem tot
+/// 0,03 lazen de gedimde Partijen als pastelkleuren (ronde 5).
+const GEDIMD_L: f32 = 0.42;
 const GEDIMD_ZWEEM: f32 = 0.1;
 const GEDIMD_HOOGSTE_C: f32 = 0.006;
 /// De lege Stoelen in de Opbouw: donker blauwgrijs leer, duidelijk donkerder dan "al geweest".
 /// Met de wachtkleur uit de Stand (#303030, nog donkerder gemaakt) stonden ze als zwarte gaten in
 /// de banken (council-ronde 5). De wachtkleur zelf blijft voor de Graphics.
-const OPBOUW_LEEG: Kleur = Kleur { r: 0x3a, g: 0x43, b: 0x52 };
+const OPBOUW_LEEG: Kleur = Kleur { r: 0x2a, g: 0x31, b: 0x40 };
+/// De Partij die aan de beurt is, heeft minstens deze lichtheid (Oklab, voor het leer): een
+/// donkere partijkleur (JA21, PVV) wordt zolang lichter in haar eigen tint, zodat ze ook naast
+/// "al geweest" het lichtst is. Aan het eind krijgt ze haar gewone kleur terug.
+const ACTIEF_L: f32 = 0.7;
 
 /// Het leer van een gedimde Partij in de Opbouw (lineair).
 fn gedimd_leer(k: Kleur) -> LinearRgba {
@@ -696,13 +775,25 @@ fn leeg_leer() -> LinearRgba {
     in_oklab(OPBOUW_LEEG, 1.0, 1.0) * kalibratie().albedo
 }
 
+/// Het leer van de Partij die in de Opbouw aan de beurt is (lineair): haar kleur, met minstens
+/// [`ACTIEF_L`] lichtheid.
+fn actief_leer(k: Kleur, nabij: f32) -> LinearRgba {
+    let mut c = Oklcha::from(gekalibreerd(k, nabij));
+    c.lightness = c.lightness.max(ACTIEF_L);
+    let l = LinearRgba::from(c);
+    LinearRgba::rgb(l.red.max(0.0), l.green.max(0.0), l.blue.max(0.0)) * kalibratie().albedo
+}
+
 /// Hoe fel het leer bij Kleurkracht 100 extra straalt in zijn eigen kleur. Laag, anders leest
 /// de stof als plastic dat zelf licht geeft.
 const KLEUR_STRAALT: f32 = 0.12;
 /// Bij de Opbouw: hoeveel de Partij die aan de beurt is naar wit opschuift, en hoe fel ze extra
 /// straalt in haar eigen kleur.
-const GLOED_LICHT: f32 = 0.35;
+const GLOED_LICHT: f32 = 0.3;
 const GLOED_STRAALT: f32 = 0.4;
+/// Na de flits gloeit de Partij die aan de beurt is zo fel na in haar eigen kleur, tot haar stap
+/// voorbij is: zo blijft het blok te vinden als de flits weg is (council-ronde 6).
+const NAGLOED_STRAALT: f32 = 0.16;
 /// Hoeveel licht de rest van de Zaal bij Kleurkracht 100 overhoudt, zolang er Stoelen gekleurd
 /// zijn. Daartussen daalt het licht in gelijke stappen voor het oog: bij 50 ongeveer een derde.
 const MINSTE_LICHT: f32 = 0.1;
@@ -889,25 +980,20 @@ fn kleur_stoelen(
     }
 }
 
-/// De lichtkring onder de Partij die in de Opbouw aan de beurt is: een spot recht boven haar
-/// blok, die met de flits van de stap opkomt en daarna zacht blijft branden. Zo vind je ook een
-/// klein blok achterin (BBB, vier Stoelen) en een donkere Partij naast een gedimde (JA21 naast
-/// PVV) meteen (council-ronde 4). Hij geeft licht op het gebakken tapijt en de banken rond het
-/// blok, dus het leest als een vloergloed, niet als een label.
-#[derive(Component)]
-struct Opbouwlicht;
-
-/// Zo hoog boven de rugleuningen hangt de spot, in meter.
-const OPBOUWLICHT_HOOGTE: f32 = 3.2;
-/// Zo ver buiten de buitenste Stoel van het blok reikt de kring, in meter.
-const OPBOUWLICHT_RAND: f32 = 1.5;
-/// De sterkte op de top van de flits en daarna, in lumen. Met 4500 en daarna de helft was de
-/// kring op het tapijt niet te meten (council-ronde 5): nu is het tapijt onder het blok minstens
-/// een kwart lichter dan ernaast.
-const OPBOUWLICHT_TOP: f32 = 14000.0;
-const OPBOUWLICHT_BLIJFT: f32 = 0.65;
+/// De lichtkring onder de Partij die in de Opbouw aan de beurt is: licht op de vloer onder haar
+/// blok ([`crate::occlusie::Vloerlicht`]), dat met de flits van de stap opkomt en daarna zacht
+/// blijft branden, zodat ook een klein blok achterin (BBB, vier Stoelen) en een donkere Partij
+/// naast een gedimde (JA21 naast PVV) meteen te vinden zijn (council-ronde 4). Een spot recht
+/// boven het blok (ronde 5) was op tv-formaat nauwelijks te zien en maakte de rugleuningen zo licht
+/// dat de partijkleur verbleekte (ronde 6); dit licht valt alleen op wat naar boven kijkt.
+///
+/// Het extra licht op de top van de flits (1 is twee keer zo licht) en wat daarna blijft.
+const OPBOUWLICHT_TOP: f32 = 4.0;
+const OPBOUWLICHT_BLIJFT: f32 = 0.7;
+/// Zo ver buiten de buitenste Stoel van het blok reikt de kring, in meter; de rand loopt zacht af.
+const OPBOUWLICHT_RAND: f32 = 1.6;
 /// Hoeveel van de partijkleur in het licht zit; de rest is warm wit.
-const OPBOUWLICHT_KLEUR: f32 = 0.2;
+const OPBOUWLICHT_KLEUR: f32 = 0.25;
 
 /// Hoe fel de lichtkring is (0 tot 1) op `t` seconden in een stap van `per_stap` seconden: hij
 /// komt op met de flits, zakt naar [`OPBOUWLICHT_BLIJFT`] en dooft vlak voor de volgende stap.
@@ -920,7 +1006,7 @@ pub fn opbouwlicht_sterkte(t: f32, per_stap: f32) -> f32 {
     op * zakt * uit
 }
 
-/// Waar de spot boven een blok Stoelen hangt en hoe wijd zijn kegel is (halve hoek).
+/// Het midden van de vloer onder een blok Stoelen en de straal van de kring.
 fn opbouwlicht_plek(stoelen: &[usize]) -> Option<(Vec3, f32)> {
     let plekken: Vec<Vec3> = stoelen.iter().filter_map(|&i| gedeeld::zaalkaart::STOELPLEKKEN.get(i)).map(|p| Vec3::from(*p)).collect();
     if plekken.is_empty() {
@@ -928,46 +1014,29 @@ fn opbouwlicht_plek(stoelen: &[usize]) -> Option<(Vec3, f32)> {
     }
     let midden = plekken.iter().copied().sum::<Vec3>() / plekken.len() as f32;
     let straal = plekken.iter().map(|p| p.with_y(0.0).distance(midden.with_y(0.0))).fold(0.0, f32::max) + OPBOUWLICHT_RAND;
-    Some((midden + Vec3::Y * OPBOUWLICHT_HOOGTE, (straal / OPBOUWLICHT_HOOGTE).atan()))
+    // de bovenkant van de rugleuning staat 0,8 m boven de vloer van zijn rij
+    Some((midden - Vec3::Y * 0.8, straal))
 }
 
-fn verlicht_de_opbouw(
-    mut commands: Commands,
-    golf: Res<Golf>,
-    mut licht: Query<(&mut SpotLight, &mut Transform, &mut Visibility), With<Opbouwlicht>>,
-) {
-    let Ok((mut spot, mut plek, mut zicht)) = licht.single_mut() else {
-        commands.spawn((
-            Opbouwlicht,
-            SpotLight {
-                intensity: 0.0,
-                range: 12.0,
-                shadow_maps_enabled: false,
-                affects_lightmapped_mesh_diffuse: true,
-                ..default()
-            },
-            Transform::IDENTITY,
-            Visibility::Hidden,
-        ));
-        return;
-    };
-    let stap = (golf.bezig && golf.vorm == Overgangsvorm::Opbouw).then(|| golf.opbouw.stap(golf.tijd)).flatten();
-    let Some((k, t)) = stap else {
-        zicht.set_if_neq(Visibility::Hidden);
-        return;
-    };
-    let blok: Vec<usize> = (0..golf.opbouw.stap_van.len()).filter(|&i| golf.opbouw.stap_van[i] == Some(k)).collect();
-    let Some((positie, halve_hoek)) = opbouwlicht_plek(&blok) else { return };
-    let kleur = golf.opbouw.stappen[k];
+/// De kleur van een licht met wat van deze kleur erin, even helder als warm wit.
+fn licht_met(kleur: Kleur, deel: f32) -> LinearRgba {
     let warm = LinearRgba::rgb(1.0, 0.93, 0.82);
     let eigen = LinearRgba::from(Srgba::rgb_u8(kleur.r, kleur.g, kleur.b));
-    let eigen = eigen * (1.0 / helderheid(eigen).max(0.05)).min(4.0);
-    *plek = Transform::from_translation(positie).looking_to(Vec3::NEG_Y, Vec3::Z);
-    spot.color = warm.mix(&eigen, OPBOUWLICHT_KLEUR).into();
-    spot.outer_angle = halve_hoek.min(1.3);
-    spot.inner_angle = spot.outer_angle * 0.55;
-    spot.intensity = OPBOUWLICHT_TOP * opbouwlicht_sterkte(t, golf.opbouw.per_stap);
-    zicht.set_if_neq(Visibility::Inherited);
+    let eigen = eigen * (helderheid(warm) / helderheid(eigen).max(0.02)).min(6.0);
+    warm.mix(&eigen, deel)
+}
+
+fn verlicht_de_opbouw(golf: Res<Golf>, mut vloer: ResMut<crate::occlusie::Vloerlicht>) {
+    let stap = (golf.bezig && golf.vorm == Overgangsvorm::Opbouw).then(|| golf.opbouw.stap(golf.tijd)).flatten();
+    let kring = stap.and_then(|(k, t)| {
+        let blok: Vec<usize> = (0..golf.opbouw.stap_van.len()).filter(|&i| golf.opbouw.stap_van[i] == Some(k)).collect();
+        let (midden, straal) = opbouwlicht_plek(&blok)?;
+        let sterkte = OPBOUWLICHT_TOP * opbouwlicht_sterkte(t, golf.opbouw.per_stap);
+        Some(crate::occlusie::Lichtkring { midden, straal, licht: licht_met(golf.opbouw.stappen[k], OPBOUWLICHT_KLEUR) * sterkte })
+    });
+    if vloer.kringen[0] != kring {
+        vloer.kringen[0] = kring;
+    }
 }
 
 /// Het sleutellicht van een close-up: een zachte spot schuin van boven en opzij van de camera,
@@ -1130,8 +1199,8 @@ fn zet_sleutellicht(
 
 /// Bij de Titelkaart een gerichte lamp van boven op de middelste Stoelen, zoals een studiolamp:
 /// het midden van de Zaal licht op en de rest valt terug (council-ronde 4: het totaalbeeld onder
-/// de Titelkaart was overal even licht). Samen met de lichtbundel ([`Titelbundel`]) het punt van
-/// aandacht van het eerste beeld (council-ronde 5).
+/// de Titelkaart was overal even licht). Samen met de lichtplek op de vloer ([`TITELPLEK`]) het
+/// punt van aandacht van het eerste beeld (council-ronde 5).
 #[derive(Component)]
 struct Titellicht;
 
@@ -1143,8 +1212,8 @@ struct Titelsterkte(f32);
 /// middelste Stoelen in de lamp zijn licht, de rest van de boog valt terug.
 const TITEL_LEER: f32 = 0.35;
 
-/// Waar de lamp hangt (net onder het plafond, voor de middelste Stoelen, waar ook de lichtbundel
-/// [`Titelbundel`] valt) en waar hij op richt, in meter.
+/// Waar de lamp hangt (net onder het plafond, voor de middelste Stoelen) en waar hij op richt, in
+/// meter.
 const TITELLICHT_PLEK: Vec3 = Vec3::new(-1.0, 4.8, -2.3);
 const TITELLICHT_DOEL: Vec3 = Vec3::new(0.0, 0.9, -4.9);
 /// De sterkte in lumen, de halve kegel in radialen en hoe lang hij erover doet om aan of uit te
@@ -1156,108 +1225,21 @@ const TITEL_ZAALLICHT: f32 = 0.4;
 const TITELLICHT_KEGEL: f32 = 0.5;
 const TITELLICHT_S: f32 = 0.8;
 
-/// De lichtbundel van de Titelkaart: een zachte baan licht van boven het beeld recht omlaag naar
-/// de middelste Stoelen, als in een studio met wat nevel. Zo heeft het eerste beeld een punt van
-/// aandacht en oogt het niet als de eerste Zetelverdeling (council-ronde 5). Het is een vlak
-/// langs de as van de bundel dat naar de camera draait, met een zacht verloop over de breedte.
-#[derive(Component)]
-struct Titelbundel;
+/// De lichtplek van de Titelkaart op de vloer onder de lamp: het midden, de straal en het extra
+/// licht. Een zichtbare bundel recht omlaag in het middenpad (council-ronde 5) las als een streep
+/// of paal zonder bron (ronde 6); nu valt er alleen licht op de middelste Stoelen en de vloer
+/// eromheen.
+const TITELPLEK: Vec3 = Vec3::new(0.0, 0.3, -5.2);
+const TITELPLEK_STRAAL: f32 = 4.2;
+const TITELPLEK_LICHT: f32 = 1.1;
 
-/// Van waar naar waar de bundel loopt, in meter, en hoe breed hij boven en onder is.
-const BUNDEL_BOVEN: Vec3 = Vec3::new(0.0, 11.5, -5.4);
-const BUNDEL_ONDER: Vec3 = Vec3::new(0.0, 1.1, -4.7);
-const BUNDEL_BREED_BOVEN: f32 = 1.6;
-const BUNDEL_BREED_ONDER: f32 = 4.0;
-/// Hoe fel de bundel is (lineair, opgeteld bij wat erachter staat) op zijn felste plek.
-const BUNDEL_LICHT: f32 = 0.36;
-
-/// Het verloop van de bundel als beeld: wit, met de dekking in de alfa. Over de breedte zacht
-/// (een klok), in de lengte van boven naar onder iets sterker, en onderaan zacht uitlopend op de
-/// Stoelen.
-fn bundel_beeld() -> Image {
-    use bevy::asset::RenderAssetUsages;
-    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
-    let (b, h) = (64usize, 256usize);
-    let mut data = Vec::with_capacity(b * h * 4);
-    for y in 0..h {
-        // v: 0 boven, 1 onder
-        let v = y as f32 / (h - 1) as f32;
-        let lengte = (0.25 + 0.75 * v) * kleurgolf::zacht((v / 0.25).min(1.0)) * (1.0 - kleurgolf::zacht(((v - 0.82) / 0.18).clamp(0.0, 1.0)) * 0.7);
-        for x in 0..b {
-            let u = x as f32 / (b - 1) as f32 * 2.0 - 1.0;
-            let breedte = (-(u * u) * 4.5).exp() * (1.0 - u * u);
-            let a = (lengte * breedte).clamp(0.0, 1.0);
-            data.extend([255, 255, 255, (a * 255.0).round() as u8]);
-        }
-    }
-    Image::new(
-        Extent3d { width: b as u32, height: h as u32, depth_or_array_layers: 1 },
-        TextureDimension::D2,
-        data,
-        TextureFormat::Rgba8Unorm,
-        RenderAssetUsages::RENDER_WORLD,
-    )
-}
-
-/// Het vlak van de bundel in zijn eigen assen: y langs de as van onder (0) naar boven, x opzij.
-fn bundel_vlak() -> Mesh {
-    use bevy::asset::RenderAssetUsages;
-    use bevy::mesh::{Indices, PrimitiveTopology};
-    let lengte = BUNDEL_BOVEN.distance(BUNDEL_ONDER);
-    let (o, b) = (BUNDEL_BREED_ONDER / 2.0, BUNDEL_BREED_BOVEN / 2.0);
-    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![[-b, lengte, 0.0], [b, lengte, 0.0], [o, 0.0, 0.0], [-o, 0.0, 0.0]])
-        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, vec![[0.0, 0.0, 1.0]; 4])
-        .with_inserted_attribute(Mesh::ATTRIBUTE_UV_0, vec![[0.0, 0.0], [1.0, 0.0], [1.0, 1.0], [0.0, 1.0]])
-        .with_inserted_indices(Indices::U32(vec![0, 2, 1, 0, 3, 2]))
-}
-
-/// Waar het vlak van de bundel staat als de camera hier is: onderaan de bundel, met y langs de as
-/// en het vlak naar de camera gedraaid.
-fn bundelstand(camera: Vec3) -> Transform {
-    let as_ = (BUNDEL_BOVEN - BUNDEL_ONDER).normalize();
-    let naar = camera - (BUNDEL_BOVEN + BUNDEL_ONDER) / 2.0;
-    let opzij = as_.cross(naar).normalize_or(Vec3::X);
-    let voor = opzij.cross(as_);
-    Transform::from_translation(BUNDEL_ONDER).with_rotation(Quat::from_mat3(&Mat3::from_cols(opzij, as_, voor)))
-}
-
-fn zet_titelbundel(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materialen: ResMut<Assets<StandardMaterial>>,
-    mut beelden: ResMut<Assets<Image>>,
-) {
-    commands.spawn((
-        Titelbundel,
-        Mesh3d(meshes.add(bundel_vlak())),
-        MeshMaterial3d(materialen.add(StandardMaterial {
-            base_color: Color::linear_rgba(1.0, 0.93, 0.8, 0.0),
-            base_color_texture: Some(beelden.add(bundel_beeld())),
-            unlit: true,
-            alpha_mode: AlphaMode::Add,
-            double_sided: true,
-            cull_mode: None,
-            fog_enabled: false,
-            ..default()
-        })),
-        Transform::IDENTITY,
-        Visibility::Hidden,
-        bevy::light::NotShadowCaster,
-        bevy::light::NotShadowReceiver,
-    ));
-}
-
-#[allow(clippy::type_complexity)]
 fn zet_titellicht(
     mut commands: Commands,
     standen: Res<Standen>,
     tijd: Res<Time>,
     mut licht: Query<(&mut SpotLight, &mut Visibility), With<Titellicht>>,
-    mut bundel: Query<(&mut Transform, &mut Visibility, &MeshMaterial3d<StandardMaterial>), (With<Titelbundel>, Without<Titellicht>)>,
-    camera: Query<&Transform, (With<crate::beeld::HoofdCamera>, Without<Titelbundel>)>,
-    mut materialen: ResMut<Assets<StandardMaterial>>,
     mut sterkte: ResMut<Titelsterkte>,
+    mut vloer: ResMut<crate::occlusie::Vloerlicht>,
 ) {
     let sterkte = &mut sterkte.0;
     let Ok((mut l, mut zicht)) = licht.single_mut() else {
@@ -1289,22 +1271,14 @@ fn zet_titellicht(
     if l.intensity != lumen {
         l.intensity = lumen;
     }
-    let te_zien = if *sterkte > 0.0 { Visibility::Inherited } else { Visibility::Hidden };
-    zicht.set_if_neq(te_zien);
-    for (mut plek, mut z, m) in &mut bundel {
-        z.set_if_neq(te_zien);
-        if let Some(c) = camera.iter().next() {
-            let nieuw = bundelstand(c.translation);
-            if *plek != nieuw {
-                *plek = nieuw;
-            }
-        }
-        let kleur = Color::linear_rgba(1.0, 0.93, 0.8, BUNDEL_LICHT * kleurgolf::zacht(*sterkte));
-        if materialen.get(&m.0).is_some_and(|m| m.base_color != kleur)
-            && let Some(mut m) = materialen.get_mut(&m.0)
-        {
-            m.base_color = kleur;
-        }
+    zicht.set_if_neq(if *sterkte > 0.0 { Visibility::Inherited } else { Visibility::Hidden });
+    let plek = (*sterkte > 0.0).then(|| crate::occlusie::Lichtkring {
+        midden: TITELPLEK,
+        straal: TITELPLEK_STRAAL,
+        licht: LinearRgba::rgb(1.0, 0.93, 0.8) * (TITELPLEK_LICHT * kleurgolf::zacht(*sterkte)),
+    });
+    if vloer.kringen[1] != plek {
+        vloer.kringen[1] = plek;
     }
 }
 
@@ -1376,13 +1350,13 @@ fn zaallicht(gekleurd: bool, kracht: f32) -> f32 {
 fn dim_zaal(
     standen: Res<Standen>,
     tijd: Res<Time>,
-    mut delen: Query<(Entity, &GltfMaterialName, &mut MeshMaterial3d<StandardMaterial>), Without<StoelLeer>>,
+    mut delen: Query<(Entity, &GltfMaterialName, &mut MeshMaterial3d<StandardMaterial>), (Without<StoelLeer>, Without<StoelBies>)>,
     ouders: Query<&ChildOf>,
     namen: Query<&Name>,
     nieuw: Query<(), Added<GltfMaterialName>>,
     mut licht: ParamSet<(
         Query<(Entity, &mut PointLight)>,
-        Query<(Entity, &mut SpotLight), (Without<Opbouwlicht>, Without<Titellicht>, Without<Sleutellicht>)>,
+        Query<(Entity, &mut SpotLight), (Without<Titellicht>, Without<Sleutellicht>)>,
         Query<(Entity, &mut DirectionalLight)>,
         Query<(Entity, &mut EnvironmentMapLight)>,
         Query<(), Or<(Added<PointLight>, Added<SpotLight>, Added<DirectionalLight>, Added<EnvironmentMapLight>)>>,
@@ -1517,17 +1491,25 @@ struct LijnBij76 {
     camera: Option<Transform>,
 }
 
-/// Breedte van de lijn bij 76, in meter: smal, zodat hij leest als een lijn en niet als een strook
-/// (council-ronde 3).
-const LIJN_76_BREEDTE: f32 = 0.1;
-/// Het getal 76 op de vloer aan het voeteind van de lijn: zo lang in de diepte (meter), zo breed
-/// als de letters bij deze hoogte zouden zijn keer [`GETAL_76_BREDER`], en zo ver voor het begin
-/// van de lijn. Uitgerekt in de diepte, want vanaf Standpunt A kijk je schuin op de vloer: met
-/// 0,6 m was het getal 15 px hoog in beeld en lag het plat (council-ronde 4).
-const GETAL_76_HOOGTE: f32 = 1.7;
-const GETAL_76_LETTER: f32 = 0.75;
-const GETAL_76_BREDER: f32 = 1.15;
-const GETAL_76_VOOR_LIJN: f32 = 0.12;
+/// De lijn bij 76 is licht op de vloer ([`crate::occlusie::Vloerlicht`]): een smalle felle kern
+/// van zoveel meter breed met zoveel extra licht, in een brede zachte lichtstrook. Als lijn van
+/// licht over de vloer valt hij alleen op de treden en niet op de stootborden ertussen, dus hij
+/// ligt plat. Een effen streep van 10 cm die ook over de stootborden liep, las vanaf Standpunt A
+/// als een rechtopstaande staaf (council-ronde 6).
+const LIJN_76_BREEDTE: f32 = 0.14;
+const LIJN_76_KERN: f32 = 4.5;
+/// De lichtstrook om de lijn: zo breed (meter, met een zachte rand) en zoveel extra licht, met
+/// zoveel van Accent erin (de rest warm wit).
+const LIJN_76_GLOED_BREEDTE: f32 = 1.8;
+const LIJN_76_GLOED: f32 = 1.0;
+const LIJN_76_TINT: f32 = 0.7;
+/// Het getal 76 plat op het open tapijt tussen de katheder en de voorzittersbank, in de richting
+/// van de lijn: het midden zoveel meter van het midden van de Zaal, zo lang in de diepte, en zo
+/// breed als de letters keer [`GETAL_76_BREED`]. Vanaf Standpunt A ongeveer 70 px hoog. Aan het
+/// voeteind van de lijn was er tot de katheder maar plaats voor 35 tot 45 px (council-ronde 6).
+const GETAL_76_AFSTAND: f32 = 0.8;
+const GETAL_76_HOOGTE: f32 = 1.3;
+const GETAL_76_BREED: f32 = 1.05;
 /// Zo lang groeit de lijn van voor naar achter, of krimpt hij weer, bij snelheid 100.
 const LIJN_76_GROEIT: f32 = 0.6;
 /// Zo lang staat de camera stil voor de lijn verschijnt, in seconden: tijdens een camerarit
@@ -1537,57 +1519,31 @@ const LIJN_76_NA_STIL: f32 = 0.25;
 /// schuiven na aankomst.
 const STIL_M_PER_S: f32 = 0.15;
 const STIL_RAD_PER_S: f32 = 0.05;
-/// Hoe fel de lijn straalt in Accent: iets boven de drempel van de gloed, zodat hij leest als licht.
+/// Hoe fel het getal straalt in Accent: iets boven de drempel van de gloed, zodat het leest als licht.
 const LIJN_76_LICHT: f32 = 2.1;
-/// Lijn en getal hebben de tint van Accent, maar minstens deze lichtheid en hoogstens deze
-/// kleurigheid (Oklch): Accent zelf stond met 1,36:1 tegen het tapijt (council-ronde 5), zo licht
-/// haalt hij 3:1 en blijft hij roze in plaats van wit.
+/// Het getal heeft de tint van Accent, maar minstens deze lichtheid en hoogstens deze kleurigheid
+/// (Oklch): Accent zelf stond met 1,36:1 tegen het tapijt (council-ronde 5), zo licht haalt het
+/// 3:1 en blijft het roze in plaats van wit.
 const LIJN_76_L: f32 = 0.86;
 const LIJN_76_C: f32 = 0.11;
-/// De donkere rand onder de lijn en om het getal: zo breed (meter) en zo dicht, zodat ze ook
-/// tegen een lichte plek in het tapijt los staan.
-const LIJN_76_RAND_BREEDTE: f32 = 0.26;
+/// De donkere rand om het getal: zo dicht, zodat het ook tegen een lichte plek in het tapijt los
+/// staat.
 const LIJN_76_RAND_DEKKING: f32 = 0.7;
 /// De rand om de letters van het getal, in pixels van [`getal_76_beeld`] (letters van 192 px).
 const GETAL_76_RAND_PX: i64 = 12;
 
-/// De strook over de vloer van de lijn bij 76, tot `deel` (0 tot 1) van zijn lengte van voor
-/// naar achter.
-fn lijnstrook(lijn: &[Vec3], deel: f32) -> Mesh {
-    strook(lijn, deel, LIJN_76_BREEDTE)
-}
-
-/// Een strook van `breedte` meter over de vloer langs de lijn, tot `deel` van zijn lengte.
-fn strook(lijn: &[Vec3], deel: f32, breedte: f32) -> Mesh {
-    use bevy::asset::RenderAssetUsages;
-    use bevy::mesh::{Indices, PrimitiveTopology};
+/// Het punt op `deel` (0 tot 1) van de lengte van de lijn.
+fn langs_de_lijn(lijn: &[Vec3], deel: f32) -> Vec3 {
     let lengte: f32 = lijn.windows(2).map(|p| p[0].distance(p[1])).sum();
     let mut over = lengte * deel.clamp(0.0, 1.0);
-    // opzij: horizontaal, loodrecht op de lijn
-    let langs = (lijn[lijn.len() - 1] - lijn[0]).with_y(0.0).normalize_or(Vec3::NEG_Z);
-    let opzij = Vec3::Y.cross(langs) * (breedte / 2.0);
-    let (mut punten, mut normalen, mut driehoeken) = (Vec::new(), Vec::new(), Vec::new());
-    for paar in lijn.windows(2) {
-        let (a, mut b) = (paar[0], paar[1]);
-        let stuk = a.distance(b);
-        if over <= 0.0 || stuk <= 0.0 {
-            break;
-        }
-        if stuk > over {
-            b = a + (b - a) * (over / stuk);
+    for p in lijn.windows(2) {
+        let stuk = p[0].distance(p[1]);
+        if stuk >= over && stuk > 0.0 {
+            return p[0] + (p[1] - p[0]) * (over / stuk);
         }
         over -= stuk;
-        // een trede kijkt omhoog, een stootbord naar voren
-        let normaal = if (b.y - a.y).abs() > 1e-4 { -langs } else { Vec3::Y };
-        let i = punten.len() as u32;
-        punten.extend([a - opzij, a + opzij, b + opzij, b - opzij].map(|p| p.to_array()));
-        normalen.extend([normaal.to_array(); 4]);
-        driehoeken.extend([i, i + 1, i + 2, i, i + 2, i + 3]);
     }
-    Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
-        .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, punten)
-        .with_inserted_attribute(Mesh::ATTRIBUTE_NORMAL, normalen)
-        .with_inserted_indices(Indices::U32(driehoeken))
+    lijn[lijn.len() - 1]
 }
 
 fn lijn_76_punten() -> Vec<Vec3> {
@@ -1640,6 +1596,14 @@ fn getal_76_beeld() -> Image {
             }
         }
     }
+    // alleen de letters met hun rand: zo is de hoogte van het vlak de hoogte van de cijfers
+    let gevuld: Vec<(usize, usize)> = (0..b * h).filter(|&i| dik[i] > 0.0).map(|i| (i % b, i / b)).collect();
+    let (x0, x1) = (gevuld.iter().map(|p| p.0).min().unwrap_or(0), gevuld.iter().map(|p| p.0).max().unwrap_or(b - 1));
+    let (y0, y1) = (gevuld.iter().map(|p| p.1).min().unwrap_or(0), gevuld.iter().map(|p| p.1).max().unwrap_or(h - 1));
+    let (x0, y0, x1, y1) = (x0.saturating_sub(2), y0.saturating_sub(2), (x1 + 2).min(b - 1), (y1 + 2).min(h - 1));
+    let binnen = |i: &usize| (x0..=x1).contains(&(i % b)) && (y0..=y1).contains(&(i / b));
+    let (alfa, dik): (Vec<f32>, Vec<f32>) = (0..b * h).filter(binnen).map(|i| (alfa[i], dik[i])).unzip();
+    let (b, h) = (x1 - x0 + 1, y1 - y0 + 1);
     let data = alfa
         .iter()
         .zip(&dik)
@@ -1661,15 +1625,16 @@ fn getal_76_beeld() -> Image {
     )
 }
 
-/// Het vlak voor het getal 76: plat op de vloer voor het begin van de lijn, te lezen vanaf de
-/// kant van de Voorzitter (de bovenkant van het getal wijst langs de lijn naar achteren).
+/// Het vlak voor het getal 76: plat op de vloer voor de katheder, in de richting van de lijn, te
+/// lezen vanaf de kant van de Voorzitter (de bovenkant van het getal wijst langs de lijn naar
+/// achteren).
 fn getal_76_vlak(lijn: &[Vec3], verhouding: f32) -> Mesh {
     use bevy::asset::RenderAssetUsages;
     use bevy::mesh::{Indices, PrimitiveTopology};
     let langs = (lijn[1] - lijn[0]).with_y(0.0).normalize_or(Vec3::NEG_Z);
     let rechts = langs.cross(Vec3::Y);
-    let (h, b) = (GETAL_76_HOOGTE, GETAL_76_LETTER * verhouding * GETAL_76_BREDER);
-    let midden = lijn[0] - langs * (GETAL_76_VOOR_LIJN + h / 2.0);
+    let (h, b) = (GETAL_76_HOOGTE, GETAL_76_HOOGTE * verhouding * GETAL_76_BREED);
+    let midden = langs * GETAL_76_AFSTAND + Vec3::Y * 0.012;
     let hoek = |x: f32, y: f32| (midden + rechts * (x * b / 2.0) + langs * (y * h / 2.0)).to_array();
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
         .with_inserted_attribute(Mesh::ATTRIBUTE_POSITION, vec![hoek(-1.0, 1.0), hoek(1.0, 1.0), hoek(1.0, -1.0), hoek(-1.0, -1.0)])
@@ -1681,10 +1646,6 @@ fn getal_76_vlak(lijn: &[Vec3], verhouding: f32) -> Mesh {
 /// Het getal 76 op de vloer bij de lijn bij 76.
 #[derive(Component)]
 struct Getal76;
-
-/// De donkere rand onder de lijn bij 76.
-#[derive(Component)]
-struct Rand76;
 
 fn zet_lijn_bij_76(
     mut commands: Commands,
@@ -1710,37 +1671,7 @@ fn zet_lijn_bij_76(
         Visibility::Hidden,
         bevy::light::NotShadowCaster,
     ));
-    commands.spawn((
-        Rand76,
-        Mesh3d(meshes.add(strook(&lijn_76_punten(), 0.0, LIJN_76_RAND_BREEDTE))),
-        MeshMaterial3d(materialen.add(StandardMaterial {
-            base_color: Color::BLACK.with_alpha(LIJN_76_RAND_DEKKING),
-            unlit: true,
-            alpha_mode: AlphaMode::Blend,
-            double_sided: true,
-            cull_mode: None,
-            depth_bias: 1.0,
-            ..default()
-        })),
-        Transform::IDENTITY,
-        Visibility::Hidden,
-        bevy::light::NotShadowCaster,
-    ));
-    commands.spawn((
-        LijnBij76 { zicht: 0.0, stil: 0.0, camera: None },
-        Mesh3d(meshes.add(lijnstrook(&lijn_76_punten(), 0.0))),
-        MeshMaterial3d(materialen.add(StandardMaterial {
-            base_color: Color::WHITE,
-            unlit: true,
-            double_sided: true,
-            cull_mode: None,
-            depth_bias: 2.0,
-            ..default()
-        })),
-        Transform::IDENTITY,
-        Visibility::Hidden,
-        bevy::light::NotShadowCaster,
-    ));
+    commands.spawn(LijnBij76 { zicht: 0.0, stil: 0.0, camera: None });
 }
 
 /// Of de lijn bij 76 op de vloer hoort bij deze Graphic in de Ether: alleen bij de Coalitie.
@@ -1791,12 +1722,11 @@ fn stap_lijn_76(zicht: f32, stil: f32, coalitie: bool, camera_stil: bool, dt: f3
 fn toon_lijn_bij_76(
     standen: Res<Standen>,
     tijd: Res<Time>,
-    camera: Query<&Transform, (With<crate::beeld::HoofdCamera>, Without<LijnBij76>)>,
-    mut meshes: ResMut<Assets<Mesh>>,
+    camera: Query<&Transform, With<crate::beeld::HoofdCamera>>,
     mut materialen: ResMut<Assets<StandardMaterial>>,
-    mut lijn: Query<(&mut LijnBij76, &Mesh3d, &mut Visibility, &MeshMaterial3d<StandardMaterial>)>,
-    mut getal: Query<(&mut Visibility, &MeshMaterial3d<StandardMaterial>), (With<Getal76>, Without<LijnBij76>)>,
-    mut rand: Query<(&Mesh3d, &mut Visibility), (With<Rand76>, Without<LijnBij76>, Without<Getal76>)>,
+    mut lijn: Query<&mut LijnBij76>,
+    mut getal: Query<(&mut Visibility, &MeshMaterial3d<StandardMaterial>), With<Getal76>>,
+    mut vloer: ResMut<crate::occlusie::Vloerlicht>,
     mut punten: Local<Vec<Vec3>>,
 ) {
     let Some(stand) = standen.huidig.as_ref().map(|s| &s.stand) else {
@@ -1809,40 +1739,29 @@ fn toon_lijn_bij_76(
     let dt = tijd.delta_secs();
     let snelheid = f32::from(stand.stijl.snelheid.max(10)) / 100.0;
     let nu = camera.iter().next().copied();
-    for (mut l, mesh, mut zicht, materiaal) in &mut lijn {
+    for mut l in &mut lijn {
         let stil = match (l.camera, nu) {
             (Some(vorig), Some(nu)) => camera_stil(&vorig, &nu, dt),
             _ => true,
         };
         l.camera = nu;
-        let vorig = l.zicht;
         (l.zicht, l.stil) = stap_lijn_76(l.zicht, l.stil, coalitie, stil, dt, dt * snelheid / LIJN_76_GROEIT);
         let deel = crate::animatie::zacht_uit(l.zicht);
-        if l.zicht != vorig {
-            if let Some(mut m) = meshes.get_mut(&mesh.0) {
-                *m = lijnstrook(&punten, deel);
-            }
-            for (r, _) in &rand {
-                if let Some(mut m) = meshes.get_mut(&r.0) {
-                    *m = strook(&punten, deel, LIJN_76_RAND_BREEDTE);
-                }
-            }
-        }
-        let te_zien = if l.zicht > 0.0 { Visibility::Inherited } else { Visibility::Hidden };
-        zicht.set_if_neq(te_zien);
-        for (_, mut z) in &mut rand {
-            z.set_if_neq(te_zien);
-        }
         let accent = stand.stijl.kleur(gedeeld::sjabloon::Stijlkleur::Accent);
-        let kleur = lijn_76_kleur(accent);
-        let kleur = Color::from(kleur.with_alpha(1.0));
-        if let Some(m) = materialen.get(&materiaal.0)
-            && m.base_color != kleur
-            && let Some(mut m) = materialen.get_mut(&materiaal.0)
-        {
-            m.base_color = kleur;
+        // de lijn en zijn gloed als licht op de vloer, dat van voor naar achter groeit
+        let strook = (l.zicht > 0.0).then(|| crate::occlusie::Lichtstrook {
+            van: punten[0],
+            naar: langs_de_lijn(&punten, deel),
+            breedte: LIJN_76_GLOED_BREEDTE,
+            licht: licht_met(accent, LIJN_76_TINT) * (LIJN_76_GLOED * crate::animatie::zacht_uit((l.zicht * 2.0).min(1.0))),
+            kern: LIJN_76_BREEDTE,
+            kern_licht: LIJN_76_KERN,
+        });
+        if vloer.strook != strook {
+            vloer.strook = strook;
         }
         // het getal komt op zodra de lijn het voeteind uit is, en gaat met hem weg
+        let kleur = Color::from(lijn_76_kleur(accent).with_alpha(1.0));
         let dekking = crate::animatie::zacht_uit((l.zicht * 3.0).min(1.0));
         for (mut z, m) in &mut getal {
             z.set_if_neq(if dekking > 0.0 { Visibility::Inherited } else { Visibility::Hidden });
@@ -2668,22 +2587,52 @@ mod tests {
     }
 
     #[test]
-    fn de_lichtkring_flitst_met_de_stap_blijft_zacht_branden_en_staat_boven_het_blok() {
+    fn de_lichtkring_flitst_met_de_stap_blijft_branden_en_ligt_op_de_vloer_onder_het_blok() {
         let per_stap = 1.5;
         assert_eq!(opbouwlicht_sterkte(0.0, per_stap), 0.0, "begint uit");
         let top = (0..30).map(|i| opbouwlicht_sterkte(i as f32 * 0.05, per_stap)).fold(0.0, f32::max);
         assert!(top > 0.95, "flitst op: {top}");
         let midden = opbouwlicht_sterkte(0.9, per_stap);
-        assert!((midden - OPBOUWLICHT_BLIJFT).abs() < 0.05, "brandt zacht: {midden}");
+        assert!((midden - OPBOUWLICHT_BLIJFT).abs() < 0.05, "blijft branden: {midden}");
         assert!(opbouwlicht_sterkte(per_stap, per_stap) < 1e-3, "uit voor de volgende stap");
-        // een klein blok van vier: een smalle kring recht erboven
+        // een klein blok van vier: een kleine kring op de vloer eronder
         let vier: Vec<usize> = stoelen_van_links_naar_rechts().into_iter().take(4).collect();
-        let (plek, hoek) = opbouwlicht_plek(&vier).unwrap();
+        let (plek, straal) = opbouwlicht_plek(&vier).unwrap();
         let midden = vier.iter().map(|&i| Vec3::from(gedeeld::zaalkaart::STOELPLEKKEN[i])).sum::<Vec3>() / 4.0;
-        assert!(plek.with_y(0.0).distance(midden.with_y(0.0)) < 1e-3 && plek.y > midden.y + 2.0);
-        assert!(hoek < 1.0, "smal: {hoek}");
+        assert!(plek.with_y(0.0).distance(midden.with_y(0.0)) < 1e-3, "recht onder het blok");
+        assert!(plek.y < midden.y - 0.5 && plek.y > -0.5, "op de vloer: {}", plek.y);
+        assert!(straal < 3.5, "klein: {straal}");
         let alle: Vec<usize> = (0..AANTAL_STOELEN).collect();
-        assert!(opbouwlicht_plek(&alle).unwrap().1 > hoek);
+        assert!(opbouwlicht_plek(&alle).unwrap().1 > straal);
+    }
+
+    #[test]
+    fn tijdens_de_opbouw_ligt_de_lichtkring_onder_de_partij_van_de_stap_en_daarna_niet() {
+        let (mut app, _) = zaal_zonder_gpu();
+        app.update();
+        // VOORBEELDGEGEVENS: 100 Stoelen rood links, 50 blauw rechts
+        let rood = Kleur { r: 200, g: 20, b: 20 };
+        let blauw = Kleur { r: 20, g: 20, b: 200 };
+        let volgorde = stoelen_van_links_naar_rechts();
+        let opbouw = Kleurovergang::standaard(Overgangsvorm::Opbouw);
+        let stand = Stand { stoelkleuren: vec![GRIJS; AANTAL_STOELEN], kleurovergang: opbouw, ..default() };
+        app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 1, stand: stand.clone() });
+        app.update();
+        let mut nieuw = stand;
+        for (r, &i) in volgorde.iter().enumerate() {
+            nieuw.stoelkleuren[i] = if r < 100 { rood } else { blauw };
+        }
+        app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 2, stand: nieuw });
+        app.update();
+        assert!(app.world().resource::<crate::occlusie::Vloerlicht>().kringen[0].is_none(), "in de inleiding nog niet");
+        // na de inleiding en een stukje van de eerste stap: rood licht op
+        wacht(&mut app, 1.3);
+        let kring = app.world().resource::<crate::occlusie::Vloerlicht>().kringen[0].expect("een kring");
+        let (midden, _) = opbouwlicht_plek(&volgorde[..100]).unwrap();
+        assert!(kring.midden.distance(midden) < 1e-3, "onder het rode blok");
+        assert!(kring.licht.red > kring.licht.blue, "met wat van de partijkleur");
+        wacht(&mut app, 6.0);
+        assert!(app.world().resource::<crate::occlusie::Vloerlicht>().kringen[0].is_none(), "na de Opbouw uit");
     }
 
     #[test]
@@ -2797,21 +2746,6 @@ mod tests {
         let k = LinearRgba::from(k);
         assert!(k.red < 0.01 && k.alpha < 0.5, "van dichtbij een donkere laag over het leer: {k:?}");
         assert_eq!(straalt.red + straalt.green + straalt.blue, 0.0, "zonder eigen licht");
-    }
-
-    #[test]
-    fn de_lichtbundel_van_de_titelkaart_draait_naar_de_camera() {
-        let a = gedeeld::camera::Standpunt::vaste()[0].stand;
-        let camera = Vec3::from(a.positie);
-        let t = bundelstand(camera);
-        let as_ = (BUNDEL_BOVEN - BUNDEL_ONDER).normalize();
-        assert!((t.rotation * Vec3::Y).distance(as_) < 1e-4, "y langs de bundel");
-        let naar = (camera - (BUNDEL_BOVEN + BUNDEL_ONDER) / 2.0).normalize();
-        let vlak = t.rotation * Vec3::Z;
-        assert!(vlak.dot(naar) > 0.9, "het vlak kijkt naar de camera: {vlak} {naar}");
-        // en de bundel staat vanaf A in beeld, van boven naar de middelste Stoelen
-        let onder = a.in_beeld(BUNDEL_ONDER.to_array()).unwrap();
-        assert!(onder[0].abs() < 0.05 && onder[1].abs() < 0.5, "{onder:?}");
     }
 }
 
