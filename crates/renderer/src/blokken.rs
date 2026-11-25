@@ -90,6 +90,13 @@ impl Verloopdeel {
     }
 }
 
+/// Het label van één Partij in het grote label van de Opbouw: te zien zolang haar kleur in de
+/// Zaal oplicht.
+#[derive(Component, Clone, Copy)]
+pub struct Opbouwkaart {
+    pub kleur: Kleur,
+}
+
 /// De kleur van de rand van een Vlak in het eindbeeld.
 #[derive(Component, Clone, Copy)]
 pub struct Randkleur(pub Color);
@@ -969,6 +976,156 @@ pub fn bouw_inhoud(
             grootte,
             tekstkleur,
             naamkleur,
+            kaartjes: true,
+        } => {
+            // Elke Partij een eigen kaartje, even breed: de Zetels boven de naam, een streep in de
+            // partijkleur onderaan.
+            commands.entity(binnen).insert(Node {
+                flex_direction: FlexDirection::Row,
+                column_gap: Val::Px(8.0),
+                align_items: AlignItems::Stretch,
+                ..vol
+            });
+            let (tk, nk) = (kleur(*tekstkleur), kleur(*naamkleur));
+            let g = f32::from(*grootte);
+            let vlakkleur = k.with_alpha(0.92);
+            let n = labels.len().max(1) as f32;
+            let tekstbreedte = (b - 8.0 * (n - 1.0)) / n - 12.0;
+            for l in labels {
+                let kaartje = commands
+                    .spawn((
+                        ChildOf(binnen),
+                        Node {
+                            flex_grow: 1.0,
+                            flex_basis: Val::Px(0.0),
+                            flex_direction: FlexDirection::Column,
+                            align_items: AlignItems::Center,
+                            justify_content: JustifyContent::Center,
+                            padding: UiRect::bottom(Val::Px(8.0)),
+                            border_radius: BorderRadius::all(Val::Px(9.0)),
+                            ..default()
+                        },
+                        BackgroundColor(vlakkleur.with_alpha(vlakkleur.alpha() * dekking)),
+                        Deel { kleur: vlakkleur },
+                    ))
+                    .id();
+                let regels = [
+                    l.zetels.map(|z| (z.to_string(), letter, (g * 2.1).round(), tk)),
+                    l.kort.as_deref().map(|t| (t.to_string(), naamletter, g, nk)),
+                ];
+                for (tekst, letter, grootte, kl) in regels.into_iter().flatten() {
+                    let t = tekst_deel(commands, bestanden, kaartje, &tekst, letter, grootte, kl, Uitlijning::Midden, dekking);
+                    commands.entity(t).insert((TextLayout::no_wrap(), Krimp { grootte, breedte: tekstbreedte }));
+                }
+                let pk = kleur(l.kleur);
+                commands.spawn((
+                    ChildOf(kaartje),
+                    Node {
+                        position_type: PositionType::Absolute,
+                        left: Val::Px(8.0),
+                        right: Val::Px(8.0),
+                        bottom: Val::Px(3.0),
+                        height: Val::Px(5.0),
+                        ..default()
+                    },
+                    BackgroundColor(pk.with_alpha(dekking)),
+                    Deel { kleur: pk },
+                ));
+            }
+        }
+        Inhoud::Opbouwlabel {
+            labels,
+            letter,
+            naamletter,
+            grootte,
+            tekstkleur,
+            naamkleur,
+        } => {
+            // Per Partij een label midden in de Plek, verborgen tot haar kleur in de Zaal oplicht
+            // (zie `crate::graphic::toon_opbouwlabel`).
+            let (tk, nk) = (kleur(*tekstkleur), kleur(*naamkleur));
+            let g = f32::from(*grootte);
+            let vlakkleur = k.with_alpha(0.94);
+            for l in labels {
+                let plaats = commands
+                    .spawn((
+                        ChildOf(binnen),
+                        Opbouwkaart { kleur: l.kleur },
+                        Visibility::Hidden,
+                        Node {
+                            position_type: PositionType::Absolute,
+                            left: Val::Px(0.0),
+                            top: Val::Px(0.0),
+                            width: Val::Percent(100.0),
+                            height: Val::Percent(100.0),
+                            justify_content: JustifyContent::Center,
+                            align_items: AlignItems::Stretch,
+                            ..default()
+                        },
+                        UiTransform::default(),
+                    ))
+                    .id();
+                let kaart = commands
+                    .spawn((
+                        ChildOf(plaats),
+                        Node {
+                            flex_direction: FlexDirection::Row,
+                            align_items: AlignItems::Center,
+                            padding: UiRect::right(Val::Px(50.0)),
+                            border_radius: BorderRadius::all(Val::Px(14.0)),
+                            ..default()
+                        },
+                        BackgroundColor(vlakkleur.with_alpha(vlakkleur.alpha() * dekking)),
+                        Deel { kleur: vlakkleur },
+                    ))
+                    .id();
+                let pk = kleur(l.kleur);
+                commands.spawn((
+                    ChildOf(kaart),
+                    Node {
+                        width: Val::Px(18.0),
+                        height: Val::Percent(100.0),
+                        margin: UiRect::right(Val::Px(34.0)),
+                        border_radius: BorderRadius::all(Val::Px(7.0)),
+                        ..default()
+                    },
+                    BackgroundColor(pk.with_alpha(dekking)),
+                    Deel { kleur: pk },
+                ));
+                if let Some(z) = l.zetels {
+                    let t = tekst_deel(commands, bestanden, kaart, &z.to_string(), letter, (g * 2.1).round(), tk, Uitlijning::Links, dekking);
+                    commands.entity(t).insert(TextLayout::no_wrap());
+                }
+                let kolom = commands
+                    .spawn((
+                        ChildOf(kaart),
+                        Node {
+                            flex_direction: FlexDirection::Column,
+                            margin: UiRect::left(Val::Px(36.0)),
+                            ..default()
+                        },
+                    ))
+                    .id();
+                if let Some(kort) = l.kort.as_deref() {
+                    let t = tekst_deel(commands, bestanden, kolom, kort, naamletter, g, nk, Uitlijning::Links, dekking);
+                    commands.entity(t).insert(TextLayout::no_wrap());
+                }
+                if l.zetels.is_some() {
+                    let woord = if l.zetels == Some(1) { "zetel" } else { "zetels" };
+                    let zacht = tk.with_alpha(0.75);
+                    let t = tekst_deel(commands, bestanden, kolom, woord, naamletter, (g * 0.58).round(), zacht, Uitlijning::Links, dekking);
+                    commands.entity(t).insert(TextLayout::no_wrap());
+                }
+            }
+        }
+        Inhoud::Partijlabels {
+            labels,
+            letter,
+            naamletter,
+            grootte,
+            tekstkleur,
+            naamkleur,
+            kaartjes: false,
         } => {
             if labels.is_empty() {
                 return;
