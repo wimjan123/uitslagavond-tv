@@ -158,7 +158,7 @@ pub fn stoelen_van_links_naar_rechts() -> Vec<usize> {
 /// Hoe hoog de bovenrand van een rugleuning boven de vloer van zijn rij staat, en hoe ver achter
 /// de rugleuning de trede naar de volgende rij ligt, in meter (gemeten in `zaal.glb`).
 const RUGLEUNING_BOVEN_VLOER: f32 = 0.805;
-const TREDE_ACHTER_RUGLEUNING: f32 = 0.2;
+const TREDE_ACHTER_RUGLEUNING: f32 = 0.08;
 /// Zo ver ligt de lijn bij 76 boven de vloer, zodat hij er niet mee door elkaar flikkert.
 const LIJN_BOVEN_VLOER: f32 = 0.01;
 

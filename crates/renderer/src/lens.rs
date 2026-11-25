@@ -25,9 +25,13 @@ impl Plugin for LensPlugin {
 const VANAF_GRADEN: f32 = 44.0;
 const HELEMAAL_GRADEN: f32 = 38.0;
 /// Het diafragma bij een volle close-up: een groot diafragma geeft weinig scherptediepte. Met de
-/// sensor van Bevy (Super 35) en de lens van de Persoonskaart is een bureau twee rijen verder zo'n
-/// 8 pixels onscherp.
-const DIAFRAGMA: f32 = 1.0;
+/// sensor van Bevy (Super 35) en de lens van de Persoonskaart is een Stoel twee rijen verder zo'n
+/// 10 pixels onscherp, en het bureau ervoor zo'n 8.
+const DIAFRAGMA: f32 = 0.7;
+/// Bij een volle close-up is de occlusie sterker en dichter bij: contactschaduw onder bureaus en
+/// Stoelen, die in een wijd shot te zwaar zou zijn.
+const OCCLUSIE_EXTRA: f32 = 0.3;
+const OCCLUSIE_STRAAL_DICHTBIJ: f32 = 0.35;
 /// Nooit onscherper dan dit, in pixels.
 const MEESTE_ONSCHERPTE: f32 = 14.0;
 /// Alleen in de Zaal: onder het plafond.
@@ -72,12 +76,19 @@ pub fn scherp_op(camera: &Transform, beeldhoek: f32, uitgelicht: Option<usize>) 
 
 fn stel_scherpte_bij(
     mut commands: Commands,
-    camera: Query<(Entity, &Transform, &Projection, Option<&DepthOfField>), With<HoofdCamera>>,
+    mut camera: Query<(Entity, &Transform, &Projection, Option<&DepthOfField>, Option<&mut crate::occlusie::Occlusie>), With<HoofdCamera>>,
     uitlichting: Res<crate::zaal::Uitlichting>,
 ) {
-    for (e, plek, projectie, nu) in &camera {
+    let b = &crate::beeld::BEELD;
+    for (e, plek, projectie, nu, occlusie) in &mut camera {
         let Projection::Perspective(p) = projectie else { continue };
         let s = sterkte(p.fov, plek.translation.y);
+        if let Some(mut o) = occlusie {
+            let (sterk, straal) = (b.occlusie + OCCLUSIE_EXTRA * s, b.occlusie_straal + (OCCLUSIE_STRAAL_DICHTBIJ - b.occlusie_straal) * s);
+            if o.sterkte != sterk || o.straal != straal {
+                (o.sterkte, o.straal) = (sterk, straal);
+            }
+        }
         let afstand = (s > 0.0).then(|| scherp_op(plek, p.fov, uitlichting.stoel)).flatten();
         match afstand {
             Some(afstand) => {
@@ -90,7 +101,12 @@ fn stel_scherpte_bij(
                     max_depth: 60.0,
                     ..default()
                 };
-                if nu.is_none_or(|n| n.focal_distance != dof.focal_distance || n.aperture_f_stops != dof.aperture_f_stops) {
+                // niet elk beeld opnieuw voor een paar millimeter
+                let anders = |n: &DepthOfField| {
+                    (n.focal_distance - dof.focal_distance).abs() > 0.01 * dof.focal_distance
+                        || (n.aperture_f_stops - dof.aperture_f_stops).abs() > 0.01 * dof.aperture_f_stops
+                };
+                if nu.is_none_or(anders) {
                     commands.entity(e).insert(dof);
                 }
             }

@@ -533,7 +533,8 @@ const STOEL_UIT: Kleur = Kleur { r: 0x4c, g: 0x4f, b: 0x55 };
 /// tot 1): de lichtheid keer `licht + licht_l * L`, de kleurigheid keer `kleur + kleur_l * L +
 /// kleur_c * C`. Gemeten op de render van Standpunt A met 24 kleuren verspreid over alle Stoelen,
 /// ook de achterste rij; per kleur een paar keer bijgesteld tot het beeld klopte, en daar deze
-/// rechte lijn door gelegd (`scripts/kleurmeting/`, council-ronde 4).
+/// rechte lijn door gelegd (`scripts/kleurmeting/`, council-ronde 4). Gemeten bij Kleurkracht 50,
+/// de standaard; hoger straalt het leer iets meer ([`KLEUR_STRAALT`]).
 #[derive(Clone, Copy, Debug)]
 struct Kalibratie {
     licht: f32,
@@ -551,15 +552,34 @@ struct Kalibratie {
 const KALIBRATIE: Kalibratie =
     Kalibratie { licht: 0.87, licht_l: 0.88, kleur: 0.2, kleur_l: 3.1, kleur_c: -1.5, albedo: 0.6, straalt: 0.15 };
 
+/// De kalibratie, of voor het meten (`scripts/kleurmeting/`) een andere uit
+/// `UITSLAGAVOND_KAL`: de zeven getallen van [`Kalibratie`] met komma's ertussen.
 fn kalibratie() -> Kalibratie {
     static K: std::sync::OnceLock<Kalibratie> = std::sync::OnceLock::new();
     *K.get_or_init(|| {
         let Ok(t) = std::env::var("UITSLAGAVOND_KAL") else { return KALIBRATIE };
         let v: Vec<f32> = t.split(',').filter_map(|x| x.trim().parse().ok()).collect();
         if v.len() != 7 {
+            warn!("UITSLAGAVOND_KAL heeft geen zeven getallen: de gewone kalibratie");
             return KALIBRATIE;
         }
         Kalibratie { licht: v[0], licht_l: v[1], kleur: v[2], kleur_l: v[3], kleur_c: v[4], albedo: v[5], straalt: v[6] }
+    })
+}
+
+/// Voor het meten per kleur (`scripts/kleurmeting/`): uit `UITSLAGAVOND_KAL_PER` de factoren op
+/// lichtheid en kleurigheid van losse kleuren, als `rrggbb:licht:kleur` met `;` ertussen.
+fn kalibratie_per_kleur() -> &'static HashMap<Kleur, (f32, f32)> {
+    static K: std::sync::OnceLock<HashMap<Kleur, (f32, f32)>> = std::sync::OnceLock::new();
+    K.get_or_init(|| {
+        let t = std::env::var("UITSLAGAVOND_KAL_PER").unwrap_or_default();
+        t.split(';')
+            .filter_map(|d| {
+                let v: Vec<&str> = d.split(':').collect();
+                let k: Kleur = format!("#{}", v.first()?).parse().ok()?;
+                Some((k, (v.get(1)?.parse().ok()?, v.get(2)?.parse().ok()?)))
+            })
+            .collect()
     })
 }
 
@@ -582,16 +602,7 @@ fn factoren(k: Kleur) -> (f32, f32) {
 
 /// Een partijkleur zoals het leer hem meekrijgt (lineair), zie [`Kalibratie`].
 fn gekalibreerd(k: Kleur) -> LinearRgba {
-    if let Ok(t) = std::env::var("UITSLAGAVOND_KAL_PER") {
-        let naam = format!("{:02x}{:02x}{:02x}", k.r, k.g, k.b);
-        for d in t.split(';') {
-            let v: Vec<&str> = d.split(':').collect();
-            if v.len() == 3 && v[0].eq_ignore_ascii_case(&naam) {
-                return in_oklab(k, v[1].parse().unwrap_or(1.0), v[2].parse().unwrap_or(1.0));
-            }
-        }
-    }
-    let (licht, kleur) = factoren(k);
+    let (licht, kleur) = kalibratie_per_kleur().get(&k).copied().unwrap_or_else(|| factoren(k));
     in_oklab(k, licht, kleur)
 }
 
@@ -1016,7 +1027,7 @@ struct LijnBij76 {
 const LIJN_76_BREEDTE: f32 = 0.1;
 /// Het getal 76 klein op de vloer aan het voeteind van de lijn: zo hoog (meter), en zo ver voor
 /// het begin van de lijn.
-const GETAL_76_HOOGTE: f32 = 0.5;
+const GETAL_76_HOOGTE: f32 = 0.6;
 const GETAL_76_VOOR_LIJN: f32 = 0.12;
 /// Zo lang groeit de lijn van voor naar achter, of krimpt hij weer, bij snelheid 100.
 const LIJN_76_GROEIT: f32 = 0.6;
@@ -1259,9 +1270,12 @@ fn toon_lijn_bij_76(
 }
 
 /// Hoe fel de Stoel van de Persoonskaart straalt in de kleur van zijn Partij (of, zonder Partij,
-/// in zijn eigen kleur): een duidelijke maar natuurlijke markering, geen wit licht dat leest als
-/// een renderfout.
-const UITGELICHT_STRAALT: f32 = 0.4;
+/// in zijn eigen kleur), en welk deel van het gekalibreerde leer hij krijgt. De kalibratie geldt
+/// voor het totaalbeeld; in de close-up staat de Stoel recht van voren in het licht, dus minder,
+/// zodat hij daar de kleur van de Partij heeft en geen lichtere tint ervan (gemeten bij
+/// Bontenbal, CDA). De markering is dat alleen hij kleur heeft.
+const UITGELICHT_STRAALT: f32 = 0.08;
+const UITGELICHT_LEER: f32 = 0.6;
 /// Zo lang duurt het oplichten en uitgaan, in seconden bij snelheid 100.
 const UITLICHTEN_S: f32 = 0.5;
 
@@ -1291,7 +1305,7 @@ fn partijkleur(stand: &gedeeld::Stand, graphic: &gedeeld::Graphic) -> Option<Kle
 /// de kleur van de Partij en straalt zacht in die kleur. Zonder Partij houdt het zijn eigen kleur
 /// en straalt daarin.
 fn uitgelicht(leer: LinearRgba, partij: Option<Kleur>, sterkte: f32) -> (LinearRgba, LinearRgba) {
-    let naar = partij.map_or(leer, leer_in_de_zaal);
+    let naar = partij.map_or(leer, |k| leer_in_de_zaal(k) * UITGELICHT_LEER);
     let kleur = leer.mix(&naar, sterkte);
     let eigen = partij.map_or(leer * (1.0 / kalibratie().albedo), gekalibreerd);
     (kleur, eigen.with_alpha(1.0) * (UITGELICHT_STRAALT * sterkte))
