@@ -203,7 +203,7 @@ function Titelkaart() {
           title={klaarIsTitelkaart ? "Haalt kop en regel uit de Titelkaart die klaarstaat" : "Kan als er een Titelkaart klaarstaat"}
           onClick={neemOver}
         >
-          Haal uit Preview
+          Laad uit Preview
         </button>
         {!graphic.kop && <span className="knop-reden">Vul eerst een kop in</span>}
       </div>

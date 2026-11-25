@@ -265,7 +265,9 @@ export function CoalitieBoog({
         {gekozenDelen.map((p) => (
           <span key={p.sleutel} style={{ width: `${((zetels[p.sleutel] ?? 0) / ZETELS) * 100}%`, background: p.kleur }} title={`${p.kort} ${zetels[p.sleutel]}`} />
         ))}
-        <span className="zetelbalk-meerderheid" style={{ left: `${(75.5 / ZETELS) * 100}%` }} />
+        <span className="zetelbalk-meerderheid" style={{ left: `${(75.5 / ZETELS) * 100}%` }}>
+          <span className="zetelbalk-76">76</span>
+        </span>
       </div>
     </section>
   );

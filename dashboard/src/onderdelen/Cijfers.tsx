@@ -63,7 +63,7 @@ export function Cijfers() {
           </button>
           <button className="filter" aria-pressed={weergave === "partijen"} onClick={() => setWeergave("partijen")}>
             Partijen {cijfers?.partijen.length ?? 0}
-            {letOp > 0 && <span className="telling-let-op" title="Partijen met een tijdelijke kleur">{letOp}</span>}
+            {letOp > 0 && <span className="telling-let-op" title="Partijen met een tijdelijke kleur: geef ze bij de Partij een eigen kleur">{letOp} tijdelijke kleur</span>}
           </button>
         </div>
         <label className="werkbalk-keuze">

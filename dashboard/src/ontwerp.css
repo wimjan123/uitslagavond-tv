@@ -444,3 +444,10 @@ details > summary { cursor: pointer; }
 .camera .standpunt-toets { height: 30px; }
 .camera .rit-toetsen .standpunt-toets { height: 29px; }
 .rit-kop { margin-top: 0; line-height: 1.1; }
+/* Het getal bij de meerderheidsstreep op de zetelbalk. */
+.zetelbalk-76 { position: absolute; bottom: calc(100% + 3px); left: 50%; transform: translateX(-50%); font-size: 11px; font-weight: 600; color: var(--paper-ink); }
+/* Tablet: een tik voelt meteen, nog voor de server antwoordt. */
+.tablet .knop:active:not(:disabled), .tablet .boog-partij:active:not(:disabled) { transform: scale(0.97); filter: brightness(1.2); }
+.tablet .boog-partij:active:not(:disabled) { transform: translate(-50%, -50%) scale(0.97); }
+.tablet .boog-raster .boog-partij:active:not(:disabled) { transform: scale(0.97); }
+:root { --tekst-3: #8e919a; }

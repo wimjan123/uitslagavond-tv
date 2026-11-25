@@ -35,7 +35,7 @@ function regels(g: Graphic | undefined, sjablonen: readonly BewerktSjabloon[] = 
 function useZonderBeeld(): string {
   const { renderers, staat } = useRegie();
   if (staat !== "verbonden") return "Geen verbinding met de server";
-  return renderers.includes("Voorbeeld") ? "Wacht op beeld" : "Geen beeld: de Renderer met rol Voorbeeld is niet verbonden";
+  return renderers.includes("Voorbeeld") ? "Wacht op beeld" : "Geen beeld: de Preview-renderer is niet verbonden";
 }
 
 function Voorbeeld() {
@@ -103,7 +103,7 @@ function Ether() {
   const geenEther = staat === "verbonden" && !renderers.includes("Ether");
   const rechts = geenEther ? (
     <span className="strook-fout" title="De Live-renderer is niet verbonden. Schakel op de mixer over naar Reserve.">
-      Live-Renderer weg
+      Live-renderer weg
     </span>
   ) : !ether ? null : s && kanBijwerken(s) ? (
     // Eén handeling op deze plek: de chip is zelf de knop Update.
