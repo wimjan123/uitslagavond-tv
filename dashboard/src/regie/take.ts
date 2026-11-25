@@ -1,5 +1,6 @@
 // Toon, Bijwerken, Uit beeld, Kleur uit en Standpunten: dezelfde handelingen voor de knoppen en de sneltoetsen.
-import { nieuwereCijfers, sjabloonId } from "../graphic";
+import { nieuwereCijfers, sjabloonId, sjabloonNaam } from "../graphic";
+import { biedHerstel } from "./herstel";
 import { geldendSjabloon, gewijzigdSjabloon } from "../vormgeving/sjablonen";
 import type { Stand } from "../typen/Stand";
 import type { Regie } from "./regie";
@@ -87,7 +88,7 @@ export function voerUit(regie: Regie, actie: Actie): void {
       void regie.stuur({ soort: "Bijwerken" }, TAKE);
       return;
     case "UitBeeld":
-      void regie.stuur({ soort: "UitBeeld" }, TAKE);
+      void uitBeeld(regie);
       return;
     case "KleurUit":
       void regie.stuur({ soort: "KleurUit" }, TAKE);
@@ -101,4 +102,24 @@ export function voerUit(regie: Regie, actie: Actie): void {
 /** Stuur de camera van de Ether naar het Standpunt of de Camerarit met deze sleutel; zet de Vrije camera uit. */
 export function kiesStandpunt(regie: Regie, letter: string, knip = false): void {
   void regie.stuur({ soort: "KiesStandpunt", letter, knip }, CAMERA);
+}
+
+/** Haalt de Graphic uit de Ether en biedt een paar seconden "Terug in beeld" aan: dat zet dezelfde
+ * Graphic opnieuw klaar en toont haar, en zet daarna terug wat klaarstond. */
+async function uitBeeld(regie: Regie): Promise<void> {
+  const s = regie.stand?.stand;
+  const ether = s?.ether;
+  const klaar = s?.klaar;
+  const a = await regie.stuur({ soort: "UitBeeld" }, TAKE);
+  if (!a.uitgevoerd || !ether || !s) return;
+  biedHerstel(`Uit beeld: ${sjabloonNaam(ether.graphic, s.sjablonen)}`, "Terug in beeld", () => {
+    void (async () => {
+      const k = await regie.stuur({ soort: "ZetKlaar", graphic: ether.graphic, standpunt: ether.standpunt }, TAKE);
+      if (!k.uitgevoerd) return;
+      const t = await regie.stuur({ soort: "Toon" }, TAKE);
+      if (t.uitgevoerd && klaar && klaar.id !== ether.id) {
+        void regie.stuur({ soort: "ZetKlaar", graphic: klaar.graphic, standpunt: klaar.standpunt }, TAKE);
+      }
+    })();
+  });
 }

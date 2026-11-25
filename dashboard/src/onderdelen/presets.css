@@ -12,10 +12,12 @@
 
 .presets-tabel { table-layout: fixed; }
 .presets-tabel .kol-toets { width: 48px; padding-left: 8px; padding-right: 0; }
-.presets-tabel .kol-beeld { width: 108px; }
-.presets-tabel .kol-camera { width: 180px; }
-.presets-tabel .kol-tablet { width: 60px; }
-.presets-tabel .kol-status { width: 120px; }
+.presets-tabel .kol-beeld { width: 86px; }
+.presets-tabel .kol-camera { width: 200px; }
+.presets-tabel .kol-tablet { width: 84px; }
+.presets-tabel .kol-status { width: 96px; padding-left: 4px; }
+.presets-tabel td { height: 47px; padding-top: 3px; padding-bottom: 3px; }
+.presets-tabel .stempel { margin-left: 0; font-size: 11.5px; padding: 3px 8px; }
 .presets-tabel tbody tr { cursor: pointer; }
 .presets-tabel td { vertical-align: middle; }
 .presets-tabel tr.rij-klaar { background: color-mix(in srgb, var(--klaar-green) 12%, transparent); box-shadow: inset 3px 0 0 var(--klaar-green); }
@@ -31,7 +33,7 @@
   border-radius: 2px;
 }
 
-.schets { display: block; width: 88px; aspect-ratio: 16 / 9; outline: 1px solid var(--graphite-line); }
+.schets { display: block; width: 66px; aspect-ratio: 16 / 9; outline: 1px solid var(--graphite-line); }
 
 .cel-tekst { min-width: 0; }
 .een-regel { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -42,10 +44,13 @@
 .camera-cel kbd { flex: none; }
 
 .tablet-knop {
-  display: grid;
-  place-items: center;
-  width: 26px;
-  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 7px;
+  font: inherit;
+  font-size: 12px;
   color: var(--slate-mute);
   background: none;
   border: 1px solid var(--graphite-line);

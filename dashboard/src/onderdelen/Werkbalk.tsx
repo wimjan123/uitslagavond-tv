@@ -11,11 +11,11 @@ export function Werkbalk({ naam, children, hint }: { naam: string; children?: Re
   );
 }
 
-/** De sneltoetsen om te tonen, voor rechts in de werkbalk. */
+/** De sneltoets om te tonen, voor rechts in de werkbalk; de andere staan op de knoppen naast Toon. */
 export function TakeHint() {
   return (
     <>
-      <kbd>Spatie</kbd> toont · <kbd>B</kbd> werkt bij · <kbd>X</kbd> haalt uit beeld · <kbd>Z</kbd> kleur uit · <kbd>C</kbd> slaat Opbouw over
+      <kbd>Spatie</kbd> toont wat klaarstaat
     </>
   );
 }

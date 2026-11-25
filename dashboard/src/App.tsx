@@ -78,6 +78,17 @@ function Schil() {
   const onderdeel = ONDERDELEN.find((o) => o.id === actief);
   const Werkvlak = onderdeel?.Werkvlak;
 
+  // Een klik op een knop geeft hem geen focus: zo blijft de spatie daarna altijd Toon, en drukt hij
+  // niet nog eens de knop die je net met de muis gebruikte (zoals Wissen of Uit beeld).
+  useEffect(() => {
+    const geenFocus = (e: MouseEvent) => {
+      const el = e.target instanceof Element ? e.target.closest("button, [role=tab]") : null;
+      if (el && !(el as HTMLButtonElement).disabled) e.preventDefault();
+    };
+    window.addEventListener("mousedown", geenFocus);
+    return () => window.removeEventListener("mousedown", geenFocus);
+  }, []);
+
   useEffect(() => {
     const toets = (e: KeyboardEvent) => {
       if (e.key === "Escape" && doelVan(e.target) === "tekstveld") {
@@ -108,6 +119,7 @@ function Schil() {
               onClick={() => setActief(o.id)}
             >
               {o.naam}
+              <TabTelling id={o.id} />
             </button>
           ))}
         </nav>
@@ -124,7 +136,38 @@ function Schil() {
       )}
       <Multiviewer />
       <main className="werkvlak">{Werkvlak && <Werkvlak kiesOnderdeel={setActief} />}</main>
+      <div className="te-smal" role="alert">
+        <h1 className="kop-regel">De Regie werkt op een laptop</h1>
+        <p>Dit scherm is te smal voor de multiviewer en de lijsten. Maak het venster breder, of open op een tablet of telefoon de tablet van de Presentator.</p>
+        <a className="knop knop-hoofd" href="/tablet">
+          Naar de tablet van de Presentator
+        </a>
+      </div>
     </div>
+  );
+}
+
+/** Open werk achter een tabblad: Stemmingen voor de uitzending die nog niet vastliggen, en in amber
+ * de Stemmingen waarvan de controle na de uitzending een verschil vond. */
+function TabTelling({ id }: { id: string }) {
+  const { stand } = useRegie();
+  if (id !== "stemmingen" || !stand) return null;
+  const lijst = stand.stand.stemmingen.lijst;
+  const open = lijst.filter((x) => x.voor_uitzending && !x.vastgelegd).length;
+  const controle = lijst.filter((x) => x.controle.status && x.controle.status !== "Gelijk" && !x.controle.afgehandeld).length;
+  return (
+    <>
+      {open > 0 && (
+        <span className="tab-telling" title={`${open} Stemmingen voor de uitzending liggen nog niet vast`}>
+          {open}
+        </span>
+      )}
+      {controle > 0 && (
+        <span className="tab-telling tab-telling-let-op" title={`${controle} Stemmingen wijken af van de officiële uitslag`}>
+          {controle}
+        </span>
+      )}
+    </>
   );
 }
 

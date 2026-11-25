@@ -4,7 +4,7 @@
 import { telling } from "../coalitie/coalitie";
 import { useState } from "react";
 import type { MouseEvent } from "react";
-import { graphicTekst, sjabloonNaam, standaardStandpunt, uurMinuut } from "../graphic";
+import { graphicTekst, nieuwereCijfers, sjabloonNaam, standaardStandpunt, uurMinuut } from "../graphic";
 import { cameraKeuzes } from "../regie/camerarit";
 import { Plus, Tablet } from "../iconen";
 import { Schets } from "../presets/Schets";
@@ -80,12 +80,12 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
           <thead>
             <tr>
               <th className="kol-toets">Toets</th>
+              <th className="kol-status">Status</th>
               <th className="kol-beeld">Beeld</th>
               <th>Graphic</th>
               <th>Gegevens</th>
               <th className="kol-camera">Camera</th>
               <th className="kol-tablet">Tablet</th>
-              <th className="kol-status">Status</th>
             </tr>
           </thead>
           <tbody>
@@ -109,8 +109,8 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
               </tr>
             )}
             <tr className="presets-nieuw">
-              <td />
-              <td colSpan={6}>
+              <td colSpan={2} />
+              <td colSpan={5}>
                 <button className="nieuw-knop" onClick={() => kiesOnderdeel("maken")}>
                   <Plus /> Nieuwe Graphic maken
                 </button>
@@ -128,12 +128,22 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
   const status = statusVan(p, s);
   const letter = p.standpunt ?? standaardStandpunt(p.graphic);
   const standpunt = cameraKeuzes(s.standpunten, s.cameraritten, true).find((x) => x.letter === letter);
+  // Een Persoonskaart met een Stoel gaat naar een shot op die Stoel: geen Standpunt, maar ook geen fout.
+  const stoel = /^stoel-(\d+)-(\d+)-(\d+)$/.exec(letter);
   const rij = status.live ? "rij-live" : status.klaar ? "rij-klaar" : "";
   const zetKlaar = () => verbonden && void regie.stuur({ soort: "ZetPresetKlaar", nummer: p.nummer }, PRESETS);
+  const oud = nieuwereCijfers(s, p.graphic);
   return (
-    <tr className={rij} onClick={zetKlaar} title={`Zet Preset ${p.nummer} klaar`}>
+    <tr className={rij} onClick={zetKlaar} title={`Zet Preset ${p.nummer} klaar (toets ${p.nummer})`}>
       <td className="kol-toets">
         <span className="toets-kap">{p.nummer}</span>
+      </td>
+      <td className="kol-status">
+        <span className="status-cel">
+          {status.live && <span className="stempel stempel-live">Live</span>}
+          {status.klaar && <span className="stempel stempel-klaar">Klaar</span>}
+          {!status.live && !status.klaar && status.wasLiveOm !== null && <span className="zacht">was live {uurMinuut(status.wasLiveOm)}</span>}
+        </span>
       </td>
       <td className="kol-beeld">
         <Schets graphic={p.graphic} kleuren={s.stijl.kleuren} />
@@ -145,13 +155,20 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
       <td className="cel-tekst">
         <Gegevens graphic={p.graphic} />
         <div className="zacht een-regel">
+          {oud && (
+            <span className="let-op" title="De cijfers zijn sinds het bewaren veranderd. Zet klaar en kies Ververs onder het Voorbeeld.">
+              oude cijfers ·{" "}
+            </span>
+          )}
           bewaard {uurMinuut(p.bewaard_ms)} door {p.bewaard_door}
         </div>
       </td>
-      <td className="kol-camera">
+      <td className="kol-camera" title={standpunt?.naam}>
         <span className="camera-cel">
           {standpunt?.toets && <kbd>{standpunt.toets}</kbd>}
-          {standpunt ? (
+          {stoel ? (
+            <span className="zacht een-regel">Shot op de eigen Stoel</span>
+          ) : standpunt ? (
             <span className="zacht een-regel">
               {standpunt.soort === "Camerarit" ? `Camerarit ${standpunt.naam}` : standpunt.naam}
             </span>
@@ -174,14 +191,8 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
           }}
         >
           <Tablet />
+          <span>{p.op_tablet ? "Aan" : "Uit"}</span>
         </button>
-      </td>
-      <td className="kol-status">
-        <span className="status-cel">
-          {status.live && <span className="stempel stempel-live">Live</span>}
-          {status.klaar && <span className="stempel stempel-klaar">Klaar</span>}
-          {!status.live && !status.klaar && status.wasLiveOm !== null && <span className="zacht">was live {uurMinuut(status.wasLiveOm)}</span>}
-        </span>
       </td>
     </tr>
   );
