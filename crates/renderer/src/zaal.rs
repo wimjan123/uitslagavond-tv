@@ -417,9 +417,9 @@ impl Golf {
 /// Hoe fel het leer bij Kleurkracht 100 straalt in zijn eigen kleur, bovenop het licht uit de bak:
 /// zo blijft de kleur vol, ook waar de bak donker is.
 const KLEUR_STRAALT: f32 = 0.25;
-/// Hoeveel de rest van de Zaal bij Kleurkracht 100 donkerder wordt, zolang er Stoelen gekleurd
-/// zijn: 0,6 laat 40 procent van het licht over.
-const DIMMEN: f32 = 0.6;
+/// Hoeveel licht de rest van de Zaal bij Kleurkracht 100 overhoudt, zolang er Stoelen gekleurd
+/// zijn. Daartussen daalt het licht in gelijke stappen voor het oog: bij 50 ongeveer een derde.
+const MINSTE_LICHT: f32 = 0.1;
 
 /// De Kleurkracht van de Ether, van 0 tot 1.
 fn kleurkracht(standen: &Standen) -> f32 {
@@ -596,17 +596,34 @@ struct Zaaldimmer {
     tijd: f32,
     duur: f32,
     begonnen: bool,
+    /// Er zijn delen waarvan het materiaal nog niet geladen was: volgend beeld opnieuw.
+    onaf: bool,
+    /// De sterkte van elke lamp en van de reflecties zoals de Zaal ze gaf.
+    lampen: HashMap<Entity, f32>,
+    /// Het leer buiten de 150 Stoelen, als eigen materiaal.
+    ander_leer: Option<Handle<StandardMaterial>>,
 }
 
 impl Default for Zaaldimmer {
     fn default() -> Self {
-        Zaaldimmer { origineel: HashMap::new(), van: 1.0, naar: 1.0, nu: 1.0, tijd: 0.0, duur: 1.0, begonnen: false }
+        Zaaldimmer {
+            origineel: HashMap::new(),
+            van: 1.0,
+            naar: 1.0,
+            nu: 1.0,
+            tijd: 0.0,
+            duur: 1.0,
+            begonnen: false,
+            onaf: false,
+            lampen: HashMap::new(),
+            ander_leer: None,
+        }
     }
 }
 
 /// Hoe licht de rest van de Zaal moet zijn bij deze Stand.
 fn zaallicht(gekleurd: bool, kracht: f32) -> f32 {
-    if gekleurd { 1.0 - DIMMEN * kracht } else { 1.0 }
+    if gekleurd { MINSTE_LICHT.powf(kracht) } else { 1.0 }
 }
 
 /// Dimt de rest van de Zaal zolang er Stoelen gekleurd zijn, zodat hun kleuren opvallen: het
@@ -615,8 +632,17 @@ fn zaallicht(gekleurd: bool, kracht: f32) -> f32 {
 fn dim_zaal(
     standen: Res<Standen>,
     tijd: Res<Time>,
-    delen: Query<(&GltfMaterialName, &MeshMaterial3d<StandardMaterial>), Without<StoelLeer>>,
+    mut delen: Query<(Entity, &GltfMaterialName, &mut MeshMaterial3d<StandardMaterial>), Without<StoelLeer>>,
+    ouders: Query<&ChildOf>,
+    namen: Query<&Name>,
     nieuw: Query<(), Added<GltfMaterialName>>,
+    mut licht: ParamSet<(
+        Query<(Entity, &mut PointLight)>,
+        Query<(Entity, &mut SpotLight)>,
+        Query<(Entity, &mut DirectionalLight)>,
+        Query<(Entity, &mut EnvironmentMapLight)>,
+        Query<(), Or<(Added<PointLight>, Added<SpotLight>, Added<DirectionalLight>, Added<EnvironmentMapLight>)>>,
+    )>,
     pm: Res<StoelMaterialen>,
     mut materialen: ResMut<Assets<StandardMaterial>>,
     mut d: ResMut<Zaaldimmer>,
@@ -640,24 +666,43 @@ fn dim_zaal(
         let f = kleurgolf::zacht((d.tijd / d.duur.max(1e-3)).clamp(0.0, 1.0));
         d.nu = if f >= 1.0 { d.naar } else { d.van + (d.naar - d.van) * f };
     }
-    if d.nu == vorig && nieuw.is_empty() {
+    if d.nu == vorig && nieuw.is_empty() && licht.p4().is_empty() && !d.onaf {
         return;
     }
     let nu = d.nu;
-    for (naam, materiaal) in &delen {
-        // het leer voordat herken_stoelen het merkte, telt ook niet mee
+    d.onaf = false;
+
+    for (e, naam, mut materiaal) in &mut delen {
         if naam.0 == STOEL_LEER {
-            continue;
+            let kamerstoel = ouders
+                .iter_ancestors(e)
+                .any(|a| namen.get(a).is_ok_and(|n| stoel_uit_naam(n.as_str()).is_some()));
+            if kamerstoel {
+                // het leer van een Kamerstoel dat herken_stoelen nog niet merkte
+                continue;
+            }
+            // leer buiten de 150 Stoelen, zoals de stoelen van het kabinet: een eigen kopie,
+            // zodat het leer van de Stoelen zelf niet dimt
+            if pm.origineel.as_ref().is_none_or(|o| o.id() == materiaal.0.id()) {
+                let Some(m) = materialen.get(&materiaal.0).cloned() else {
+                    d.onaf = true;
+                    continue;
+                };
+                let kopie = d.ander_leer.get_or_insert_with(|| materialen.add(m)).clone();
+                materiaal.0 = kopie;
+            }
         }
         let id = materiaal.0.id();
         if pm.origineel.as_ref().is_some_and(|o| o.id() == id) {
-            // een deel dat het materiaal van het leer deelt
             continue;
         }
         let origineel = match d.origineel.get(&id) {
             Some(k) => *k,
             None => {
-                let Some(m) = materialen.get(id) else { continue };
+                let Some(m) = materialen.get(id) else {
+                    d.onaf = true;
+                    continue;
+                };
                 let k = LinearRgba::from(m.base_color);
                 d.origineel.insert(id, k);
                 k
@@ -671,6 +716,20 @@ fn dim_zaal(
                 m.base_color = k.into();
             }
         }
+    }
+    // De glans van de lampen en de reflecties hangen niet van de kleur van het materiaal af:
+    // die gaan apart mee.
+    for (e, mut l) in &mut licht.p0() {
+        l.intensity = d.lampen.entry(e).or_insert(l.intensity).to_owned() * nu;
+    }
+    for (e, mut l) in &mut licht.p1() {
+        l.intensity = d.lampen.entry(e).or_insert(l.intensity).to_owned() * nu;
+    }
+    for (e, mut l) in &mut licht.p2() {
+        l.illuminance = d.lampen.entry(e).or_insert(l.illuminance).to_owned() * nu;
+    }
+    for (e, mut l) in &mut licht.p3() {
+        l.intensity = d.lampen.entry(e).or_insert(l.intensity).to_owned() * nu;
     }
 }
 
@@ -1169,13 +1228,14 @@ mod tests {
         app.update();
         assert_eq!(licht(&mut app), origineel, "zonder kleur zoals gebakken");
 
-        // VOORBEELDGEGEVENS: alle Stoelen rood, standaard-Kleurkracht 50: 70 procent licht
+        // VOORBEELDGEGEVENS: alle Stoelen rood, standaard-Kleurkracht 50: een derde van het licht
         zet_stand(&mut app, 2, vec!["#d4202c".parse().unwrap(); 150]);
         wacht(&mut app, 0.5);
         let halverwege = licht(&mut app);
-        assert!(halverwege < origineel && halverwege > origineel * 0.7, "het licht gaat mee met de overgang");
+        let doel = origineel * MINSTE_LICHT.sqrt();
+        assert!(halverwege < origineel && halverwege > doel, "het licht gaat mee met de overgang");
         wacht(&mut app, 0.6);
-        assert!((licht(&mut app) - origineel * 0.7).abs() < 1e-4);
+        assert!((licht(&mut app) - doel).abs() < 1e-4);
 
         // Kleur uit: weer zoals gebakken
         zet_stand(&mut app, 3, vec![]);
