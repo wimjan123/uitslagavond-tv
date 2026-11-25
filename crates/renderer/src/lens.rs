@@ -193,8 +193,8 @@ mod tests {
         let shot = gedeeld::camera::shot_op_stoel(stoel).unwrap();
         let camera = crate::camera::transform(&shot);
         let afstand = scherp_op(&camera, shot.beeldhoek, stoel.index()).unwrap();
-        // de camera staat 3,2 m langs de vloer van de Stoel en 0,95 m hoger
-        assert!((afstand - 3.3).abs() < 0.3, "{afstand}");
+        // de camera staat 3,3 m langs de vloer van de Stoel en 0,95 m hoger
+        assert!((afstand - 3.45).abs() < 0.3, "{afstand}");
         // zonder uitgelichte Stoel: op de Stoelen in het midden, verder weg
         let midden = scherp_op(&camera, shot.beeldhoek, None).unwrap();
         assert!(midden > 2.0 && midden < 12.0, "{midden}");

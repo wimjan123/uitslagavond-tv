@@ -307,17 +307,25 @@ pub fn ververs_vaste_standpunten(standpunten: &mut [Standpunt]) {
 
 /// Hoe ver de camera van een Stoel staat bij het shot van de Persoonskaart, in meter langs de
 /// vloer, en hoeveel graden opzij van recht voor de Stoel.
-const SHOT_AFSTAND: f32 = 3.2;
+const SHOT_AFSTAND: f32 = 3.3;
 const SHOT_OPZIJ: f32 = 28.0;
-/// Hoe hoog boven de rugleuning de camera staat, en waar hij naar kijkt (het hoofd van wie er zit).
+/// Hoe hoog boven de rugleuning de camera staat, en waar hij naar kijkt (het wapen, onder de
+/// bovenkant van de rugleuning). Van 0,95 m hoog, gericht op het hoofd en met de Stoel in het
+/// midden, vulde het onscherpe bureaublad voor de Stoel ongeveer 40 procent van de linkerhelft
+/// (council-ronde 7); van hoger (1,6 m) werd het blad alleen groter. Lager mag niet: de camera
+/// blijft 30 cm boven banken en tafels (de onzichtbare ruimte van de server).
 const SHOT_HOOGTE: f32 = 0.95;
-const SHOT_HOOFD: f32 = 0.1;
+const SHOT_HOOFD: f32 = -0.15;
 /// Verticale beeldhoek van het shot, in graden: krap op de Stoel, met zijn buren half in beeld
-/// (council-ronde 4; met 34 graden was de Stoel klein tussen veel bureaus).
-const SHOT_BEELDHOEK: f32 = 26.0;
+/// (council-ronde 4; met 34 graden was de Stoel klein tussen veel bureaus; 26 tot ronde 7).
+const SHOT_BEELDHOEK: f32 = 22.0;
 /// Waar de Stoel in beeld komt: links van het midden, want de Persoonskaart staat rechts
 /// (x -1 tot 1 over de breedte; de kaart begint bij 0,21).
 const SHOT_PLEK_X: f32 = -0.42;
+/// En hoe hoog (y -1 onderaan tot 1 bovenaan): het wapen staat lager in beeld, zodat het
+/// bureaublad voor de Stoel er grotendeels onderuit valt en de onscherpe banken erachter het beeld
+/// erboven vullen. Bij -0,8 kwamen de plafondspots bovenin beeld.
+const SHOT_PLEK_Y: f32 = -0.65;
 
 /// Aanschuiven: de keuze in een Sjabloon, Graphic of Preset. Bij het tonen wordt dat de sleutel
 /// van het blok van de gekozen Partij ([`aanschuifsleutel`]); zonder Partij het Standpunt van de
@@ -440,7 +448,7 @@ pub fn shot_op_stoel(stoel: crate::Stoel) -> Option<Camerastand> {
     Some(Camerastand {
         positie,
         draai: (-d[0]).atan2(-d[2]) - opzij,
-        helling: d[1].atan2(vlak),
+        helling: d[1].atan2(vlak) - (SHOT_PLEK_Y * (beeldhoek / 2.0).tan()).atan(),
         beeldhoek,
     })
 }
