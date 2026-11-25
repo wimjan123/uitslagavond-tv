@@ -295,14 +295,8 @@ mod tests {
 
     #[test]
     fn een_foto_zonder_extensie_herkent_de_renderer_aan_de_eerste_bytes() {
-        assert_eq!(
-            beeldsoort("fotos/eigen/abc", b"\x89PNG\r\n\x1a\n rest"),
-            "png"
-        );
-        assert_eq!(
-            beeldsoort("fotos/open-data/abc", b"\xFF\xD8\xFF rest"),
-            "jpg"
-        );
+        assert_eq!(beeldsoort("fotos/eigen/abc", b"\x89PNG\r\n\x1a\n rest"), "png");
+        assert_eq!(beeldsoort("fotos/open-data/abc", b"\xFF\xD8\xFF rest"), "jpg");
         // een PNG met de naam .jpg is toch een PNG
         assert_eq!(beeldsoort("logos/a.jpg", b"\x89PNG\r\n\x1a\n"), "png");
         assert_eq!(beeldsoort("logos/a.WEBP", b"RIFF"), "webp");

@@ -9,8 +9,7 @@
 
 use gedeeld::kamer::{Fractie, Kamer};
 use gedeeld::stemmingen::{
-    AfwijkendeStem, Besluit, Bron, GetikteFractie, OfficieleUitslag, OpgehaaldeUitslag, Stem,
-    Stemming,
+    AfwijkendeStem, Besluit, Bron, GetikteFractie, OfficieleUitslag, OpgehaaldeUitslag, Stem, Stemming,
 };
 use serde::Deserialize;
 
@@ -47,10 +46,7 @@ pub struct AgendaDebat {
 impl Agenda {
     /// De debatten met Stemmingen.
     pub fn stemmingen(&self) -> impl Iterator<Item = &str> {
-        self.debates
-            .iter()
-            .filter(|d| d.debate_type.as_deref() == Some("Stemmingen"))
-            .map(|d| d.id.as_str())
+        self.debates.iter().filter(|d| d.debate_type.as_deref() == Some("Stemmingen")).map(|d| d.id.as_str())
     }
 }
 
@@ -121,16 +117,8 @@ pub fn lees_actors(json: &str) -> anyhow::Result<Actors> {
 
 /// De uitslagen van de rondes die bij een Stemming op de lijst horen. Een ronde zonder uitslag
 /// (de Kamer houdt hem nog tegen, of hij heet "Onbekend") telt niet.
-pub fn uitslagen(
-    debatten: &[Debat],
-    actors: &Actors,
-    lijst: &[Stemming],
-    kamer: &Kamer,
-) -> Vec<OpgehaaldeUitslag> {
-    let rondes = debatten
-        .iter()
-        .flat_map(|d| &d.votings)
-        .flat_map(|v| &v.voting_rounds);
+pub fn uitslagen(debatten: &[Debat], actors: &Actors, lijst: &[Stemming], kamer: &Kamer) -> Vec<OpgehaaldeUitslag> {
+    let rondes = debatten.iter().flat_map(|d| &d.votings).flat_map(|v| &v.voting_rounds);
     let mut uit: Vec<OpgehaaldeUitslag> = Vec::new();
     for r in rondes {
         let besluit = match r.result.as_deref() {
@@ -142,21 +130,15 @@ pub fn uitslagen(
             continue;
         }
         let Some(stemming) = bij_stemming(&r.title, lijst) else {
-            tracing::debug!(
-                "Debat Direct: geen Stemming op de lijst bij \"{}\"",
-                r.title
-            );
+            tracing::debug!("Debat Direct: geen Stemming op de lijst bij \"{}\"", r.title);
             continue;
         };
         if uit.iter().any(|u| u.stemming == stemming) {
             continue;
         }
         let hoofdelijk = r.soort.as_deref() == Some("Hoofd");
-        let (fracties, afwijkend) = if hoofdelijk {
-            per_kamerlid(&r.votes, actors, kamer)
-        } else {
-            (per_fractie(&r.votes, actors, kamer), vec![])
-        };
+        let (fracties, afwijkend) =
+            if hoofdelijk { per_kamerlid(&r.votes, actors, kamer) } else { (per_fractie(&r.votes, actors, kamer), vec![]) };
         if fracties.is_empty() {
             continue;
         }
@@ -179,10 +161,7 @@ pub fn uitslagen(
 fn met_dubbele_punt(t: &str) -> String {
     let n = t.len();
     let zone = t.get(n.saturating_sub(5)..).unwrap_or("");
-    if n > 5
-        && (zone.starts_with('+') || zone.starts_with('-'))
-        && zone[1..].bytes().all(|b| b.is_ascii_digit())
-    {
+    if n > 5 && (zone.starts_with('+') || zone.starts_with('-')) && zone[1..].bytes().all(|b| b.is_ascii_digit()) {
         format!("{}:{}", &t[..n - 2], &t[n - 2..])
     } else {
         t.to_owned()
@@ -215,10 +194,7 @@ fn bij_stemming<'a>(titel: &str, lijst: &'a [Stemming]) -> Option<&'a str> {
             return Some(s);
         }
     }
-    let zonder_nummer = titel
-        .trim_start()
-        .trim_start_matches(|c: char| c.is_ascii_digit())
-        .trim_start_matches('.');
+    let zonder_nummer = titel.trim_start().trim_start_matches(|c: char| c.is_ascii_digit()).trim_start_matches('.');
     let t = gewoon(zonder_nummer);
     enige(&|s| gewoon(&s.punt.titel) == t)
 }
@@ -235,23 +211,11 @@ fn stem(s: &str) -> Option<Stem> {
 /// ("Christen Democratisch Appel" tegen "Christen-Democratisch Appèl", "Het Juiste Antwoord JA21"
 /// tegen "JA21"), dus: gelijke naam of afkorting, anders de afkorting als los woord in de naam.
 fn fractie_bij<'a>(partij: &str, actors: &Actors, kamer: &'a Kamer) -> Option<&'a Fractie> {
-    let naam = gewoon(
-        &actors
-            .parties
-            .iter()
-            .find(|p| p.id.eq_ignore_ascii_case(partij))?
-            .name,
-    );
-    let gelijk = kamer
-        .fracties
-        .iter()
-        .find(|f| gewoon(&f.naam) == naam || gewoon(&f.afkorting) == naam);
+    let naam = gewoon(&actors.parties.iter().find(|p| p.id.eq_ignore_ascii_case(partij))?.name);
+    let gelijk = kamer.fracties.iter().find(|f| gewoon(&f.naam) == naam || gewoon(&f.afkorting) == naam);
     gelijk.or_else(|| {
         let woorden: Vec<&str> = naam.split(' ').collect();
-        let mut p = kamer
-            .fracties
-            .iter()
-            .filter(|f| woorden.contains(&gewoon(&f.afkorting).as_str()));
+        let mut p = kamer.fracties.iter().filter(|f| woorden.contains(&gewoon(&f.afkorting).as_str()));
         match (p.next(), p.next()) {
             (Some(f), None) => Some(f),
             _ => None,
@@ -267,27 +231,17 @@ fn per_fractie(votes: &[(String, String)], actors: &Actors, kamer: &Kamer) -> Ve
             if f.is_none() {
                 tracing::warn!("Debat Direct: partij {partij} niet in de Kamer");
             }
-            Some(GetikteFractie {
-                fractie: f?.id.clone(),
-                stem: stem(s)?,
-            })
+            Some(GetikteFractie { fractie: f?.id.clone(), stem: stem(s)? })
         })
         .collect()
 }
 
 /// Bij een hoofdelijke stemming: per Fractie de stem van de meeste Kamerleden, en wie anders stemde.
-fn per_kamerlid(
-    votes: &[(String, String)],
-    actors: &Actors,
-    kamer: &Kamer,
-) -> (Vec<GetikteFractie>, Vec<AfwijkendeStem>) {
+fn per_kamerlid(votes: &[(String, String)], actors: &Actors, kamer: &Kamer) -> (Vec<GetikteFractie>, Vec<AfwijkendeStem>) {
     let stemmen: Vec<(&Persoon, &Fractie, Stem)> = votes
         .iter()
         .filter_map(|(id, s)| {
-            let p = actors
-                .politicians
-                .iter()
-                .find(|p| p.id.eq_ignore_ascii_case(id))?;
+            let p = actors.politicians.iter().find(|p| p.id.eq_ignore_ascii_case(id))?;
             let f = fractie_bij(p.party_id.as_deref()?, actors, kamer)?;
             Some((p, f, stem(s)?))
         })
@@ -300,26 +254,12 @@ fn per_kamerlid(
         if van_f.is_empty() {
             continue;
         }
-        let meeste = if voor * 2 >= van_f.len() {
-            Stem::Voor
-        } else {
-            Stem::Tegen
-        };
-        fracties.push(GetikteFractie {
-            fractie: f.id.clone(),
-            stem: meeste,
-        });
+        let meeste = if voor * 2 >= van_f.len() { Stem::Voor } else { Stem::Tegen };
+        fracties.push(GetikteFractie { fractie: f.id.clone(), stem: meeste });
         for (p, _, s) in van_f.iter().filter(|(.., s)| *s != meeste) {
             match kamerlid_bij(p, f, kamer) {
-                Some(k) => afwijkend.push(AfwijkendeStem {
-                    kamerlid: k,
-                    stem: *s,
-                }),
-                None => tracing::warn!(
-                    "Debat Direct: {} {} niet in de Kamer",
-                    p.first_name,
-                    p.last_name
-                ),
+                Some(k) => afwijkend.push(AfwijkendeStem { kamerlid: k, stem: *s }),
+                None => tracing::warn!("Debat Direct: {} {} niet in de Kamer", p.first_name, p.last_name),
             }
         }
     }
@@ -334,9 +274,7 @@ fn kamerlid_bij(p: &Persoon, f: &Fractie, kamer: &Kamer) -> Option<String> {
     let voornaam = gewoon(&p.first_name);
     let mut kandidaten = kamer.kamerleden.iter().filter(|k| {
         k.fractie == f.id
-            && gewoon(&k.achternaam)
-                .split(' ')
-                .all(|w| woorden.contains(&w))
+            && gewoon(&k.achternaam).split(' ').all(|w| woorden.contains(&w))
             && (voornaam.is_empty() || gewoon(&k.roepnaam) == voornaam)
     });
     match (kandidaten.next(), kandidaten.next()) {

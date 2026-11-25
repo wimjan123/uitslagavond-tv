@@ -5,8 +5,8 @@ use std::path::Path;
 
 use gedeeld::{BerichtVanServer, GenummerdeStand, Graphic, Opdracht};
 use reqwest::StatusCode;
-use serde_json::{Value, json};
 use server::{Instellingen, Server};
+use serde_json::{Value, json};
 
 const SLEUTEL: &str = "proefsleutel";
 
@@ -41,15 +41,8 @@ async fn stand(server: &Server) -> GenummerdeStand {
 }
 
 /// Een POST zoals Companion hem stuurt: vaste body, de sleutel en de naam van de knop als kop.
-async fn post(
-    server: &Server,
-    pad: &str,
-    body: Option<&Value>,
-    sleutel: Option<&str>,
-) -> reqwest::Response {
-    let mut v = reqwest::Client::new()
-        .post(url(server, pad))
-        .header("X-Afzender", "Stream Deck");
+async fn post(server: &Server, pad: &str, body: Option<&Value>, sleutel: Option<&str>) -> reqwest::Response {
+    let mut v = reqwest::Client::new().post(url(server, pad)).header("X-Afzender", "Stream Deck");
     if let Some(s) = sleutel {
         v = v.bearer_auth(s);
     }
@@ -65,17 +58,9 @@ async fn druk(server: &Server, pad: &str, body: Option<Value>) -> (StatusCode, B
     let voor = stand(server).await.volgnummer;
     for sleutel in [None, Some("fout")] {
         let r = post(server, pad, body.as_ref(), sleutel).await;
-        assert_eq!(
-            r.status(),
-            StatusCode::UNAUTHORIZED,
-            "{pad} met sleutel {sleutel:?}"
-        );
+        assert_eq!(r.status(), StatusCode::UNAUTHORIZED, "{pad} met sleutel {sleutel:?}");
     }
-    assert_eq!(
-        stand(server).await.volgnummer,
-        voor,
-        "{pad} zonder sleutel veranderde de Stand"
-    );
+    assert_eq!(stand(server).await.volgnummer, voor, "{pad} zonder sleutel veranderde de Stand");
     let r = post(server, pad, body.as_ref(), Some(SLEUTEL)).await;
     let status = r.status();
     (status, r.json().await.expect("antwoord als JSON"))
@@ -91,50 +76,22 @@ async fn druk_ok(server: &Server, pad: &str, body: Value) -> u64 {
 
 /// Zet via de gewone Opdracht een Opdracht klaar, voor de proeven die een begintoestand nodig hebben.
 async fn voer_uit(server: &Server, opdracht: Opdracht) {
-    let r = post(
-        server,
-        "/api/opdracht",
-        Some(&serde_json::to_value(opdracht).unwrap()),
-        Some(SLEUTEL),
-    )
-    .await;
+    let r = post(server, "/api/opdracht", Some(&serde_json::to_value(opdracht).unwrap()), Some(SLEUTEL)).await;
     assert_eq!(r.status(), StatusCode::OK);
 }
 
 fn titelkaart(kop: &str) -> Graphic {
-    Graphic::Titelkaart {
-        kop: kop.into(),
-        regel: "Voorbeeldgegevens".into(),
-    }
+    Graphic::Titelkaart { kop: kop.into(), regel: "Voorbeeldgegevens".into() }
 }
 
 #[tokio::test]
 async fn knop_zet_preset_klaar_op_zijn_nummer() {
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
-    voer_uit(
-        &server,
-        Opdracht::BewaarPreset {
-            graphic: titelkaart("Preset één"),
-            standpunt: None,
-        },
-    )
-    .await;
-    voer_uit(
-        &server,
-        Opdracht::BewaarPreset {
-            graphic: titelkaart("Preset twee"),
-            standpunt: None,
-        },
-    )
-    .await;
+    voer_uit(&server, Opdracht::BewaarPreset { graphic: titelkaart("Preset één"), standpunt: None }).await;
+    voer_uit(&server, Opdracht::BewaarPreset { graphic: titelkaart("Preset twee"), standpunt: None }).await;
 
-    druk_ok(
-        &server,
-        "/api/opdracht",
-        json!({ "soort": "ZetPresetKlaar", "nummer": 2 }),
-    )
-    .await;
+    druk_ok(&server, "/api/opdracht", json!({ "soort": "ZetPresetKlaar", "nummer": 2 })).await;
 
     let s = stand(&server).await.stand;
     let klaar = s.klaar.expect("Preset klaar");
@@ -146,22 +103,11 @@ async fn knop_zet_preset_klaar_op_zijn_nummer() {
 async fn knop_toon_zet_wat_klaarstaat_in_de_ether() {
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
-    voer_uit(
-        &server,
-        Opdracht::ZetKlaar {
-            graphic: titelkaart("Goedenavond"),
-            standpunt: None,
-        },
-    )
-    .await;
+    voer_uit(&server, Opdracht::ZetKlaar { graphic: titelkaart("Goedenavond"), standpunt: None }).await;
 
     druk_ok(&server, "/api/opdracht", json!({ "soort": "Toon" })).await;
 
-    let ether = stand(&server)
-        .await
-        .stand
-        .ether
-        .expect("Graphic in de Ether");
+    let ether = stand(&server).await.stand.ether.expect("Graphic in de Ether");
     assert_eq!(ether.graphic, titelkaart("Goedenavond"));
     assert_eq!(ether.getoond_door, "Stream Deck");
 }
@@ -170,21 +116,10 @@ async fn knop_toon_zet_wat_klaarstaat_in_de_ether() {
 async fn knop_toon_met_versie_weigert_als_de_graphic_intussen_veranderde() {
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
-    voer_uit(
-        &server,
-        Opdracht::ZetKlaar {
-            graphic: titelkaart("Eerste kop"),
-            standpunt: None,
-        },
-    )
-    .await;
+    voer_uit(&server, Opdracht::ZetKlaar { graphic: titelkaart("Eerste kop"), standpunt: None }).await;
     let gezien = stand(&server).await.stand.klaar.unwrap();
     // intussen past een Werkplek de klaargezette Graphic aan (via HTTP met een eigen naam)
-    let wijzig = Opdracht::WijzigKlaar {
-        id: gezien.id,
-        graphic: titelkaart("Nieuwe kop"),
-        standpunt: None,
-    };
+    let wijzig = Opdracht::WijzigKlaar { id: gezien.id, graphic: titelkaart("Nieuwe kop"), standpunt: None };
     let r = reqwest::Client::new()
         .post(url(&server, "/api/opdracht"))
         .bearer_auth(SLEUTEL)
@@ -195,77 +130,38 @@ async fn knop_toon_met_versie_weigert_als_de_graphic_intussen_veranderde() {
         .unwrap();
     assert_eq!(r.status(), StatusCode::OK);
 
-    let (status, antwoord) = druk(
-        &server,
-        "/api/opdracht",
-        Some(json!({ "soort": "Toon", "versie": gezien.versie })),
-    )
-    .await;
+    let (status, antwoord) =
+        druk(&server, "/api/opdracht", Some(json!({ "soort": "Toon", "versie": gezien.versie }))).await;
     assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
-    let BerichtVanServer::Geweigerd { reden } = antwoord else {
-        panic!("niet geweigerd: {antwoord:?}")
-    };
+    let BerichtVanServer::Geweigerd { reden } = antwoord else { panic!("niet geweigerd: {antwoord:?}") };
     assert!(reden.contains("Tablet"), "{reden}");
     assert!(stand(&server).await.stand.ether.is_none());
 
     // met de versie die nu klaarstaat lukt het
     let nu = stand(&server).await.stand.klaar.unwrap().versie;
-    druk_ok(
-        &server,
-        "/api/opdracht",
-        json!({ "soort": "Toon", "versie": nu }),
-    )
-    .await;
-    assert_eq!(
-        stand(&server).await.stand.ether.unwrap().graphic,
-        titelkaart("Nieuwe kop")
-    );
+    druk_ok(&server, "/api/opdracht", json!({ "soort": "Toon", "versie": nu })).await;
+    assert_eq!(stand(&server).await.stand.ether.unwrap().graphic, titelkaart("Nieuwe kop"));
 }
 
 #[tokio::test]
 async fn knop_bijwerken_neemt_de_nieuwe_versie_over_in_de_ether() {
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
-    voer_uit(
-        &server,
-        Opdracht::ZetKlaar {
-            graphic: titelkaart("Oud"),
-            standpunt: None,
-        },
-    )
-    .await;
+    voer_uit(&server, Opdracht::ZetKlaar { graphic: titelkaart("Oud"), standpunt: None }).await;
     voer_uit(&server, Opdracht::Toon { versie: None }).await;
     let id = stand(&server).await.stand.klaar.unwrap().id;
-    voer_uit(
-        &server,
-        Opdracht::WijzigKlaar {
-            id,
-            graphic: titelkaart("Bijgewerkt"),
-            standpunt: None,
-        },
-    )
-    .await;
+    voer_uit(&server, Opdracht::WijzigKlaar { id, graphic: titelkaart("Bijgewerkt"), standpunt: None }).await;
 
     druk_ok(&server, "/api/opdracht", json!({ "soort": "Bijwerken" })).await;
 
-    assert_eq!(
-        stand(&server).await.stand.ether.unwrap().graphic,
-        titelkaart("Bijgewerkt")
-    );
+    assert_eq!(stand(&server).await.stand.ether.unwrap().graphic, titelkaart("Bijgewerkt"));
 }
 
 #[tokio::test]
 async fn knop_uit_beeld_haalt_de_graphic_uit_de_ether() {
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
-    voer_uit(
-        &server,
-        Opdracht::ZetKlaar {
-            graphic: titelkaart("Weg ermee"),
-            standpunt: None,
-        },
-    )
-    .await;
+    voer_uit(&server, Opdracht::ZetKlaar { graphic: titelkaart("Weg ermee"), standpunt: None }).await;
     voer_uit(&server, Opdracht::Toon { versie: None }).await;
 
     druk_ok(&server, "/api/opdracht", json!({ "soort": "UitBeeld" })).await;
@@ -278,12 +174,7 @@ async fn knop_kiest_een_standpunt() {
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
 
-    druk_ok(
-        &server,
-        "/api/opdracht",
-        json!({ "soort": "KiesStandpunt", "letter": "D" }),
-    )
-    .await;
+    druk_ok(&server, "/api/opdracht", json!({ "soort": "KiesStandpunt", "letter": "D" })).await;
 
     let camera = stand(&server).await.stand.camera;
     assert_eq!((camera.standpunt.as_str(), camera.knip), ("D", false));
@@ -294,19 +185,9 @@ async fn knop_zet_de_vrije_camera_aan_en_uit() {
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
 
-    druk_ok(
-        &server,
-        "/api/opdracht",
-        json!({ "soort": "ZetVrijeCamera", "aan": true }),
-    )
-    .await;
+    druk_ok(&server, "/api/opdracht", json!({ "soort": "ZetVrijeCamera", "aan": true })).await;
     assert!(stand(&server).await.stand.camera.vrij);
-    druk_ok(
-        &server,
-        "/api/opdracht",
-        json!({ "soort": "ZetVrijeCamera", "aan": false }),
-    )
-    .await;
+    druk_ok(&server, "/api/opdracht", json!({ "soort": "ZetVrijeCamera", "aan": false })).await;
     assert!(!stand(&server).await.stand.camera.vrij);
 }
 
@@ -339,33 +220,16 @@ async fn knopstatus_zegt_per_veld_wat_klaarstaat_en_wat_in_beeld_is() {
         assert_eq!(veld(&server, naam).await, verwacht, "{naam} bij het begin");
     }
 
-    voer_uit(
-        &server,
-        Opdracht::BewaarPreset {
-            graphic: titelkaart("Preset"),
-            standpunt: None,
-        },
-    )
-    .await;
+    voer_uit(&server, Opdracht::BewaarPreset { graphic: titelkaart("Preset"), standpunt: None }).await;
     voer_uit(&server, Opdracht::ZetPresetKlaar { nummer: 1 }).await;
     let klaar = stand(&server).await.stand.klaar.unwrap();
-    assert_eq!(
-        veld(&server, "klaar_versie").await,
-        klaar.versie.to_string()
-    );
+    assert_eq!(veld(&server, "klaar_versie").await, klaar.versie.to_string());
     assert_eq!(veld(&server, "klaar_door").await, "Stream Deck");
     assert_eq!(veld(&server, "kan_tonen").await, "ja");
     assert_eq!(veld(&server, "preset_klaar").await, "1");
 
     voer_uit(&server, Opdracht::Toon { versie: None }).await;
-    voer_uit(
-        &server,
-        Opdracht::KiesStandpunt {
-            letter: "G".into(),
-            knip: true,
-        },
-    )
-    .await;
+    voer_uit(&server, Opdracht::KiesStandpunt { letter: "G".into(), knip: true }).await;
     voer_uit(&server, Opdracht::ZetVrijeCamera { aan: true }).await;
     assert_eq!(veld(&server, "in_beeld").await, "ja");
     assert_eq!(veld(&server, "kan_tonen").await, "nee");
@@ -374,20 +238,10 @@ async fn knopstatus_zegt_per_veld_wat_klaarstaat_en_wat_in_beeld_is() {
     assert_eq!(veld(&server, "vrije_camera").await, "aan");
 
     // alles tegelijk als JSON, en een onbekend veld
-    let r = reqwest::Client::new()
-        .get(url(&server, "/api/knoppen"))
-        .bearer_auth(SLEUTEL)
-        .send()
-        .await
-        .unwrap();
+    let r = reqwest::Client::new().get(url(&server, "/api/knoppen")).bearer_auth(SLEUTEL).send().await.unwrap();
     let alles: Value = r.json().await.unwrap();
     assert_eq!(alles["in_beeld"], "ja");
-    let r = reqwest::Client::new()
-        .get(url(&server, "/api/knoppen/onbekend"))
-        .bearer_auth(SLEUTEL)
-        .send()
-        .await
-        .unwrap();
+    let r = reqwest::Client::new().get(url(&server, "/api/knoppen/onbekend")).bearer_auth(SLEUTEL).send().await.unwrap();
     assert_eq!(r.status(), StatusCode::NOT_FOUND);
 }
 
@@ -396,11 +250,7 @@ async fn knopstatus_vraagt_de_sleutel() {
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
     for pad in ["/api/knoppen", "/api/knoppen/in_beeld"] {
-        let r = reqwest::Client::new()
-            .get(url(&server, pad))
-            .send()
-            .await
-            .unwrap();
+        let r = reqwest::Client::new().get(url(&server, pad)).send().await.unwrap();
         assert_eq!(r.status(), StatusCode::UNAUTHORIZED, "{pad}");
     }
 }
@@ -425,13 +275,7 @@ async fn knop_kleur_uit_geeft_de_stoelen_hun_eigen_leer_terug() {
     assert_eq!(veld(&server, "kleur").await, "uit");
 
     let rood = "#d4202c".parse().unwrap();
-    voer_uit(
-        &server,
-        Opdracht::ZetStoelkleuren {
-            kleuren: vec![rood; 150],
-        },
-    )
-    .await;
+    voer_uit(&server, Opdracht::ZetStoelkleuren { kleuren: vec![rood; 150] }).await;
     assert_eq!(veld(&server, "kleur").await, "aan");
 
     druk_ok(&server, "/api/opdracht", json!({"soort": "KleurUit"})).await;

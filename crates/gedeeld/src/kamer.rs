@@ -128,18 +128,10 @@ pub enum KamerWeigering {
 impl Kamerlid {
     /// "Van Groningen": de achternaam met tussenvoegsel, zoals in een lijst namen.
     pub fn achternaam_met_tussenvoegsel(&self) -> String {
-        match self
-            .tussenvoegsel
-            .as_deref()
-            .map(str::trim)
-            .filter(|t| !t.is_empty())
-        {
+        match self.tussenvoegsel.as_deref().map(str::trim).filter(|t| !t.is_empty()) {
             Some(t) => {
                 let mut c = t.chars();
-                let eerste = c
-                    .next()
-                    .map(|e| e.to_uppercase().collect::<String>())
-                    .unwrap_or_default();
+                let eerste = c.next().map(|e| e.to_uppercase().collect::<String>()).unwrap_or_default();
                 format!("{eerste}{} {}", c.as_str(), self.achternaam)
             }
             None => self.achternaam.clone(),
@@ -276,13 +268,11 @@ impl Kamer {
             }
             m.vertrokken = vertrokken.iter().map(|k| k.naam()).collect();
             let weg: Vec<Kamerlid> = vertrokken.into_iter().cloned().collect();
-            self.vertrokken
-                .retain(|v| !weg.iter().any(|w| w.id == v.id));
+            self.vertrokken.retain(|v| !weg.iter().any(|w| w.id == v.id));
             self.vertrokken.extend(weg);
         }
         // wie terugkomt, is niet meer vertrokken
-        self.vertrokken
-            .retain(|v| !kamerleden.iter().any(|k| k.id == v.id));
+        self.vertrokken.retain(|v| !kamerleden.iter().any(|k| k.id == v.id));
 
         let mut kamerleden = kamerleden.to_vec();
         kamerleden.sort_by(|a, b| {

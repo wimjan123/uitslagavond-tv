@@ -26,48 +26,12 @@ struct Vast {
 }
 
 const VAST: [Vast; 6] = [
-    Vast {
-        letter: "Q",
-        naam: "Onthulling",
-        seconden: 16,
-        eind: RitEind::Stoppen,
-        stand: onthulling,
-    },
-    Vast {
-        letter: "W",
-        naam: "Zwenk linkerflank naar rechterflank",
-        seconden: 24,
-        eind: RitEind::Stoppen,
-        stand: zwenk,
-    },
-    Vast {
-        letter: "E",
-        naam: "Rondje boven de zaal",
-        seconden: 50,
-        eind: RitEind::Herhalen,
-        stand: rondje,
-    },
-    Vast {
-        letter: "T",
-        naam: "Panorama vanuit het midden",
-        seconden: 20,
-        eind: RitEind::Stoppen,
-        stand: panorama,
-    },
-    Vast {
-        letter: "Y",
-        naam: "Kraan omhoog naar overzicht",
-        seconden: 14,
-        eind: RitEind::Stoppen,
-        stand: kraan,
-    },
-    Vast {
-        letter: "U",
-        naam: "Naar de katheder",
-        seconden: 14,
-        eind: RitEind::Stoppen,
-        stand: katheder,
-    },
+    Vast { letter: "Q", naam: "Onthulling", seconden: 16, eind: RitEind::Stoppen, stand: onthulling },
+    Vast { letter: "W", naam: "Zwenk linkerflank naar rechterflank", seconden: 24, eind: RitEind::Stoppen, stand: zwenk },
+    Vast { letter: "E", naam: "Rondje boven de zaal", seconden: 50, eind: RitEind::Herhalen, stand: rondje },
+    Vast { letter: "T", naam: "Panorama vanuit het midden", seconden: 20, eind: RitEind::Stoppen, stand: panorama },
+    Vast { letter: "Y", naam: "Kraan omhoog naar overzicht", seconden: 14, eind: RitEind::Stoppen, stand: kraan },
+    Vast { letter: "U", naam: "Naar de katheder", seconden: 14, eind: RitEind::Stoppen, stand: katheder },
 ];
 
 /// Zacht starten en stoppen.
@@ -91,11 +55,7 @@ fn onthulling(t: f32) -> ([f32; 3], [f32; 3], f32) {
 /// Van de linkerflank in een boog voor de Voorzitter langs naar de rechterflank.
 fn zwenk(t: f32) -> ([f32; 3], [f32; 3], f32) {
     let s = -1.0 + 2.0 * zacht(t);
-    let plek = [
-        9.8 * s,
-        2.8 + 0.5 * (1.0 - s * s),
-        0.8 + 2.6 * (1.0 - s * s),
-    ];
+    let plek = [9.8 * s, 2.8 + 0.5 * (1.0 - s * s), 0.8 + 2.6 * (1.0 - s * s)];
     (plek, [0.0, 0.9, -5.5], 52.0)
 }
 
@@ -137,14 +97,7 @@ fn punt(plek: [f32; 3], doel: [f32; 3], beeldhoek_graden: f32) -> [f32; 6] {
     let d = [doel[0] - plek[0], doel[1] - plek[1], doel[2] - plek[2]];
     let draai = (-d[0]).atan2(-d[2]);
     let helling = d[1].atan2((d[0] * d[0] + d[2] * d[2]).sqrt());
-    [
-        plek[0],
-        plek[1],
-        plek[2],
-        draai,
-        helling,
-        beeldhoek_graden.to_radians(),
-    ]
+    [plek[0], plek[1], plek[2], draai, helling, beeldhoek_graden.to_radians()]
 }
 
 fn opname(v: &Vast) -> Vec<[f32; 6]> {
@@ -161,9 +114,7 @@ static OPNAMES: LazyLock<Vec<Vec<[f32; 6]>>> = LazyLock::new(|| VAST.iter().map(
 
 /// De opname van de vaste Camerarit met deze sleutel.
 pub fn opname_van(letter: &str) -> Option<&'static [[f32; 6]]> {
-    VAST.iter()
-        .position(|v| v.letter == letter)
-        .map(|i| OPNAMES[i].as_slice())
+    VAST.iter().position(|v| v.letter == letter).map(|i| OPNAMES[i].as_slice())
 }
 
 /// Of dit de sleutel van een vaste Camerarit is.
@@ -184,11 +135,7 @@ fn standaard(v: &Vast) -> Camerarit {
         toets: None,
         vast: true,
         opname: Vec::new(),
-        bijschaving: Bijschaving {
-            gladheid: 0.0,
-            eind: v.eind,
-            ..Bijschaving::nieuw(v.seconden as f32)
-        },
+        bijschaving: Bijschaving { gladheid: 0.0, eind: v.eind, ..Bijschaving::nieuw(v.seconden as f32) },
     }
 }
 
@@ -211,11 +158,7 @@ mod tests {
     #[test]
     fn elke_vaste_rit_duurt_zo_lang_als_zijn_opname() {
         for r in vaste() {
-            assert!(
-                (r.opname_s() - r.bijschaving.duur_s).abs() < 1e-3,
-                "{}",
-                r.naam
-            );
+            assert!((r.opname_s() - r.bijschaving.duur_s).abs() < 1e-3, "{}", r.naam);
             assert!(r.beginstand().is_some());
         }
     }

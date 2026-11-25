@@ -14,16 +14,9 @@ fn het_overgezette_bestand_heeft_150_stoelen_en_niemand_dubbel() {
     let z = Zaalindeling::uit_json(TK2025).expect("leesbaar");
     assert_eq!(z.kamerperiode, "2025");
     let c = z.controleer();
-    assert_eq!(
-        c,
-        Controle::default(),
-        "geen ontbrekende, dubbele of onbekende Stoelen"
-    );
+    assert_eq!(c, Controle::default(), "geen ontbrekende, dubbele of onbekende Stoelen");
     assert!(c.in_orde());
-    assert_eq!(
-        z.stoelen.iter().filter(|s| s.kamerlid.is_some()).count(),
-        150
-    );
+    assert_eq!(z.stoelen.iter().filter(|s| s.kamerlid.is_some()).count(), 150);
 }
 
 #[test]
@@ -38,18 +31,8 @@ fn de_controle_meldt_ontbrekende_dubbele_en_onbekende_stoelen() {
     (buiten.vak, buiten.rij, buiten.nummer) = (7, 1, 1);
     buiten.kamerlid = None;
     z.stoelen.push(buiten);
-    let wie = z
-        .stoelen
-        .iter()
-        .find(|s| s.stoel() == stoel(1, 2, 1))
-        .unwrap()
-        .kamerlid
-        .clone();
-    z.stoelen
-        .iter_mut()
-        .find(|s| s.stoel() == stoel(1, 2, 2))
-        .unwrap()
-        .kamerlid = wie.clone();
+    let wie = z.stoelen.iter().find(|s| s.stoel() == stoel(1, 2, 1)).unwrap().kamerlid.clone();
+    z.stoelen.iter_mut().find(|s| s.stoel() == stoel(1, 2, 2)).unwrap().kamerlid = wie.clone();
 
     let c = z.controleer();
     assert_eq!(c.ontbrekend, [stoel(1, 1, 2)]);
@@ -61,10 +44,10 @@ fn de_controle_meldt_ontbrekende_dubbele_en_onbekende_stoelen() {
 
 // --- De Zaalindeling in de Stand: voorstel bij een wissel ---
 
-use gedeeld::cijfers::Invoer;
 use gedeeld::kamer::{Foto, Fractie, Kamerlid};
-use gedeeld::sjabloon::GRIJS;
 use gedeeld::zaalindeling::{Bezetting, Stoelvoorstel};
+use gedeeld::cijfers::Invoer;
+use gedeeld::sjabloon::GRIJS;
 use gedeeld::{Graphic, Herkomst, Indeling, Kleur, Opdracht, Stand, Weigering};
 
 /// VOORBEELDGEGEVENS: verzonnen Kamerleden en Fracties.
@@ -90,12 +73,7 @@ fn lid(id: &str, achternaam: &str, fractie: &str, zetel: &str) -> Kamerlid {
 
 fn fracties() -> Vec<Fractie> {
     ["rood", "blauw"]
-        .map(|f| Fractie {
-            id: f.into(),
-            afkorting: f.to_uppercase(),
-            naam: f.into(),
-            zetels: 2,
-        })
+        .map(|f| Fractie { id: f.into(), afkorting: f.to_uppercase(), naam: f.into(), zetels: 2 })
         .into()
 }
 
@@ -107,22 +85,15 @@ struct Proef {
 impl Proef {
     /// Vier Kamerleden: A en B van Rood op 1-1-1 en 1-1-2, C en D van Blauw op 1-2-1 en 1-2-2.
     fn new() -> Self {
-        let mut p = Proef {
-            stand: Stand::default(),
-            volgnummer: 0,
-        };
+        let mut p = Proef { stand: Stand::default(), volgnummer: 0 };
         let invoer = Invoer::uit_json(
             r##"{ "partijen": [
                 { "sleutel": "rood", "naam": "Rode Partij", "kort": "ROOD", "kleur": "#d4202c" },
                 { "sleutel": "blauw", "naam": "Blauwe Partij", "kort": "BLAUW", "kleur": "#12357a" }
             ], "sets": [] }"##,
         );
-        p.doe(Opdracht::LeesInvoer {
-            bestand: "proef.json".into(),
-            ontvangen: "nu".into(),
-            invoer,
-        })
-        .unwrap();
+        p.doe(Opdracht::LeesInvoer { bestand: "proef.json".into(), ontvangen: "nu".into(), invoer })
+            .unwrap();
         p.lees_kamer(vec![
             lid("a", "Aal", "rood", "z1"),
             lid("b", "Bes", "rood", "z2"),
@@ -138,16 +109,8 @@ impl Proef {
                 naam: k.into(),
             })
             .into();
-        let zaalindeling = Zaalindeling {
-            kamerperiode: "2025".into(),
-            bron: String::new(),
-            stoelen,
-        };
-        p.doe(Opdracht::LeesZaalindeling {
-            bestand: "proef.json".into(),
-            zaalindeling,
-        })
-        .unwrap();
+        let zaalindeling = Zaalindeling { kamerperiode: "2025".into(), bron: String::new(), stoelen };
+        p.doe(Opdracht::LeesZaalindeling { bestand: "proef.json".into(), zaalindeling }).unwrap();
         p
     }
 
@@ -163,11 +126,7 @@ impl Proef {
 
     fn doe(&mut self, opdracht: Opdracht) -> Result<(), Weigering> {
         let mut nieuw = self.stand.clone();
-        let h = Herkomst {
-            door: "Regie 1",
-            volgnummer: self.volgnummer + 1,
-            tijd_ms: 1_000,
-        };
+        let h = Herkomst { door: "Regie 1", volgnummer: self.volgnummer + 1, tijd_ms: 1_000 };
         nieuw.voer_uit(&opdracht, &h)?;
         self.stand = nieuw;
         self.volgnummer += 1;
@@ -202,11 +161,7 @@ fn bij_een_wissel_stelt_het_systeem_de_stoel_van_de_vertrokken_persoon_voor() {
     );
 
     // één klik: de Regie bevestigt
-    p.doe(Opdracht::GeefStoel {
-        kamerlid: "e".into(),
-        stoel: stoel(1, 1, 1),
-    })
-    .unwrap();
+    p.doe(Opdracht::GeefStoel { kamerlid: "e".into(), stoel: stoel(1, 1, 1) }).unwrap();
     assert_eq!(p.stand.zaalindeling.stoel_van("e"), Some(stoel(1, 1, 1)));
     assert!(p.stand.zaalmelding.voorstellen.is_empty());
     assert!(p.stand.zaalmelding.zonder_stoel.is_empty());
@@ -226,30 +181,17 @@ fn komt_de_opvolger_op_een_andere_fractiezetel_dan_telt_de_fractie() {
     ]);
     let voorstellen = &p.stand.zaalmelding.voorstellen;
     assert_eq!(voorstellen.len(), 1);
-    assert_eq!(
-        (voorstellen[0].stoel, voorstellen[0].kamerlid.as_str()),
-        (stoel(1, 2, 2), "f")
-    );
-    assert_eq!(
-        p.stand.zaalmelding.zonder_stoel,
-        ["Proef Fem", "Proef Gijs"]
-    );
+    assert_eq!((voorstellen[0].stoel, voorstellen[0].kamerlid.as_str()), (stoel(1, 2, 2), "f"));
+    assert_eq!(p.stand.zaalmelding.zonder_stoel, ["Proef Fem", "Proef Gijs"]);
 }
 
 #[test]
 fn een_stoel_van_een_ander_kamerlid_geeft_de_server_niet_weg() {
     let mut p = Proef::new();
-    let fout = p.doe(Opdracht::GeefStoel {
-        kamerlid: "a".into(),
-        stoel: stoel(1, 1, 2),
-    });
+    let fout = p.doe(Opdracht::GeefStoel { kamerlid: "a".into(), stoel: stoel(1, 1, 2) });
     assert!(matches!(fout, Err(Weigering::Zaal(_))), "{fout:?}");
     // naar een lege Stoel mag wel: de oude Stoel is daarna leeg
-    p.doe(Opdracht::GeefStoel {
-        kamerlid: "a".into(),
-        stoel: stoel(1, 3, 1),
-    })
-    .unwrap();
+    p.doe(Opdracht::GeefStoel { kamerlid: "a".into(), stoel: stoel(1, 3, 1) }).unwrap();
     assert_eq!(p.stand.zaalindeling.stoel_van("a"), Some(stoel(1, 3, 1)));
     assert_eq!(p.stand.zaalindeling.op(stoel(1, 1, 1)), None);
 }
@@ -273,11 +215,7 @@ fn zetelverdeling_in_de_zaalindeling_kleurt_elke_stoel_naar_de_fractie_van_wie_e
         indeling: Indeling::Zaalindeling,
         cijfers: None,
     };
-    p.doe(Opdracht::ZetKlaar {
-        graphic,
-        standpunt: None,
-    })
-    .unwrap();
+    p.doe(Opdracht::ZetKlaar { graphic, standpunt: None }).unwrap();
     p.doe(Opdracht::Toon { versie: None }).unwrap();
 
     let rood: Kleur = "#d4202c".parse().unwrap();

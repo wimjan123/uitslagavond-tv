@@ -3,20 +3,12 @@
 //! `dashboard/src/typen/standaardSjablonen.ts`. Zo ziet de vormgevingstab of een aangepast vast
 //! Sjabloon op een oudere standaard gebaseerd is.
 
-use gedeeld::sjabloon::{
-    DONKER, EIGEN, GROEP_EIGEN, MAX_BLOKKEN, MAX_SJABLOONNAAM, vaste_sjablonen, vingerafdruk,
-};
+use gedeeld::sjabloon::{DONKER, EIGEN, GROEP_EIGEN, MAX_BLOKKEN, MAX_SJABLOONNAAM, vaste_sjablonen, vingerafdruk};
 
 fn inhoud() -> String {
     let vast = vaste_sjablonen();
-    let regels: Vec<String> = vast
-        .iter()
-        .map(|s| format!("  {},", serde_json::to_string(s).unwrap()))
-        .collect();
-    let afdrukken: Vec<String> = vast
-        .iter()
-        .map(|s| format!("  {:?}: {:?},", s.id, vingerafdruk(s)))
-        .collect();
+    let regels: Vec<String> = vast.iter().map(|s| format!("  {},", serde_json::to_string(s).unwrap())).collect();
+    let afdrukken: Vec<String> = vast.iter().map(|s| format!("  {:?}: {:?},", s.id, vingerafdruk(s))).collect();
     format!(
         "// Gemaakt door `cargo test -p gedeeld` (crates/gedeeld/tests/standaard_sjablonen.rs). Niet met de hand wijzigen.\n\
          import type {{ Sjabloon }} from \"./Sjabloon\";\n\n\
@@ -41,9 +33,7 @@ fn inhoud() -> String {
 
 #[test]
 fn schrijf_de_standaard_sjablonen_voor_het_dashboard() {
-    let Some(map) = std::env::var_os("TS_RS_EXPORT_DIR") else {
-        return;
-    };
+    let Some(map) = std::env::var_os("TS_RS_EXPORT_DIR") else { return };
     let pad = std::path::Path::new(&map).join("standaardSjablonen.ts");
     let nieuw = inhoud();
     if std::fs::read_to_string(&pad).ok().as_deref() != Some(nieuw.as_str()) {

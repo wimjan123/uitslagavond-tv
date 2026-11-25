@@ -19,31 +19,31 @@ pub mod kamer;
 pub mod persoonskaart;
 pub mod presets;
 pub mod sjabloon;
-pub mod stemmingen;
 mod tablet;
+pub mod stemmingen;
 pub mod uitslagindeling;
 pub mod vaste_ritten;
-#[cfg(feature = "volger")]
-pub mod volger;
 pub mod zaalindeling;
 pub mod zaalkaart;
 pub mod zetelbalk;
+#[cfg(feature = "volger")]
+pub mod volger;
 
 use crate::camera::{
     CameraOvergang, Camerabeeld, Camerakeuze, Camerastand, MAX_STANDPUNTNAAM, NaAankomst, Standpunt,
 };
 use crate::camerarit::{Bijschaving, Camerarit, RIT_MIN_S};
 use crate::cijfers::{Aanvulling, Bewerking, CijferWeigering, Cijfers, Invoer, Soort};
-use crate::kamer::{Foto, Fractie, Kamer, KamerWeigering, Kamerlid};
+pub use graphic::{
+    Graphic, GraphicInBeeld, Indeling, KlaargezetteGraphic, MAX_KOP, MAX_REGEL, Overgang, VELD_FUNCTIE,
+    VELD_GEGEVENS, VELD_NAMEN, VELD_VRIJE_REGEL, VELD_ZETELS,
+};
 use crate::persoonskaart::{EigenPersoon, Extra};
+use crate::kamer::{Foto, Fractie, Kamer, KamerWeigering, Kamerlid};
 use crate::presets::Preset;
 use crate::stemmingen::{Lijstpunt, OpgehaaldeUitslag, Stemgedrag, StemmingWeigering, Stemmingen};
 use crate::uitslagindeling::{Uitslagvolgorde, Volgorde, Zetelstand};
 use crate::zaalindeling::{ZaalWeigering, Zaalindeling, Zaalmelding};
-pub use graphic::{
-    Graphic, GraphicInBeeld, Indeling, KlaargezetteGraphic, MAX_KOP, MAX_REGEL, Overgang,
-    VELD_FUNCTIE, VELD_GEGEVENS, VELD_NAMEN, VELD_VRIJE_REGEL, VELD_ZETELS,
-};
 
 /// Versie van het systeem: de versie uit Cargo.toml plus de commit, zoals `0.1.0+4a46080` (zie
 /// `build.rs`). De server weigert een Renderer met een andere versie.
@@ -169,10 +169,9 @@ impl Stoel {
     /// Alle 150 Stoelen: vak na vak, in elk vak rij na rij, in elke rij op nummer.
     pub fn alle() -> impl Iterator<Item = Stoel> {
         (1..=6u8).flat_map(|vak| {
-            STOELEN_PER_RIJ
-                .iter()
-                .zip(1u8..)
-                .flat_map(move |(&n, rij)| (1..=n).map(move |nummer| Stoel { vak, rij, nummer }))
+            STOELEN_PER_RIJ.iter().zip(1u8..).flat_map(move |(&n, rij)| {
+                (1..=n).map(move |nummer| Stoel { vak, rij, nummer })
+            })
         })
     }
 
@@ -210,18 +209,9 @@ impl std::str::FromStr for Kleur {
     type Err = GeenKleur;
     fn from_str(s: &str) -> Result<Self, GeenKleur> {
         let fout = || GeenKleur(s.to_string());
-        let hex = s
-            .strip_prefix('#')
-            .filter(|h| h.len() == 6)
-            .ok_or_else(fout)?;
-        let deel = |i: usize| {
-            u8::from_str_radix(hex.get(i..i + 2).ok_or_else(fout)?, 16).map_err(|_| fout())
-        };
-        Ok(Kleur {
-            r: deel(0)?,
-            g: deel(2)?,
-            b: deel(4)?,
-        })
+        let hex = s.strip_prefix('#').filter(|h| h.len() == 6).ok_or_else(fout)?;
+        let deel = |i: usize| u8::from_str_radix(hex.get(i..i + 2).ok_or_else(fout)?, 16).map_err(|_| fout());
+        Ok(Kleur { r: deel(0)?, g: deel(2)?, b: deel(4)? })
     }
 }
 
@@ -274,9 +264,7 @@ pub enum Opdracht {
     /// die in de Ether staat. Uitzondering op Bijwerken (besluit #6): de Ether werkt direct bij,
     /// en de Renderer schuift vloeiend naar de nieuwe coalitie. De cijfers blijven de kopie van
     /// de Graphic. Ook de Presentator kiest zo Partijen op de tablet.
-    ZetCoalitie {
-        partijen: Vec<String>,
-    },
+    ZetCoalitie { partijen: Vec<String> },
     /// Haalt de Graphic uit de Ether.
     UitBeeld,
     /// Kleur uit: de Stoelen in de Ether krijgen direct hun eigen leer terug, met de
@@ -295,14 +283,10 @@ pub enum Opdracht {
     },
     /// Zet de Vrije camera aan of uit (V op het dashboard, Start op de gamepad). Met de Vrije
     /// camera aan stuurt de gamepad de camera van de Ether; uit blijft de camera staan.
-    ZetVrijeCamera {
-        aan: bool,
-    },
+    ZetVrijeCamera { aan: bool },
     /// Zet Oefenen aan of uit (O): de gamepad stuurt dan alleen de camera van het Voorbeeld, de
     /// Ether blijft staan. Oefenen en de Vrije camera gaan niet samen.
-    ZetOefenen {
-        aan: bool,
-    },
+    ZetOefenen { aan: bool },
     /// Start of stopt de opname van een Camerarit (R op het dashboard, B op de gamepad). Alleen
     /// tijdens Oefenen. Met `voor` neemt de Regie die Camerarit opnieuw op. Bij stoppen vult de
     /// server `opname` in met wat hij opnam; de nieuwe Camerarit speelt meteen af in het Voorbeeld.
@@ -312,34 +296,20 @@ pub enum Opdracht {
         #[ts(optional)]
         voor: Option<String>,
         #[serde(default)]
-        #[ts(
-            optional,
-            type = "Array<[number, number, number, number, number, number]>"
-        )]
+        #[ts(optional, type = "Array<[number, number, number, number, number, number]>")]
         opname: Option<Vec<[f32; 6]>>,
     },
     /// Speelt een Standpunt of Camerarit af in het Voorbeeld, vanaf waar de camera van de Ether
     /// nu staat ("Probeer in Voorbeeld", "Speel af in Voorbeeld"). De Ether blijft staan.
-    ProbeerInVoorbeeld {
-        letter: String,
-    },
+    ProbeerInVoorbeeld { letter: String },
     /// Stelt in hoe de camera naar een Standpunt gaat en wat hij daarna doet. Speelt af in het
     /// Voorbeeld.
-    ZetStandpuntOvergang {
-        letter: String,
-        overgang: CameraOvergang,
-        na_aankomst: NaAankomst,
-    },
+    ZetStandpuntOvergang { letter: String, overgang: CameraOvergang, na_aankomst: NaAankomst },
     /// Zet de schuifjes van een Camerarit. Speelt af in het Voorbeeld.
-    BijschaafCamerarit {
-        letter: String,
-        bijschaving: Bijschaving,
-    },
+    BijschaafCamerarit { letter: String, bijschaving: Bijschaving },
     /// Zet een vaste Camerarit terug naar zijn standaard: naam en schuifjes. Speelt af in het
     /// Voorbeeld.
-    HerstelCamerarit {
-        letter: String,
-    },
+    HerstelCamerarit { letter: String },
     /// Bewaart een nieuw eigen Standpunt. Zonder `stand` vult de server in waar de camera van de
     /// Ether nu staat.
     BewaarStandpunt {
@@ -357,10 +327,7 @@ pub enum Opdracht {
         stand: Option<Camerastand>,
     },
     /// Geeft een eigen Standpunt of een Camerarit een andere naam.
-    HernoemStandpunt {
-        letter: String,
-        naam: String,
-    },
+    HernoemStandpunt { letter: String, naam: String },
     /// Geeft een eigen Standpunt of een Camerarit toets J, K of L, of geen. Had een ander die
     /// toets, dan raakt dat hem kwijt.
     ZetStandpuntToets {
@@ -371,9 +338,7 @@ pub enum Opdracht {
     },
     /// Wist een eigen Standpunt of een Camerarit. Kan niet zolang iets het gebruikt (zie
     /// [`Stand::gebruik_van_standpunt`]).
-    WisStandpunt {
-        letter: String,
-    },
+    WisStandpunt { letter: String },
     /// Geef alle 150 Stoelen tegelijk een kleur, in de volgorde van [`Stoel::alle`].
     /// Een lege lijst geeft elke Stoel zijn eigen kleur terug.
     ZetStoelkleuren {
@@ -389,27 +354,13 @@ pub enum Opdracht {
         invoer: Invoer,
     },
     /// Zet de Zetels van één Partij in een set.
-    ZetZetels {
-        set: String,
-        partij: String,
-        zetels: u16,
-    },
+    ZetZetels { set: String, partij: String, zetels: u16 },
     /// Zet een set op slot: daarna weigert de server elke wijziging, ook uit het bestand.
-    VergrendelSet {
-        set: String,
-    },
-    OntgrendelSet {
-        set: String,
-    },
+    VergrendelSet { set: String },
+    OntgrendelSet { set: String },
     /// Koppelt een Voorganger aan een Partij.
-    KoppelVoorganger {
-        partij: String,
-        voorganger: String,
-    },
-    OntkoppelVoorganger {
-        partij: String,
-        voorganger: String,
-    },
+    KoppelVoorganger { partij: String, voorganger: String },
+    OntkoppelVoorganger { partij: String, voorganger: String },
     /// Zet live een nieuwe Partij in de partijlijst. Zonder kleur krijgt ze een tijdelijke kleur.
     VoegPartijToe {
         naam: String,
@@ -424,15 +375,9 @@ pub enum Opdracht {
         fractie_zonder_lijst: bool,
     },
     /// Vult een Partij aan: alleen de velden die meegaan veranderen.
-    VulPartijAan {
-        partij: String,
-        aanvulling: Aanvulling,
-    },
+    VulPartijAan { partij: String, aanvulling: Aanvulling },
     /// Maakt een nieuwe, lege set van deze soort (peiling, exitpoll enz.).
-    MaakSet {
-        setsoort: Soort,
-        label: String,
-    },
+    MaakSet { setsoort: Soort, label: String },
     /// Kiest de set waartegen winst en verlies wordt berekend. Zonder `set`: geen.
     KiesVergelijkingsset {
         #[serde(default)]
@@ -449,63 +394,33 @@ pub enum Opdracht {
         fracties: Vec<Fractie>,
     },
     /// Welke foto de server voor een Kamerlid heeft, zoals na het plaatsen van een eigen foto.
-    ZetFoto {
-        kamerlid: String,
-        foto: Foto,
-    },
+    ZetFoto { kamerlid: String, foto: Foto },
 
     // Stemmingen (zie de module `stemmingen`).
     /// Neemt de Stemmingslijst van een dag over. De server stuurt deze zelf.
-    LeesStemmingslijst {
-        dag: String,
-        ingelezen: String,
-        punten: Vec<Lijstpunt>,
-    },
+    LeesStemmingslijst { dag: String, ingelezen: String, punten: Vec<Lijstpunt> },
     /// Een motie die niet in de lijst staat: de Regie typt de titel.
-    VoegStemmingToe {
-        titel: String,
-    },
+    VoegStemmingToe { titel: String },
     /// Vinkt een Stemming aan (of uit) voor de uitzending.
-    ZetVoorUitzending {
-        stemming: String,
-        aan: bool,
-    },
+    ZetVoorUitzending { stemming: String, aan: bool },
     /// Het stemgedrag zoals de Regie het nu heeft ingevoerd. De server rekent de uitkomst uit.
-    ZetStemgedrag {
-        stemming: String,
-        stemgedrag: Stemgedrag,
-    },
-    VergrendelStemming {
-        stemming: String,
-    },
-    OntgrendelStemming {
-        stemming: String,
-    },
+    ZetStemgedrag { stemming: String, stemgedrag: Stemgedrag },
+    VergrendelStemming { stemming: String },
+    OntgrendelStemming { stemming: String },
     /// "Vastleggen en klaarzetten": zet de uitslag klaar als Graphic. Staat dezelfde Stemming al
     /// klaar, dan wijzigt die Graphic, zodat Bijwerken de Ether bijwerkt.
-    LegStemmingVast {
-        stemming: String,
-    },
+    LegStemmingVast { stemming: String },
     /// Waar een Stemming de Stoelen kleurt: in de Zaalindeling (standaard) of, tussen de
     /// beëdiging en een nieuwe Zaalindeling, in de Uitslagindeling met elke Fractie als één blok.
-    ZetStemmingIndeling {
-        indeling: Indeling,
-    },
+    ZetStemmingIndeling { indeling: Indeling },
     /// De officiële uitslagen die de server ophaalde (Controle na de uitzending). De server stuurt
     /// deze zelf. De invoer van de Regie verandert niet.
-    LeesOfficieleUitslagen {
-        opgehaald: String,
-        uitslagen: Vec<OpgehaaldeUitslag>,
-    },
+    LeesOfficieleUitslagen { opgehaald: String, uitslagen: Vec<OpgehaaldeUitslag> },
     /// "Neem officieel over": het officiële stemgedrag wordt de invoer van de Stemming. Een
     /// Graphic, ook in een Preset of de Ether, houdt de oude gegevens.
-    NeemOfficieelOver {
-        stemming: String,
-    },
+    NeemOfficieelOver { stemming: String },
     /// "Onze invoer klopt": de invoer blijft, het verschil met de officiële uitslag is afgehandeld.
-    OnzeInvoerKlopt {
-        stemming: String,
-    },
+    OnzeInvoerKlopt { stemming: String },
 
     // Presets (zie de module `presets`).
     /// Bewaart een Graphic als Preset, met het eerste vrije nummer. De Preset is een kopie: hij
@@ -516,82 +431,50 @@ pub enum Opdracht {
         #[ts(optional)]
         standpunt: Option<String>,
     },
-    WisPreset {
-        nummer: u16,
-    },
+    WisPreset { nummer: u16 },
     /// Zet de Graphic van de Preset klaar, als nieuwe Graphic. Toon zet hem pas in de Ether.
-    ZetPresetKlaar {
-        nummer: u16,
-    },
+    ZetPresetKlaar { nummer: u16 },
     /// Zet de Preset op de tablet van de Presentator, of haalt hem eraf.
-    ZetPresetOpTablet {
-        nummer: u16,
-        aan: bool,
-    },
+    ZetPresetOpTablet { nummer: u16, aan: bool },
 
     // De Uitslagindeling (zie de module `uitslagindeling`).
     /// Zet de volgorde van de Partijen in de Uitslagindeling, vóór de uitzending.
-    ZetUitslagvolgorde {
-        volgorde: Uitslagvolgorde,
-    },
+    ZetUitslagvolgorde { volgorde: Uitslagvolgorde },
 
     // De Zaalindeling (zie de module `zaalindeling`).
     /// Leest het bestand met de Zaalindeling in. De server stuurt deze zelf als het bestand
     /// verandert.
-    LeesZaalindeling {
-        bestand: String,
-        zaalindeling: Zaalindeling,
-    },
+    LeesZaalindeling { bestand: String, zaalindeling: Zaalindeling },
     /// Geeft een Kamerlid een Stoel, zoals bij het bevestigen van een voorstel na een wissel.
-    GeefStoel {
-        kamerlid: String,
-        stoel: Stoel,
-    },
+    GeefStoel { kamerlid: String, stoel: Stoel },
 
     // De Persoonskaart (zie de module `persoonskaart`).
     /// Bewaart een eigen persoon: zonder id een nieuwe, met id een wijziging.
-    BewaarPersoon {
-        persoon: EigenPersoon,
-    },
-    WisPersoon {
-        persoon: String,
-    },
+    BewaarPersoon { persoon: EigenPersoon },
+    WisPersoon { persoon: String },
     /// Of de server een foto van deze eigen persoon heeft, zoals na het plaatsen (`PUT
     /// /api/foto/<id>`). De server stuurt deze zelf.
-    ZetFotoPersoon {
-        persoon: String,
-        foto: bool,
-    },
+    ZetFotoPersoon { persoon: String, foto: bool },
     /// Welke extra gegevens op een nieuwe Persoonskaart standaard aan staan (vormgevingstab).
-    ZetStandaardExtra {
-        extra: Extra,
-    },
+    ZetStandaardExtra { extra: Extra },
 
     // De Stijl (zie de module `sjabloon`).
     /// Opslaan in de vormgevingstab: de nieuwe Stijl. De Graphic in de Ether houdt haar vorm tot
     /// de volgende Toon; de klaargezette Graphic krijgt de nieuwe vorm en telt als net veranderd.
-    ZetStijl {
-        stijl: sjabloon::Stijl,
-    },
+    ZetStijl { stijl: sjabloon::Stijl },
 
     // Sjablonen bewerken in de vormgevingstab.
     /// Opslaan van een vast of eigen Sjabloon. Net als bij de Stijl houdt de Graphic in de Ether
     /// haar vorm tot de volgende Toon; een klaargezette Graphic van dit Sjabloon krijgt de nieuwe
     /// vorm en telt als net veranderd. Gelijk aan de standaard: het vaste Sjabloon is niet meer
     /// aangepast.
-    ZetSjabloon {
-        sjabloon: sjabloon::Sjabloon,
-    },
+    ZetSjabloon { sjabloon: sjabloon::Sjabloon },
     /// Een vast Sjabloon terug naar de standaard (ook: de nieuwe standaard overnemen), of een
     /// eigen Sjabloon weg. Een eigen Sjabloon dat klaarstaat of in een Preset zit, mag niet weg.
-    WisSjabloon {
-        id: String,
-    },
+    WisSjabloon { id: String },
     /// Een aangepast vast Sjabloon houden zoals het is, ook al is er een nieuwe standaard: de
     /// melding verdwijnt.
-    HoudSjabloon {
-        id: String,
-    },
+    HoudSjabloon { id: String },
 }
 
 /// Waarom de server een Opdracht niet uitvoert.
@@ -709,11 +592,7 @@ impl Stand {
                 let graphic = self.vul_cijfers_in(graphic, h.tijd_ms)?;
                 self.zet_klaar(graphic, standpunt.clone(), h);
             }
-            Opdracht::WijzigKlaar {
-                id,
-                graphic,
-                standpunt,
-            } => {
+            Opdracht::WijzigKlaar { id, graphic, standpunt } => {
                 graphic.controleer()?;
                 self.controleer_sjabloon_van(graphic)?;
                 self.controleer_standpunt(standpunt.as_deref())?;
@@ -746,9 +625,7 @@ impl Stand {
                     sinds_ms: h.tijd_ms,
                     getoond_door: h.door.into(),
                     stijl: self.stijl.clone(),
-                    sjabloon: self
-                        .sjabloon(&klaar.graphic.sjabloon_id())
-                        .map(Cow::into_owned),
+                    sjabloon: self.sjabloon(&klaar.graphic.sjabloon_id()).map(Cow::into_owned),
                 };
                 // Een nieuwe Graphic tonen beweegt de camera naar haar Standpunt.
                 self.kies_standpunt(&ether.standpunt(), false, h);
@@ -800,24 +677,17 @@ impl Stand {
                 self.kleurovergang = self.stijl_van_ether().kleurovergang;
             }
             Opdracht::SlaOpbouwOver => {
-                if self.kleurovergang.vorm != sjabloon::Overgangsvorm::Opbouw
-                    || self.stoelkleuren.is_empty()
-                {
+                if self.kleurovergang.vorm != sjabloon::Overgangsvorm::Opbouw || self.stoelkleuren.is_empty() {
                     return Err(Weigering::GeenOpbouw);
                 }
-                self.kleurovergang = sjabloon::Kleurovergang {
-                    vorm: sjabloon::Overgangsvorm::Vervagen,
-                    duur_ms: OPBOUW_OVERSLAAN_MS,
-                };
+                self.kleurovergang =
+                    sjabloon::Kleurovergang { vorm: sjabloon::Overgangsvorm::Vervagen, duur_ms: OPBOUW_OVERSLAAN_MS };
             }
             Opdracht::KiesStandpunt { letter, knip } => {
                 self.controleer_standpunt(Some(letter))?;
                 // Aanschuiven gaat naar de Partij van de Graphic in de Ether
                 let letter = match (letter.as_str(), &self.ether) {
-                    (camera::AANSCHUIVEN, Some(e)) => e
-                        .graphic
-                        .standpunt_bij(Some(camera::AANSCHUIVEN))
-                        .into_owned(),
+                    (camera::AANSCHUIVEN, Some(e)) => e.graphic.standpunt_bij(Some(camera::AANSCHUIVEN)).into_owned(),
                     (camera::AANSCHUIVEN, None) => return Err(Weigering::NietsInBeeld),
                     _ => letter.clone(),
                 };
@@ -829,16 +699,13 @@ impl Stand {
                 self.zet_opnemen(*aan, voor.as_deref(), opname.as_deref(), h)?
             }
             Opdracht::ProbeerInVoorbeeld { letter } => self.probeer(letter, h)?,
-            Opdracht::ZetStandpuntOvergang {
-                letter,
-                overgang,
-                na_aankomst,
-            } => self.zet_standpunt_overgang(letter, *overgang, *na_aankomst, h)?,
+            Opdracht::ZetStandpuntOvergang { letter, overgang, na_aankomst } => {
+                self.zet_standpunt_overgang(letter, *overgang, *na_aankomst, h)?
+            }
             Opdracht::HerstelCamerarit { letter } => self.herstel_camerarit(letter, h)?,
-            Opdracht::BijschaafCamerarit {
-                letter,
-                bijschaving,
-            } => self.bijschaaf_camerarit(letter, *bijschaving, h)?,
+            Opdracht::BijschaafCamerarit { letter, bijschaving } => {
+                self.bijschaaf_camerarit(letter, *bijschaving, h)?
+            }
             Opdracht::BewaarStandpunt { naam, stand } => self.bewaar_standpunt(naam, *stand)?,
             Opdracht::OverschrijfStandpunt { letter, stand } => {
                 self.overschrijf_standpunt(letter, *stand)?
@@ -855,16 +722,12 @@ impl Stand {
                 self.stoelkleuren = kleuren.clone();
                 self.kleurovergang = self.stijl_van_ether().kleurovergang;
             }
-            Opdracht::LeesInvoer {
-                bestand,
-                ontvangen,
-                invoer,
-            } => self.cijfers.lees_invoer(bestand, ontvangen, invoer),
-            Opdracht::ZetZetels {
-                set,
-                partij,
-                zetels,
-            } => self.cijfers.zet_zetels(set, partij, *zetels)?,
+            Opdracht::LeesInvoer { bestand, ontvangen, invoer } => {
+                self.cijfers.lees_invoer(bestand, ontvangen, invoer)
+            }
+            Opdracht::ZetZetels { set, partij, zetels } => {
+                self.cijfers.zet_zetels(set, partij, *zetels)?
+            }
             Opdracht::VergrendelSet { set } => self.cijfers.vergrendel(set, true)?,
             Opdracht::OntgrendelSet { set } => self.cijfers.vergrendel(set, false)?,
             Opdracht::KoppelVoorganger { partij, voorganger } => {
@@ -873,13 +736,7 @@ impl Stand {
             Opdracht::OntkoppelVoorganger { partij, voorganger } => {
                 self.cijfers.ontkoppel_voorganger(partij, voorganger)?
             }
-            Opdracht::VoegPartijToe {
-                naam,
-                kort,
-                kleur,
-                logo,
-                fractie_zonder_lijst,
-            } => {
+            Opdracht::VoegPartijToe { naam, kort, kleur, logo, fractie_zonder_lijst } => {
                 self.cijfers.voeg_partij_toe(
                     naam,
                     kort,
@@ -897,84 +754,48 @@ impl Stand {
             Opdracht::KiesVergelijkingsset { set } => {
                 self.cijfers.kies_vergelijkingsset(set.as_deref())?
             }
-            Opdracht::LeesKamer {
-                opgehaald,
-                peildatum,
-                kamerleden,
-                fracties,
-            } => {
-                self.kamer.lees(
-                    &mut self.cijfers,
-                    opgehaald,
-                    peildatum,
-                    kamerleden,
-                    fracties,
-                );
+            Opdracht::LeesKamer { opgehaald, peildatum, kamerleden, fracties } => {
+                self.kamer.lees(&mut self.cijfers, opgehaald, peildatum, kamerleden, fracties);
                 self.stemmingen.reken_opnieuw(&self.kamer);
             }
             Opdracht::ZetFoto { kamerlid, foto } => self.kamer.zet_foto(kamerlid, *foto)?,
-            Opdracht::LeesStemmingslijst {
-                dag,
-                ingelezen,
-                punten,
-            } => self.stemmingen.lees(dag, ingelezen, punten, &self.kamer),
+            Opdracht::LeesStemmingslijst { dag, ingelezen, punten } => {
+                self.stemmingen.lees(dag, ingelezen, punten, &self.kamer)
+            }
             Opdracht::VoegStemmingToe { titel } => {
                 self.stemmingen.voeg_toe(titel, h.volgnummer, &self.kamer)?
             }
             Opdracht::ZetVoorUitzending { stemming, aan } => {
                 self.stemmingen.zet_voor_uitzending(stemming, *aan)?
             }
-            Opdracht::ZetStemgedrag {
-                stemming,
-                stemgedrag,
-            } => self
-                .stemmingen
-                .zet_stemgedrag(stemming, stemgedrag, &self.kamer)?,
-            Opdracht::VergrendelStemming { stemming } => {
-                self.stemmingen.vergrendel(stemming, true)?
+            Opdracht::ZetStemgedrag { stemming, stemgedrag } => {
+                self.stemmingen.zet_stemgedrag(stemming, stemgedrag, &self.kamer)?
             }
-            Opdracht::OntgrendelStemming { stemming } => {
-                self.stemmingen.vergrendel(stemming, false)?
-            }
+            Opdracht::VergrendelStemming { stemming } => self.stemmingen.vergrendel(stemming, true)?,
+            Opdracht::OntgrendelStemming { stemming } => self.stemmingen.vergrendel(stemming, false)?,
             Opdracht::ZetStemmingIndeling { indeling } => self.stemmingen.indeling = *indeling,
             Opdracht::LegStemmingVast { stemming } => {
                 let stoelen = stemmingen::Stoelbron {
                     zaal: &self.zaalindeling,
                     volgorde: &self.uitslagvolgorde.bepaal(&self.cijfers),
                 };
-                let graphic =
-                    self.stemmingen
-                        .leg_vast(stemming, &self.kamer, &self.cijfers, &stoelen)?;
-                let zelfde = self
-                    .klaar
-                    .as_ref()
-                    .filter(|k| k.graphic.stemming() == Some(stemming.as_str()));
+                let graphic = self.stemmingen.leg_vast(stemming, &self.kamer, &self.cijfers, &stoelen)?;
+                let zelfde = self.klaar.as_ref().filter(|k| k.graphic.stemming() == Some(stemming.as_str()));
                 match zelfde {
                     Some(k) => {
                         let (id, standpunt) = (k.id, k.standpunt.clone());
-                        self.voer_uit(
-                            &Opdracht::WijzigKlaar {
-                                id,
-                                graphic,
-                                standpunt,
-                            },
-                            h,
-                        )?;
+                        self.voer_uit(&Opdracht::WijzigKlaar { id, graphic, standpunt }, h)?;
                     }
                     None => self.zet_klaar(graphic, None, h),
                 }
             }
-            Opdracht::LeesOfficieleUitslagen {
-                opgehaald,
-                uitslagen,
-            } => self.stemmingen.lees_officieel(opgehaald, uitslagen),
+            Opdracht::LeesOfficieleUitslagen { opgehaald, uitslagen } => {
+                self.stemmingen.lees_officieel(opgehaald, uitslagen)
+            }
             Opdracht::NeemOfficieelOver { stemming } => {
-                self.stemmingen
-                    .neem_officieel_over(stemming, h.door, &self.kamer)?
+                self.stemmingen.neem_officieel_over(stemming, h.door, &self.kamer)?
             }
-            Opdracht::OnzeInvoerKlopt { stemming } => {
-                self.stemmingen.onze_invoer_klopt(stemming, h.door)?
-            }
+            Opdracht::OnzeInvoerKlopt { stemming } => self.stemmingen.onze_invoer_klopt(stemming, h.door)?,
             Opdracht::BewaarPreset { graphic, standpunt } => {
                 graphic.controleer()?;
                 self.controleer_sjabloon_van(graphic)?;
@@ -1008,16 +829,11 @@ impl Stand {
                 self.zet_klaar(graphic, standpunt, h);
                 self.preset_mut(*nummer)?.klaargezet_als = Some(h.volgnummer);
             }
-            Opdracht::ZetPresetOpTablet { nummer, aan } => {
-                self.preset_mut(*nummer)?.op_tablet = *aan
-            }
+            Opdracht::ZetPresetOpTablet { nummer, aan } => self.preset_mut(*nummer)?.op_tablet = *aan,
             Opdracht::ZetUitslagvolgorde { volgorde } => self.uitslagvolgorde = volgorde.clone(),
-            Opdracht::LeesZaalindeling { zaalindeling, .. } => {
-                self.zaalindeling = zaalindeling.clone()
-            }
+            Opdracht::LeesZaalindeling { zaalindeling, .. } => self.zaalindeling = zaalindeling.clone(),
             Opdracht::GeefStoel { kamerlid, stoel } => {
-                self.zaalindeling
-                    .geef_stoel(&self.kamer, kamerlid, *stoel)?
+                self.zaalindeling.geef_stoel(&self.kamer, kamerlid, *stoel)?
             }
             Opdracht::BewaarPersoon { persoon } => self.bewaar_persoon(persoon, h.volgnummer)?,
             Opdracht::WisPersoon { persoon } => self.wis_persoon(persoon)?,
@@ -1027,13 +843,9 @@ impl Stand {
             Opdracht::ZetSjabloon { sjabloon } => self.zet_sjabloon(sjabloon, h)?,
             Opdracht::WisSjabloon { id } => self.wis_sjabloon(id, h)?,
             Opdracht::HoudSjabloon { id } => {
-                let b = self
-                    .sjablonen
-                    .iter_mut()
-                    .find(|b| b.sjabloon.id == *id && b.standaard.is_some());
+                let b = self.sjablonen.iter_mut().find(|b| b.sjabloon.id == *id && b.standaard.is_some());
                 let b = b.ok_or_else(|| Weigering::NietAangepast(id.clone()))?;
-                let vast = sjabloon::vast_sjabloon(id)
-                    .ok_or_else(|| Weigering::OnbekendSjabloon(id.clone()))?;
+                let vast = sjabloon::vast_sjabloon(id).ok_or_else(|| Weigering::OnbekendSjabloon(id.clone()))?;
                 b.standaard = Some(sjabloon::vingerafdruk(&vast));
             }
         }
@@ -1051,13 +863,7 @@ impl Stand {
             *gegevens = Some(self.persoonsgegevens(wie, tijd_ms)?);
         }
         let volgorde = self.uitslagvolgorde.bepaal(&self.cijfers);
-        if let Graphic::Zetelverdeling {
-            set,
-            indeling,
-            cijfers,
-            ..
-        } = &mut g
-        {
+        if let Graphic::Zetelverdeling { set, indeling, cijfers, .. } = &mut g {
             *cijfers = Some(match indeling {
                 Indeling::Uitslagindeling => Zetelstand::van(&volgorde, &self.cijfers, set)
                     .ok_or_else(|| CijferWeigering::OnbekendeSet(set.clone()))?,
@@ -1068,34 +874,19 @@ impl Stand {
         }
         let onbekend = |set: &str| Weigering::from(CijferWeigering::OnbekendeSet(set.into()));
         match &mut g {
-            Graphic::Zetelbalk { set, cijfers, .. }
-            | Graphic::UitslagPerPartij { set, cijfers, .. } => {
-                *cijfers = Some(
-                    Zetelstand::van(&volgorde, &self.cijfers, set).ok_or_else(|| onbekend(set))?,
-                );
+            Graphic::Zetelbalk { set, cijfers, .. } | Graphic::UitslagPerPartij { set, cijfers, .. } => {
+                *cijfers = Some(Zetelstand::van(&volgorde, &self.cijfers, set).ok_or_else(|| onbekend(set))?);
             }
-            Graphic::PartijUitgelicht {
-                set,
-                partij,
-                cijfers,
-            } => {
-                let p = self
-                    .cijfers
-                    .partij(partij)
-                    .ok_or_else(|| CijferWeigering::OnbekendePartij(partij.clone()))?;
-                let mut stand =
-                    Zetelstand::van(&volgorde, &self.cijfers, set).ok_or_else(|| onbekend(set))?;
+            Graphic::PartijUitgelicht { set, partij, cijfers } => {
+                let p = self.cijfers.partij(partij).ok_or_else(|| CijferWeigering::OnbekendePartij(partij.clone()))?;
+                let mut stand = Zetelstand::van(&volgorde, &self.cijfers, set).ok_or_else(|| onbekend(set))?;
                 // ook zonder Zetels in deze set: haar naam staat in beeld
                 if !stand.partijen.iter().any(|q| q.sleutel == p.sleutel) {
                     stand.partijen.push(p.clone());
                 }
                 *cijfers = Some(stand);
             }
-            Graphic::WinstEnVerlies {
-                set,
-                vergelijk_met,
-                cijfers,
-            } => {
+            Graphic::WinstEnVerlies { set, vergelijk_met, cijfers } => {
                 let tegen = vergelijk_met
                     .clone()
                     .or_else(|| self.cijfers.vergelijk_met.clone())
@@ -1115,23 +906,13 @@ impl Stand {
                     Zetelstand::van(&volgorde, &self.cijfers, set).ok_or_else(|| onbekend(set))?
                 });
             }
-            Graphic::TweeSets {
-                set,
-                tweede,
-                cijfers,
-                ..
-            } => {
+            Graphic::TweeSets { set, tweede, cijfers, .. } => {
                 for s in [&*set, &*tweede] {
                     self.cijfers.set(s).ok_or_else(|| onbekend(s))?;
                 }
                 *cijfers = Zetelstand::van_twee(&volgorde, &self.cijfers, set, tweede);
             }
-            Graphic::Eigen {
-                set: Some(set),
-                partij,
-                cijfers,
-                ..
-            } => {
+            Graphic::Eigen { set: Some(set), partij, cijfers, .. } => {
                 // met de vergelijkingsset, zodat een Getal met winst of verlies iets toont
                 let mut stand = match self.cijfers.vergelijk_met.as_deref().filter(|v| v != set) {
                     Some(tegen) => Zetelstand::tegen(&volgorde, &self.cijfers, set, tegen),
@@ -1139,24 +920,15 @@ impl Stand {
                 }
                 .ok_or_else(|| onbekend(set))?;
                 if let Some(p) = partij.as_deref() {
-                    let p = self
-                        .cijfers
-                        .partij(p)
-                        .ok_or_else(|| CijferWeigering::OnbekendePartij(p.into()))?;
+                    let p = self.cijfers.partij(p).ok_or_else(|| CijferWeigering::OnbekendePartij(p.into()))?;
                     if !stand.partijen.iter().any(|q| q.sleutel == p.sleutel) {
                         stand.partijen.push(p.clone());
                     }
                 }
                 *cijfers = Some(stand);
             }
-            Graphic::Eigen {
-                set: None,
-                partij: Some(p),
-                ..
-            } => {
-                self.cijfers
-                    .partij(p)
-                    .ok_or_else(|| CijferWeigering::OnbekendePartij(p.clone()))?;
+            Graphic::Eigen { set: None, partij: Some(p), .. } => {
+                self.cijfers.partij(p).ok_or_else(|| CijferWeigering::OnbekendePartij(p.clone()))?;
             }
             _ => {}
         }
@@ -1187,9 +959,7 @@ impl Stand {
     /// Zet het standaard Standpunt van het Sjabloon bij de klaargezette Graphic.
     fn zet_standpunt_van_sjabloon(&mut self) {
         if let Some(k) = &self.klaar {
-            let standpunt = self
-                .sjabloon(&k.graphic.sjabloon_id())
-                .and_then(|s| s.standpunt.clone());
+            let standpunt = self.sjabloon(&k.graphic.sjabloon_id()).and_then(|s| s.standpunt.clone());
             if let Some(k) = self.klaar.as_mut() {
                 k.standpunt_van_sjabloon = standpunt;
             }
@@ -1199,11 +969,7 @@ impl Stand {
     /// De klaargezette Graphic van dit Sjabloon krijgt de nieuwe vorm als nieuwe versie, zodat
     /// Toon weigert op een scherm dat nog de oude vorm liet zien (#21).
     fn nieuwe_vorm_voor_klaar(&mut self, id: &str, h: &Herkomst) {
-        if let Some(k) = self
-            .klaar
-            .as_mut()
-            .filter(|k| k.graphic.sjabloon_id() == id)
-        {
+        if let Some(k) = self.klaar.as_mut().filter(|k| k.graphic.sjabloon_id() == id) {
             k.versie = h.volgnummer;
             k.gewijzigd_door = h.door.into();
         }
@@ -1218,10 +984,7 @@ impl Stand {
             return Ok(());
         }
         let vast = sjabloon::vast_sjabloon(&nieuw.id);
-        let plek = self
-            .sjablonen
-            .iter()
-            .position(|b| b.sjabloon.id == nieuw.id);
+        let plek = self.sjablonen.iter().position(|b| b.sjabloon.id == nieuw.id);
         match (&vast, plek) {
             // gelijk aan de standaard: niet meer aangepast
             (Some(v), Some(i)) if v == nieuw => {
@@ -1273,9 +1036,7 @@ impl Stand {
         if !zelfde || !self.nieuwere_cijfers(&klaar.graphic) {
             return;
         }
-        let Ok(graphic) = self.vul_cijfers_in(&klaar.graphic, h.tijd_ms) else {
-            return;
-        };
+        let Ok(graphic) = self.vul_cijfers_in(&klaar.graphic, h.tijd_ms) else { return };
         let klaar = self.klaar.as_mut().expect("net gezien");
         klaar.graphic = graphic;
         klaar.versie = h.volgnummer;
@@ -1312,33 +1073,20 @@ impl Stand {
             }
             gedaan = true;
         }
-        if gedaan {
-            Ok(())
-        } else {
-            Err(Weigering::GeenCoalitie)
-        }
+        if gedaan { Ok(()) } else { Err(Weigering::GeenCoalitie) }
     }
 
     fn preset(&self, nummer: u16) -> Result<&Preset, Weigering> {
-        self.presets
-            .iter()
-            .find(|p| p.nummer == nummer)
-            .ok_or(Weigering::OnbekendePreset(nummer))
+        self.presets.iter().find(|p| p.nummer == nummer).ok_or(Weigering::OnbekendePreset(nummer))
     }
 
     fn preset_mut(&mut self, nummer: u16) -> Result<&mut Preset, Weigering> {
-        self.presets
-            .iter_mut()
-            .find(|p| p.nummer == nummer)
-            .ok_or(Weigering::OnbekendePreset(nummer))
+        self.presets.iter_mut().find(|p| p.nummer == nummer).ok_or(Weigering::OnbekendePreset(nummer))
     }
 
     /// De Presets die dit Standpunt gebruiken, ook als Standpunt van hun Sjabloon. Zolang er een
     /// is, mag het Standpunt niet weg.
-    pub fn presets_met_standpunt<'a>(
-        &'a self,
-        letter: &'a str,
-    ) -> impl Iterator<Item = &'a Preset> {
+    pub fn presets_met_standpunt<'a>(&'a self, letter: &'a str) -> impl Iterator<Item = &'a Preset> {
         self.presets.iter().filter(move |p| p.standpunt() == letter)
     }
 
@@ -1383,10 +1131,7 @@ impl Stand {
             .map(|s| s.stand)
             .or_else(|| self.camerarit(letter).and_then(Camerarit::beginstand))
             .or_else(|| camera::stoel_uit_sleutel(letter).and_then(camera::shot_op_stoel))
-            .or_else(|| {
-                camera::aanschuif_uit_sleutel(letter)
-                    .and_then(|(van, tot)| camera::aanschuif_stand(van, tot))
-            })
+            .or_else(|| camera::aanschuif_uit_sleutel(letter).and_then(|(van, tot)| camera::aanschuif_stand(van, tot)))
     }
 
     /// Of er een Standpunt, Camerarit of Stoel met deze sleutel is (geen sleutel mag ook).
@@ -1527,9 +1272,7 @@ impl Afzender {
     /// De naam die de Regie te zien krijgt, zoals bij "klaargezet door".
     pub fn naam(&self) -> String {
         match self {
-            Afzender::Werkplek { naam } | Afzender::Tablet { naam } | Afzender::Knop { naam } => {
-                naam.clone()
-            }
+            Afzender::Werkplek { naam } | Afzender::Tablet { naam } | Afzender::Knop { naam } => naam.clone(),
             Afzender::Renderer { rol, .. } => format!("Renderer {rol:?}"),
             Afzender::Invoerbestand { .. } => "Invoerbestand".into(),
             Afzender::OpenData { .. } => "Open data".into(),
@@ -1545,12 +1288,8 @@ impl Afzender {
 #[serde(tag = "soort")]
 #[ts(export)]
 pub enum BerichtAanServer {
-    Hallo {
-        afzender: Afzender,
-    },
-    Opdracht {
-        opdracht: Opdracht,
-    },
+    Hallo { afzender: Afzender },
+    Opdracht { opdracht: Opdracht },
     /// Welke set deze Werkplek nu open heeft in het onderdeel Cijfers, of geen. Verandert de
     /// Stand niet en zet niets op slot: de andere Werkplekken zien het alleen.
     Bewerk {
@@ -1624,104 +1363,46 @@ pub const MAX_BEELD: usize = 1 << 20;
 mod tests {
     use super::*;
 
-    const H: Herkomst = Herkomst {
-        door: "Proef",
-        volgnummer: 1,
-        tijd_ms: 0,
-    };
+    const H: Herkomst = Herkomst { door: "Proef", volgnummer: 1, tijd_ms: 0 };
 
     #[test]
     fn de_zaal_telt_150_stoelen_in_vaste_volgorde() {
         let alle: Vec<Stoel> = Stoel::alle().collect();
         assert_eq!(alle.len(), 150);
-        assert_eq!(
-            alle[0],
-            Stoel {
-                vak: 1,
-                rij: 1,
-                nummer: 1
-            }
-        );
+        assert_eq!(alle[0], Stoel { vak: 1, rij: 1, nummer: 1 });
         // vak 1 heeft rijen van 2, 3, 4, 5, 5 en 6 Stoelen: de eerste van vak 2 is nummer 25
-        assert_eq!(
-            alle[25],
-            Stoel {
-                vak: 2,
-                rij: 1,
-                nummer: 1
-            }
-        );
-        assert_eq!(
-            alle[149],
-            Stoel {
-                vak: 6,
-                rij: 6,
-                nummer: 6
-            }
-        );
+        assert_eq!(alle[25], Stoel { vak: 2, rij: 1, nummer: 1 });
+        assert_eq!(alle[149], Stoel { vak: 6, rij: 6, nummer: 6 });
         for (i, s) in alle.iter().enumerate() {
             assert_eq!(s.index(), Some(i));
         }
-        assert_eq!(
-            Stoel {
-                vak: 1,
-                rij: 1,
-                nummer: 3
-            }
-            .index(),
-            None
-        );
-        assert_eq!(
-            Stoel {
-                vak: 7,
-                rij: 1,
-                nummer: 1
-            }
-            .index(),
-            None
-        );
+        assert_eq!(Stoel { vak: 1, rij: 1, nummer: 3 }.index(), None);
+        assert_eq!(Stoel { vak: 7, rij: 1, nummer: 1 }.index(), None);
     }
 
     #[test]
     fn alle_stoelen_krijgen_in_een_opdracht_een_nieuwe_kleur() {
         let mut stand = Stand::default();
-        assert!(
-            stand.stoelkleuren.is_empty(),
-            "zonder kleuren houden de Stoelen hun eigen kleur"
-        );
+        assert!(stand.stoelkleuren.is_empty(), "zonder kleuren houden de Stoelen hun eigen kleur");
         let rood: Kleur = "#d4202c".parse().unwrap();
         stand
-            .voer_uit(
-                &Opdracht::ZetStoelkleuren {
-                    kleuren: vec![rood; 150],
-                },
-                &H,
-            )
+            .voer_uit(&Opdracht::ZetStoelkleuren { kleuren: vec![rood; 150] }, &H)
             .unwrap();
         assert_eq!(stand.stoelkleuren.len(), 150);
-        assert!(stand.stoelkleuren.iter().all(|k| *k
-            == Kleur {
-                r: 0xd4,
-                g: 0x20,
-                b: 0x2c
-            }));
+        assert!(stand.stoelkleuren.iter().all(|k| *k == Kleur { r: 0xd4, g: 0x20, b: 0x2c }));
     }
 
     #[test]
     fn een_onvolledige_lijst_stoelkleuren_wordt_geweigerd() {
         let mut stand = Stand::default();
         let fout = stand.voer_uit(
-            &Opdracht::ZetStoelkleuren {
-                kleuren: vec![Kleur { r: 1, g: 2, b: 3 }; 149],
-            },
+            &Opdracht::ZetStoelkleuren { kleuren: vec![Kleur { r: 1, g: 2, b: 3 }; 149] },
             &H,
         );
         assert_eq!(fout, Err(Weigering::StoelkleurenAantal(149)));
         assert!(stand.stoelkleuren.is_empty());
         // leeg mag: dan krijgen de Stoelen hun eigen kleur terug
-        stand
-            .voer_uit(&Opdracht::ZetStoelkleuren { kleuren: vec![] }, &H)
-            .unwrap();
+        stand.voer_uit(&Opdracht::ZetStoelkleuren { kleuren: vec![] }, &H).unwrap();
     }
 
     #[test]
@@ -1731,29 +1412,10 @@ mod tests {
         assert_eq!(
             o,
             Opdracht::ZetStoelkleuren {
-                kleuren: vec![
-                    Kleur {
-                        r: 0x00,
-                        g: 0xae,
-                        b: 0x41
-                    },
-                    Kleur {
-                        r: 0x0e,
-                        g: 0x2c,
-                        b: 0x5a
-                    }
-                ]
+                kleuren: vec![Kleur { r: 0x00, g: 0xae, b: 0x41 }, Kleur { r: 0x0e, g: 0x2c, b: 0x5a }]
             }
         );
-        assert_eq!(
-            serde_json::to_string(&Kleur {
-                r: 0,
-                g: 0xae,
-                b: 0x41
-            })
-            .unwrap(),
-            "\"#00ae41\""
-        );
+        assert_eq!(serde_json::to_string(&Kleur { r: 0, g: 0xae, b: 0x41 }).unwrap(), "\"#00ae41\"");
         assert!(serde_json::from_str::<Kleur>("\"rood\"").is_err());
         assert!(serde_json::from_str::<Kleur>("\"#12345\"").is_err());
     }

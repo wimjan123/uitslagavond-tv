@@ -15,10 +15,7 @@ struct Proef {
 impl Proef {
     /// VOORBEELDGEGEVENS: vier verzonnen Partijen en een exitpoll.
     fn new() -> Self {
-        let mut p = Proef {
-            stand: Stand::default(),
-            volgnummer: 0,
-        };
+        let mut p = Proef { stand: Stand::default(), volgnummer: 0 };
         let invoer = Invoer::uit_json(
             r##"{
             "partijen": [
@@ -33,32 +30,17 @@ impl Proef {
             ]
         }"##,
         );
-        p.doe(Opdracht::LeesInvoer {
-            bestand: "proef.json".into(),
-            ontvangen: "nu".into(),
-            invoer,
-        })
-        .unwrap();
-        let lijst = ["groen", "rood", "blauw", "geel"]
-            .map(String::from)
-            .to_vec();
-        p.doe(Opdracht::ZetUitslagvolgorde {
-            volgorde: Uitslagvolgorde {
-                lijst,
-                ..Default::default()
-            },
-        })
-        .unwrap();
+        p.doe(Opdracht::LeesInvoer { bestand: "proef.json".into(), ontvangen: "nu".into(), invoer })
+            .unwrap();
+        let lijst = ["groen", "rood", "blauw", "geel"].map(String::from).to_vec();
+        p.doe(Opdracht::ZetUitslagvolgorde { volgorde: Uitslagvolgorde { lijst, ..Default::default() } })
+            .unwrap();
         p
     }
 
     fn doe(&mut self, opdracht: Opdracht) -> Result<(), Weigering> {
         let mut nieuw = self.stand.clone();
-        let h = Herkomst {
-            door: "Regie 1",
-            volgnummer: self.volgnummer + 1,
-            tijd_ms: 1_000,
-        };
+        let h = Herkomst { door: "Regie 1", volgnummer: self.volgnummer + 1, tijd_ms: 1_000 };
         nieuw.voer_uit(&opdracht, &h)?;
         self.stand = nieuw;
         self.volgnummer += 1;
@@ -66,18 +48,12 @@ impl Proef {
     }
 
     fn toon(&mut self, graphic: Graphic) {
-        self.doe(Opdracht::ZetKlaar {
-            graphic,
-            standpunt: None,
-        })
-        .unwrap();
+        self.doe(Opdracht::ZetKlaar { graphic, standpunt: None }).unwrap();
         self.doe(Opdracht::Toon { versie: None }).unwrap();
     }
 
     fn zet(&mut self, partijen: &[&str]) -> Result<(), Weigering> {
-        self.doe(Opdracht::ZetCoalitie {
-            partijen: partijen.iter().map(|p| p.to_string()).collect(),
-        })
+        self.doe(Opdracht::ZetCoalitie { partijen: partijen.iter().map(|p| p.to_string()).collect() })
     }
 
     /// De Blokken van de Graphic in de Ether, zoals de Renderer ze invult.
@@ -86,11 +62,7 @@ impl Proef {
         let invulling = g.invulling();
         let sjabloon = vast_sjabloon(&invulling.sjabloon).expect("vast Sjabloon");
         let cijfers = g.cijfers().expect("de Graphic houdt haar cijfers vast");
-        sjabloon
-            .vul_in(&invulling, &cijfers, &self.stand.stijl)
-            .into_iter()
-            .map(|b| b.inhoud)
-            .collect()
+        sjabloon.vul_in(&invulling, &cijfers, &self.stand.stijl).into_iter().map(|b| b.inhoud).collect()
     }
 
     fn teksten(&self) -> Vec<String> {
@@ -108,11 +80,9 @@ impl Proef {
         self.ether()
             .into_iter()
             .find_map(|i| match i {
-                Inhoud::Getal {
-                    waarde: Getalwaarde::Getal { waarde, .. },
-                    meerderheid,
-                    ..
-                } => Some((waarde, meerderheid)),
+                Inhoud::Getal { waarde: Getalwaarde::Getal { waarde, .. }, meerderheid, .. } => {
+                    Some((waarde, meerderheid))
+                }
                 _ => None,
             })
             .expect("een teller")
@@ -189,13 +159,8 @@ fn een_partij_erbij_werkt_de_coalitie_in_de_ether_direct_bij_zonder_bijwerken() 
 
     // Uitzondering op "een Graphic in beeld verandert nooit vanzelf" (besluit #6): geen Bijwerken
     // nodig, en het is dezelfde Graphic, dus de Renderer schuift vloeiend (geen wissel).
-    assert_eq!(
-        Overgang::tussen(Some(&voor), Some(&na)),
-        Overgang::Bijwerken
-    );
-    assert!(
-        matches!(&na.graphic, Graphic::Coalitie { partijen, .. } if partijen == &["blauw", "groen"])
-    );
+    assert_eq!(Overgang::tussen(Some(&voor), Some(&na)), Overgang::Bijwerken);
+    assert!(matches!(&na.graphic, Graphic::Coalitie { partijen, .. } if partijen == &["blauw", "groen"]));
     assert_eq!(
         van_links_naar_rechts(&p.stand.stoelkleuren)[..2],
         [(kleur("#2dbe4f"), 30), (kleur("#12357a"), 40)],
@@ -216,18 +181,13 @@ fn een_partij_erbij_na_een_nieuwe_stijl_houdt_de_oude_stijl_in_de_ether_en_toon_
     let oud = p.stand.stijl.clone();
     let mut nieuw = oud.clone();
     nieuw.snelheid = 140;
-    p.doe(Opdracht::ZetStijl {
-        stijl: nieuw.clone(),
-    })
-    .unwrap();
+    p.doe(Opdracht::ZetStijl { stijl: nieuw.clone() }).unwrap();
     p.zet(&["blauw", "groen"]).unwrap();
 
     // De Ether werkt direct bij, maar houdt de vorm van haar Toon (#61): een nieuwe Stijl geldt
     // pas bij de volgende Toon.
     let e = p.stand.ether.as_ref().unwrap();
-    assert!(
-        matches!(&e.graphic, Graphic::Coalitie { partijen, .. } if partijen == &["blauw", "groen"])
-    );
+    assert!(matches!(&e.graphic, Graphic::Coalitie { partijen, .. } if partijen == &["blauw", "groen"]));
     assert_eq!(e.stijl, oud);
     // Die volgende Toon blijft mogelijk, en neemt de nieuwe Stijl mee.
     assert!(!p.stand.staat_klaar_in_beeld());
@@ -241,10 +201,7 @@ fn de_coalitie_in_de_ether_werkt_ook_bij_als_er_iets_anders_klaarstaat() {
     let mut p = Proef::new();
     p.toon(coalitie("exitpoll", &["blauw"]));
     p.doe(Opdracht::ZetKlaar {
-        graphic: Graphic::Titelkaart {
-            kop: "Straks".into(),
-            regel: String::new(),
-        },
+        graphic: Graphic::Titelkaart { kop: "Straks".into(), regel: String::new() },
         standpunt: None,
     })
     .unwrap();
@@ -253,13 +210,7 @@ fn de_coalitie_in_de_ether_werkt_ook_bij_als_er_iets_anders_klaarstaat() {
         &p.stand.ether.as_ref().unwrap().graphic,
         Graphic::Coalitie { partijen, .. } if partijen.len() == 2
     ));
-    assert!(
-        matches!(
-            p.stand.klaar.as_ref().unwrap().graphic,
-            Graphic::Titelkaart { .. }
-        ),
-        "de Titelkaart blijft"
-    );
+    assert!(matches!(p.stand.klaar.as_ref().unwrap().graphic, Graphic::Titelkaart { .. }), "de Titelkaart blijft");
 }
 
 #[test]
@@ -275,10 +226,7 @@ fn de_teller_telt_naar_76_en_meldt_de_meerderheid() {
     assert_eq!(p.teller(), (60, false));
     let t = p.teksten();
     assert!(t.contains(&"COALITIE".to_string()), "{t:?}");
-    assert!(
-        t.contains(&"BLAUW en GEEL".to_string()),
-        "de kop: de Partijen op volgorde, {t:?}"
-    );
+    assert!(t.contains(&"BLAUW en GEEL".to_string()), "de kop: de Partijen op volgorde, {t:?}");
     assert!(t.contains(&"16 tekort voor 76".to_string()), "{t:?}");
 
     p.zet(&["blauw", "geel", "groen"]).unwrap();
@@ -294,13 +242,10 @@ fn de_coalitiebalk_zet_de_coalitie_vooraan_en_de_rest_zonder_label_erachter() {
     p.toon(coalitiebalk("exitpoll", &["geel", "rood"]));
     let kort: Vec<(&str, u16, u8)> = Vec::new();
     let balk = p.balk();
-    let kort = balk
-        .iter()
-        .map(|d| (d.kort.as_str(), d.zetels, d.dekking))
-        .fold(kort, |mut v, d| {
-            v.push(d);
-            v
-        });
+    let kort = balk.iter().map(|d| (d.kort.as_str(), d.zetels, d.dekking)).fold(kort, |mut v, d| {
+        v.push(d);
+        v
+    });
     assert_eq!(
         kort,
         [
@@ -315,16 +260,7 @@ fn de_coalitiebalk_zet_de_coalitie_vooraan_en_de_rest_zonder_label_erachter() {
     );
     // elk deel houdt een eigen sleutel, zodat een Partij die erbij komt vloeiend naar links schuift
     let sleutels: Vec<Option<&str>> = balk.iter().map(|d| d.partij.as_deref()).collect();
-    assert_eq!(
-        sleutels,
-        [
-            Some("rood"),
-            Some("geel"),
-            Some("rest:groen"),
-            Some("rest:blauw"),
-            None
-        ]
-    );
+    assert_eq!(sleutels, [Some("rood"), Some("geel"), Some("rest:groen"), Some("rest:blauw"), None]);
 }
 
 #[test]
@@ -349,8 +285,5 @@ fn de_coalitie_werkt_ook_met_de_zetels_van_de_huidige_kamer() {
     assert!(p.teksten().contains(&"6 tekort voor 76".to_string()));
     p.zet(&["rood", "blauw"]).unwrap();
     assert_eq!(p.teller(), (150, true));
-    assert_eq!(
-        van_links_naar_rechts(&p.stand.stoelkleuren),
-        [(kleur("#d4202c"), 70), (kleur("#12357a"), 80)]
-    );
+    assert_eq!(van_links_naar_rechts(&p.stand.stoelkleuren), [(kleur("#d4202c"), 70), (kleur("#12357a"), 80)]);
 }

@@ -12,8 +12,7 @@
 
 use gedeeld::kamer::Kamer;
 use gedeeld::stemmingen::{
-    AfwijkendeStem, Besluit, Bron, GetikteFractie, OfficieleUitslag, OpgehaaldeUitslag, Stem,
-    Stemming,
+    AfwijkendeStem, Besluit, Bron, GetikteFractie, OfficieleUitslag, OpgehaaldeUitslag, Stem, Stemming,
 };
 use jiff::civil::Date;
 use serde::Deserialize;
@@ -95,15 +94,8 @@ pub fn lees_pagina(json: &str) -> anyhow::Result<Pagina> {
 }
 
 /// De uitslagen van de Besluiten met Stemmingen die bij een Stemming op de lijst horen.
-pub fn uitslagen(
-    activiteiten: &[Activiteit],
-    lijst: &[Stemming],
-    kamer: &Kamer,
-) -> Vec<OpgehaaldeUitslag> {
-    let besluiten = activiteiten
-        .iter()
-        .flat_map(|a| &a.agendapunt)
-        .flat_map(|p| &p.besluit);
+pub fn uitslagen(activiteiten: &[Activiteit], lijst: &[Stemming], kamer: &Kamer) -> Vec<OpgehaaldeUitslag> {
+    let besluiten = activiteiten.iter().flat_map(|a| &a.agendapunt).flat_map(|p| &p.besluit);
     let mut uit: Vec<OpgehaaldeUitslag> = Vec::new();
     for b in besluiten {
         let soort = b.besluit_soort.as_deref().unwrap_or("").to_lowercase();
@@ -118,9 +110,7 @@ pub fn uitslagen(
             continue;
         }
         for z in &b.zaak {
-            let Some(s) = lijst.iter().find(|s| s.punt.id.eq_ignore_ascii_case(&z.id)) else {
-                continue;
-            };
+            let Some(s) = lijst.iter().find(|s| s.punt.id.eq_ignore_ascii_case(&z.id)) else { continue };
             let (fracties, afwijkend) = stemmen(&b.stemming, kamer);
             let u = OpgehaaldeUitslag {
                 stemming: s.punt.id.clone(),
@@ -151,29 +141,15 @@ fn stem(s: Option<&str>) -> Option<Stem> {
 
 /// De stem per Fractie en wie anders stemde dan zijn Fractie. Stemden de Kamerleden van een
 /// Fractie apart (hoofdelijk, of een verdeelde Fractie), dan geldt de stem van de meesten.
-fn stemmen<'a>(
-    regels: &'a [Regel],
-    kamer: &'a Kamer,
-) -> (Vec<GetikteFractie>, Vec<AfwijkendeStem>) {
+fn stemmen<'a>(regels: &'a [Regel], kamer: &'a Kamer) -> (Vec<GetikteFractie>, Vec<AfwijkendeStem>) {
     let mut fracties: Vec<GetikteFractie> = regels
         .iter()
         .filter(|r| r.persoon.is_none())
-        .filter_map(|r| {
-            Some(GetikteFractie {
-                fractie: fractie_van(r, kamer)?.to_owned(),
-                stem: stem(r.soort.as_deref())?,
-            })
-        })
+        .filter_map(|r| Some(GetikteFractie { fractie: fractie_van(r, kamer)?.to_owned(), stem: stem(r.soort.as_deref())? }))
         .collect();
     let leden: Vec<(&str, &str, Stem)> = regels
         .iter()
-        .filter_map(|r| {
-            Some((
-                r.persoon.as_deref()?,
-                fractie_van(r, kamer)?,
-                stem(r.soort.as_deref())?,
-            ))
-        })
+        .filter_map(|r| Some((r.persoon.as_deref()?, fractie_van(r, kamer)?, stem(r.soort.as_deref())?)))
         .collect();
     let mut afwijkend = Vec::new();
     let mut gedaan: Vec<&str> = Vec::new();
@@ -187,26 +163,13 @@ fn stemmen<'a>(
             Some(g) => g.stem,
             None => {
                 let voor = van_f.iter().filter(|(.., s)| *s == Stem::Voor).count();
-                let m = if voor * 2 >= van_f.len() {
-                    Stem::Voor
-                } else {
-                    Stem::Tegen
-                };
-                fracties.push(GetikteFractie {
-                    fractie: (*f).to_owned(),
-                    stem: m,
-                });
+                let m = if voor * 2 >= van_f.len() { Stem::Voor } else { Stem::Tegen };
+                fracties.push(GetikteFractie { fractie: (*f).to_owned(), stem: m });
                 m
             }
         };
         afwijkend.extend(
-            van_f
-                .iter()
-                .filter(|(.., s)| *s != meeste)
-                .map(|(p, _, s)| AfwijkendeStem {
-                    kamerlid: (*p).to_owned(),
-                    stem: *s,
-                }),
+            van_f.iter().filter(|(.., s)| *s != meeste).map(|(p, _, s)| AfwijkendeStem { kamerlid: (*p).to_owned(), stem: *s }),
         );
     }
     (fracties, afwijkend)
@@ -226,10 +189,7 @@ fn fractie_van<'a>(r: &'a Regel, kamer: &'a Kamer) -> Option<&'a str> {
     match bij_naam {
         Some(f) => Some(&f.id),
         None => {
-            tracing::warn!(
-                "open data: Fractie {naam} ({}) niet in de Kamer",
-                id.unwrap_or("zonder id")
-            );
+            tracing::warn!("open data: Fractie {naam} ({}) niet in de Kamer", id.unwrap_or("zonder id"));
             id
         }
     }

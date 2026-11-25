@@ -24,8 +24,8 @@ use crate::{AANTAL_STOELEN, Graphic, Indeling};
 
 mod controle;
 pub use controle::{
-    Beoordeling, Bron, Controlestatus, Keuze, OfficieleUitslag, OpgehaaldeUitslag,
-    Stemmingscontrole, Verschil,
+    Beoordeling, Bron, Controlestatus, Keuze, OfficieleUitslag, OpgehaaldeUitslag, Stemmingscontrole,
+    Verschil,
 };
 
 /// Langste titel van een motie die de Regie zelf intypt, in tekens.
@@ -49,12 +49,7 @@ pub struct Stemmingen {
 
 impl Default for Stemmingen {
     fn default() -> Self {
-        Stemmingen {
-            dag: None,
-            ingelezen: None,
-            lijst: Vec::new(),
-            indeling: Indeling::Zaalindeling,
-        }
+        Stemmingen { dag: None, ingelezen: None, lijst: Vec::new(), indeling: Indeling::Zaalindeling }
     }
 }
 
@@ -183,12 +178,7 @@ pub struct Uitkomst {
 
 impl Default for Uitkomst {
     fn default() -> Self {
-        Uitkomst {
-            voor: 0,
-            tegen: 0,
-            open: 0,
-            besluit: None,
-        }
+        Uitkomst { voor: 0, tegen: 0, open: 0, besluit: None }
     }
 }
 
@@ -247,18 +237,11 @@ impl Stemgedrag {
         let mut uit = vec![None; AANTAL_STOELEN];
         let mut fracties: Vec<_> = kamer.fracties.iter().collect();
         fracties.sort_by_key(|f| {
-            kamer
-                .partij_van
-                .get(&f.id)
-                .map_or(usize::MAX, |p| volgorde.plaats(p))
+            kamer.partij_van.get(&f.id).map_or(usize::MAX, |p| volgorde.plaats(p))
         });
         let mut stoelen = stoelen_van_links_naar_rechts().into_iter();
         for f in fracties {
-            let leden = if self.hoofdelijk {
-                op_kieslijst(kamer, &f.id)
-            } else {
-                Vec::new()
-            };
+            let leden = if self.hoofdelijk { op_kieslijst(kamer, &f.id) } else { Vec::new() };
             let fractie = self.stem_van(&f.id);
             for (j, stoel) in stoelen.by_ref().take(usize::from(f.zetels)).enumerate() {
                 uit[stoel] = leden.get(j).map_or(fractie, |k| self.stem_van_kamerlid(k));
@@ -303,11 +286,7 @@ impl Stemgedrag {
             let afwijkers = self
                 .afwijkend
                 .iter()
-                .filter(|a| {
-                    kamer
-                        .kamerlid(&a.kamerlid)
-                        .is_some_and(|k| k.fractie == f.id)
-                })
+                .filter(|a| kamer.kamerlid(&a.kamerlid).is_some_and(|k| k.fractie == f.id))
                 .count();
             let afwijkers = u16::try_from(afwijkers).unwrap_or(u16::MAX);
             tel(self.stem_van(&f.id), f.zetels.saturating_sub(afwijkers));
@@ -318,11 +297,7 @@ impl Stemgedrag {
             }
         }
         if u.open == 0 && u.voor + u.tegen > 0 {
-            u.besluit = Some(if u.voor > u.tegen {
-                Besluit::Aangenomen
-            } else {
-                Besluit::Verworpen
-            });
+            u.besluit = Some(if u.voor > u.tegen { Besluit::Aangenomen } else { Besluit::Verworpen });
         }
         u
     }
@@ -365,22 +340,14 @@ impl Stemmingen {
             })
             .collect();
         lijst.extend(oud.into_iter().filter(|s| {
-            s.met_de_hand
-                || s.vastgelegd
-                || s.voor_uitzending
-                || s.stemgedrag != Stemgedrag::default()
+            s.met_de_hand || s.vastgelegd || s.voor_uitzending || s.stemgedrag != Stemgedrag::default()
         }));
         self.lijst = lijst;
         self.ingelezen = Some(ingelezen.into());
     }
 
     /// Een motie die niet in de lijst staat: de Regie typt de titel.
-    pub fn voeg_toe(
-        &mut self,
-        titel: &str,
-        volgnummer: u64,
-        kamer: &Kamer,
-    ) -> Result<(), StemmingWeigering> {
+    pub fn voeg_toe(&mut self, titel: &str, volgnummer: u64, kamer: &Kamer) -> Result<(), StemmingWeigering> {
         let titel = titel.trim();
         if titel.is_empty() {
             return Err(StemmingWeigering::TitelLeeg);
@@ -410,12 +377,7 @@ impl Stemmingen {
         Ok(())
     }
 
-    pub fn zet_stemgedrag(
-        &mut self,
-        id: &str,
-        stemgedrag: &Stemgedrag,
-        kamer: &Kamer,
-    ) -> Result<(), StemmingWeigering> {
+    pub fn zet_stemgedrag(&mut self, id: &str, stemgedrag: &Stemgedrag, kamer: &Kamer) -> Result<(), StemmingWeigering> {
         let s = self.stemming_mut(id)?;
         if s.vergrendeld {
             return Err(StemmingWeigering::Vergrendeld);
@@ -462,41 +424,20 @@ impl Stemmingen {
 
     /// "Neem officieel over": de officiële stemmen worden de invoer. Ook bij een vergrendelde
     /// Stemming, want het is een bewuste keuze. Een Graphic houdt zijn eigen kopie.
-    pub fn neem_officieel_over(
-        &mut self,
-        id: &str,
-        door: &str,
-        kamer: &Kamer,
-    ) -> Result<(), StemmingWeigering> {
+    pub fn neem_officieel_over(&mut self, id: &str, door: &str, kamer: &Kamer) -> Result<(), StemmingWeigering> {
         let s = self.stemming_mut(id)?;
-        let o = s
-            .controle
-            .officieel
-            .clone()
-            .ok_or(StemmingWeigering::GeenOfficieleUitslag)?;
+        let o = s.controle.officieel.clone().ok_or(StemmingWeigering::GeenOfficieleUitslag)?;
         s.stemgedrag = o.als_stemgedrag();
         s.uitkomst = s.stemgedrag.uitkomst(kamer);
-        s.controle.beoordeling = Some(Beoordeling {
-            keuze: Keuze::OfficieelOvergenomen,
-            door: door.into(),
-            over: o,
-        });
+        s.controle.beoordeling = Some(Beoordeling { keuze: Keuze::OfficieelOvergenomen, door: door.into(), over: o });
         Ok(())
     }
 
     /// "Onze invoer klopt": de invoer blijft, het verschil telt als afgehandeld.
     pub fn onze_invoer_klopt(&mut self, id: &str, door: &str) -> Result<(), StemmingWeigering> {
         let s = self.stemming_mut(id)?;
-        let o = s
-            .controle
-            .officieel
-            .clone()
-            .ok_or(StemmingWeigering::GeenOfficieleUitslag)?;
-        s.controle.beoordeling = Some(Beoordeling {
-            keuze: Keuze::OnzeInvoerKlopt,
-            door: door.into(),
-            over: o,
-        });
+        let o = s.controle.officieel.clone().ok_or(StemmingWeigering::GeenOfficieleUitslag)?;
+        s.controle.beoordeling = Some(Beoordeling { keuze: Keuze::OnzeInvoerKlopt, door: door.into(), over: o });
         Ok(())
     }
 
@@ -515,11 +456,7 @@ impl Stemmingen {
     /// Rekent de uitkomst opnieuw uit na een nieuwe Kamer. Een vastgelegde of vergrendelde
     /// Stemming houdt de uitkomst van toen.
     pub fn reken_opnieuw(&mut self, kamer: &Kamer) {
-        for s in self
-            .lijst
-            .iter_mut()
-            .filter(|s| !s.vastgelegd && !s.vergrendeld)
-        {
+        for s in self.lijst.iter_mut().filter(|s| !s.vastgelegd && !s.vergrendeld) {
             s.uitkomst = s.stemgedrag.uitkomst(kamer);
         }
     }
@@ -643,9 +580,7 @@ impl Stemmingsuitslag {
                     zetels: f.zetels,
                     stem: s.stemgedrag.stem_van(&f.id)?,
                     logo: partij.and_then(|p| p.logo.clone()),
-                    kort: partij
-                        .map(|p| p.kort.clone())
-                        .filter(|k| !k.trim().is_empty()),
+                    kort: partij.map(|p| p.kort.clone()).filter(|k| !k.trim().is_empty()),
                 })
             })
             .collect();
@@ -658,9 +593,7 @@ impl Stemmingsuitslag {
                 Some(AfwijkendInUitslag {
                     kamerlid: k.id.clone(),
                     naam: k.naam(),
-                    fractie: kamer
-                        .fractie(&k.fractie)
-                        .map_or_else(|| k.fractie.clone(), |f| f.afkorting.clone()),
+                    fractie: kamer.fractie(&k.fractie).map_or_else(|| k.fractie.clone(), |f| f.afkorting.clone()),
                     stem: a.stem,
                 })
             })
@@ -755,18 +688,8 @@ impl Stemmingsuitslag {
 /// De Kamerleden van een Fractie op volgorde van de kieslijst; wie geen plek op de lijst heeft
 /// achteraan, op achternaam.
 fn op_kieslijst<'a>(kamer: &'a Kamer, fractie: &str) -> Vec<&'a Kamerlid> {
-    let mut leden: Vec<&Kamerlid> = kamer
-        .kamerleden
-        .iter()
-        .filter(|k| k.fractie == fractie)
-        .collect();
-    leden.sort_by_key(|k| {
-        (
-            k.kieslijst.is_none(),
-            k.kieslijst,
-            k.achternaam.to_lowercase(),
-        )
-    });
+    let mut leden: Vec<&Kamerlid> = kamer.kamerleden.iter().filter(|k| k.fractie == fractie).collect();
+    leden.sort_by_key(|k| (k.kieslijst.is_none(), k.kieslijst, k.achternaam.to_lowercase()));
     leden
 }
 

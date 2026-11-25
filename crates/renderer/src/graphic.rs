@@ -15,19 +15,17 @@
 //! nieuwste vorm. De achtergrond van het Sjabloon tekent de laag als eerste Blok
 //! ([`Sjabloon::met_achtergrond`]).
 
-use bevy::post_process::dof::{DepthOfField, DepthOfFieldMode};
 use bevy::prelude::*;
 use gedeeld::Stand;
 use gedeeld::cijfers::Cijfers;
-use gedeeld::sjabloon::{
-    Achtergrond, IngevuldBlok, Inhoud, Invulling, Sjabloon, Stijl, vaste_sjablonen,
-};
+use bevy::post_process::dof::{DepthOfField, DepthOfFieldMode};
+use gedeeld::sjabloon::{Achtergrond, IngevuldBlok, Inhoud, Invulling, Sjabloon, Stijl, vaste_sjablonen};
 
 use crate::animatie::{Aard, Tijden, Toestand, op_hele_pixels, zacht_uit};
 use crate::bestanden::Bestanden;
 use crate::blokken::{
-    Binnen, BlokKnoop, Deel, Krimp, Letter, Opbouwkaart, Pasbreedte, PastIn, Puls, Randkleur,
-    Rijplek, Segment, Teller, Verloopdeel, Vorig, WachtOpBeeld, bouw_blok, bouw_inhoud, krimp,
+    Binnen, BlokKnoop, Deel, Krimp, Letter, Opbouwkaart, Pasbreedte, PastIn, Puls, Randkleur, Rijplek, Segment, Teller,
+    Verloopdeel, Vorig, WachtOpBeeld, bouw_blok, bouw_inhoud, krimp,
 };
 use crate::volging::Standen;
 use crate::zaal::Opbouwstand;
@@ -106,9 +104,7 @@ impl Wens {
     }
 
     fn sjabloon<'a>(&'a self, sjablonen: &'a Sjablonen) -> Option<&'a Sjabloon> {
-        self.sjabloon
-            .as_ref()
-            .or_else(|| sjablonen.zoek(&self.invulling.sjabloon))
+        self.sjabloon.as_ref().or_else(|| sjablonen.zoek(&self.invulling.sjabloon))
     }
 }
 
@@ -185,19 +181,12 @@ fn vraag_vooraf(standen: Res<Standen>, mut bestanden: ResMut<Bestanden>) {
     let Some(s) = &standen.huidig else { return };
     let stand = &s.stand;
     let ether = stand.ether.as_ref().map(|e| &e.stijl);
-    for naam in stand
-        .stijl
-        .bestanden()
-        .chain(ether.into_iter().flat_map(Stijl::bestanden))
-    {
+    for naam in stand.stijl.bestanden().chain(ether.into_iter().flat_map(Stijl::bestanden)) {
         bestanden.vraag(naam);
     }
     // eigen lettertypes en afbeeldingen van bewerkte Sjablonen, ook van de kopie in de Ether
     let sjablonen = stand.sjablonen.iter().map(|b| &b.sjabloon);
-    for naam in sjablonen
-        .chain(stand.ether.iter().filter_map(|e| e.sjabloon.as_ref()))
-        .flat_map(Sjabloon::eigen_bestanden)
-    {
+    for naam in sjablonen.chain(stand.ether.iter().filter_map(|e| e.sjabloon.as_ref())).flat_map(Sjabloon::eigen_bestanden) {
         bestanden.vraag(&naam);
     }
     for logo in stand
@@ -231,11 +220,7 @@ fn volg_stand(standen: Res<Standen>, mut lagen: Query<&mut Laag, Without<HandGes
                     .sjabloon
                     .as_ref()
                     .map(Sjabloon::met_achtergrond)
-                    .or_else(|| {
-                        stand
-                            .sjabloon(&e.graphic.sjabloon_id())
-                            .map(|s| s.met_achtergrond())
-                    }),
+                    .or_else(|| stand.sjabloon(&e.graphic.sjabloon_id()).map(|s| s.met_achtergrond())),
             }),
             Bron::Klaar => stand.klaar.as_ref().map(|k| Wens {
                 toon: 0,
@@ -243,9 +228,7 @@ fn volg_stand(standen: Res<Standen>, mut lagen: Query<&mut Laag, Without<HandGes
                 invulling: k.graphic.invulling(),
                 cijfers: k.graphic.cijfers(),
                 stijl: stand.stijl.clone(),
-                sjabloon: stand
-                    .sjabloon(&k.graphic.sjabloon_id())
-                    .map(|s| s.met_achtergrond()),
+                sjabloon: stand.sjabloon(&k.graphic.sjabloon_id()).map(|s| s.met_achtergrond()),
             }),
         };
         laag.gewenst = wens;
@@ -312,11 +295,13 @@ fn voer_overgang(
                 continue;
             }
             let zelfde_vorm = match (&nieuw, kaart_ids.first().and_then(|k| kaarten.get(*k).ok())) {
-                (Some(w), Some((kaart, _))) => w.sjabloon(&sjablonen).is_some_and(|s| {
-                    *s == kaart.sjabloon
-                        && w.stijl == kaart.stijl
-                        && s.vul_in(&w.invulling, w.cijfers(&stand), &w.stijl) == kaart.blokken
-                }),
+                (Some(w), Some((kaart, _))) => {
+                    w.sjabloon(&sjablonen).is_some_and(|s| {
+                        *s == kaart.sjabloon
+                            && w.stijl == kaart.stijl
+                            && s.vul_in(&w.invulling, w.cijfers(&stand), &w.stijl) == kaart.blokken
+                    })
+                }
                 (None, None) => true,
                 _ => false,
             };
@@ -350,10 +335,9 @@ fn voer_overgang(
                     let wacht = kaart.tijden.eruit_klaar(kaart.blokken.len());
                     bouw(&mut commands, &mut bestanden, n, Fase::Wacht(wacht));
                 } else {
-                    let nieuwe =
-                        kaart
-                            .sjabloon
-                            .vul_in(&n.invulling, n.cijfers(&stand), &kaart.stijl);
+                    let nieuwe = kaart
+                        .sjabloon
+                        .vul_in(&n.invulling, n.cijfers(&stand), &kaart.stijl);
                     werk_bij(
                         &mut commands,
                         &mut bestanden,
@@ -404,13 +388,7 @@ struct Onscherp(f32);
 fn maak_onscherp(
     mut commands: Commands,
     tijd: Res<Time>,
-    mut lagen: Query<(
-        Entity,
-        &Laag,
-        &UiTargetCamera,
-        Option<&Children>,
-        Option<&mut Onscherp>,
-    )>,
+    mut lagen: Query<(Entity, &Laag, &UiTargetCamera, Option<&Children>, Option<&mut Onscherp>)>,
     kaarten: Query<&Kaart>,
 ) {
     for (id, laag, camera, kinderen, onscherp) in &mut lagen {
@@ -422,11 +400,7 @@ fn maak_onscherp(
             .map(|k| k.fase)
             .collect();
         // bij een wissel tussen twee van zulke Graphics blijft de Zaal onscherp
-        let doel = if donker.iter().any(|f| *f != Fase::Eruit) {
-            1.0
-        } else {
-            0.0
-        };
+        let doel = if donker.iter().any(|f| *f != Fase::Eruit) { 1.0 } else { 0.0 };
         // een Graphic die er al staat (het Voorbeeld, of het eindbeeld na het opstarten): meteen
         let meteen = laag.bron == Bron::Klaar || donker.contains(&Fase::Staat);
         let Some(mut nu) = onscherp else {
@@ -438,18 +412,12 @@ fn maak_onscherp(
             doel
         } else {
             let stap = tijd.delta_secs() / ONSCHERP_S;
-            if doel > nu.0 {
-                (nu.0 + stap).min(doel)
-            } else {
-                (nu.0 - stap).max(doel)
-            }
+            if doel > nu.0 { (nu.0 + stap).min(doel) } else { (nu.0 - stap).max(doel) }
         };
         if nu.0 == vorig {
             continue;
         }
-        let Ok(mut camera) = commands.get_entity(camera.entity()) else {
-            continue;
-        };
+        let Ok(mut camera) = commands.get_entity(camera.entity()) else { continue };
         if nu.0 > 0.0 {
             camera.insert(DepthOfField {
                 mode: DepthOfFieldMode::Gaussian,
@@ -563,18 +531,8 @@ fn werk_bij(
                     puls,
                 ));
             }
-            (
-                Inhoud::Zetelbalk {
-                    delen: oude_delen, ..
-                },
-                Inhoud::Zetelbalk { .. },
-            )
-            | (
-                Inhoud::Uitslaggrafiek {
-                    rijen: oude_delen, ..
-                },
-                Inhoud::Uitslaggrafiek { .. },
-            ) => {
+            (Inhoud::Zetelbalk { delen: oude_delen, .. }, Inhoud::Zetelbalk { .. })
+            | (Inhoud::Uitslaggrafiek { rijen: oude_delen, .. }, Inhoud::Uitslaggrafiek { .. }) => {
                 herbouw(commands, knoop);
                 bouw_inhoud(
                     commands,
@@ -583,10 +541,7 @@ fn werk_bij(
                     knoop,
                     nieuw,
                     1.0,
-                    Some(Vorig {
-                        delen: oude_delen,
-                        duur,
-                    }),
+                    Some(Vorig { delen: oude_delen, duur }),
                 );
                 commands.entity(knoop).insert(Schuift { tijd: 0.0, duur });
             }
@@ -638,10 +593,7 @@ fn stel_teller_in(
                 };
             }
             if let Some(na) = puls_na {
-                world.entity_mut(t).insert(Puls {
-                    tijd: -na,
-                    duur: PULS * duur,
-                });
+                world.entity_mut(t).insert(Puls { tijd: -na, duur: PULS * duur });
             }
         }
     }
@@ -652,11 +604,7 @@ fn stel_teller_in(
 const PULS: f32 = 0.66;
 
 /// De teller groeit even en komt terug als de coalitie een meerderheid haalt.
-fn pulseer(
-    mut commands: Commands,
-    tijd: Res<Time>,
-    mut tellers: Query<(Entity, &mut Puls, &mut UiTransform)>,
-) {
+fn pulseer(mut commands: Commands, tijd: Res<Time>, mut tellers: Query<(Entity, &mut Puls, &mut UiTransform)>) {
     for (e, mut p, mut transform) in &mut tellers {
         p.tijd += tijd.delta_secs();
         let schaal = Vec2::splat(crate::animatie::puls(p.tijd, p.duur));
@@ -726,9 +674,7 @@ fn animeer(
     for (kaart_id, mut kaart, blok_ids, laag) in &mut kaarten {
         kaart.tijd += dt;
         // In de Ether wachten de Partijlabels op het eind van een Opbouw in de Zaal.
-        let ether = lagen
-            .get(laag.parent())
-            .is_ok_and(|l| l.bron == Bron::Ether);
+        let ether = lagen.get(laag.parent()).is_ok_and(|l| l.bron == Bron::Ether);
         kaart.na_opbouw = if ether && opbouw_bezig && kaart.fase != Fase::Eruit {
             0.0
         } else {
@@ -832,11 +778,7 @@ fn animeer(
                 node.top = top;
                 node.overflow = overflow;
             }
-            let na_opbouw = if matches!(blok.inhoud, Inhoud::Partijlabels { .. }) {
-                kaart.na_opbouw
-            } else {
-                1.0
-            };
+            let na_opbouw = if matches!(blok.inhoud, Inhoud::Partijlabels { .. }) { kaart.na_opbouw } else { 1.0 };
             let dekking = t.dekking * wissel_dekking * na_opbouw;
             for k in knoop_kinderen.into_iter().flatten() {
                 if let Ok(mut bn) = binnen.get_mut(*k) {
@@ -905,19 +847,9 @@ fn toon_opbouwlabel(
 ) {
     let stap = opbouw.and_then(|o| o.stap.filter(|_| o.bezig));
     for (e, kaart, mut zicht, mut vorm) in &mut labels {
-        let ether = || {
-            ouders
-                .iter_ancestors(e)
-                .any(|a| lagen.get(a).is_ok_and(|l| l.bron == Bron::Ether))
-        };
-        let t = stap
-            .filter(|(k, _)| *k == kaart.kleur && ether())
-            .map(|(_, t)| t);
-        zicht.set_if_neq(if t.is_some() {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        });
+        let ether = || ouders.iter_ancestors(e).any(|a| lagen.get(a).is_ok_and(|l| l.bron == Bron::Ether));
+        let t = stap.filter(|(k, _)| *k == kaart.kleur && ether()).map(|(_, t)| t);
+        zicht.set_if_neq(if t.is_some() { Visibility::Inherited } else { Visibility::Hidden });
         if let Some(t) = t {
             let f = zacht_uit((t / OPBOUWLABEL_S).min(1.0));
             let doel = UiTransform {
@@ -999,11 +931,7 @@ fn verberg_wat_niet_past(mut labels: Query<(&PastIn, &ComputedNode, &mut Visibil
     for (past, node, mut zicht) in &mut labels {
         let breed = node.size.x * node.inverse_scale_factor;
         // nog niet gemeten (het eerste beeld na Bijwerken): nog niet tonen, anders flitst hij
-        let nieuw = if breed > 0.0 && breed + RUIMTE <= past.0 {
-            Visibility::Inherited
-        } else {
-            Visibility::Hidden
-        };
+        let nieuw = if breed > 0.0 && breed + RUIMTE <= past.0 { Visibility::Inherited } else { Visibility::Hidden };
         zicht.set_if_neq(nieuw);
     }
 }
@@ -1144,13 +1072,7 @@ mod tests {
             .init_asset::<Image>()
             .init_asset::<Font>()
             .init_resource::<Standen>()
-            .add_plugins((
-                BestandenPlugin {
-                    kopie: kopie.to_owned(),
-                    bron: None,
-                },
-                GraphicPlugin,
-            ));
+            .add_plugins((BestandenPlugin { kopie: kopie.to_owned(), bron: None }, GraphicPlugin));
         app.world_mut().spawn(Bron::Ether);
         app.update();
         app
@@ -1164,10 +1086,7 @@ mod tests {
                 ether: Some(GraphicInBeeld {
                     id: toon,
                     versie: toon,
-                    graphic: Graphic::Titelkaart {
-                        kop: kop.into(),
-                        regel: "Voorbeeldgegevens".into(),
-                    },
+                    graphic: Graphic::Titelkaart { kop: kop.into(), regel: "Voorbeeldgegevens".into() },
                     standpunt: None,
                     getoond: toon,
                     sinds_ms: 0,
@@ -1191,16 +1110,11 @@ mod tests {
 
     fn kaarten(app: &mut App) -> Vec<(Entity, Fase)> {
         let world = app.world_mut();
-        world
-            .query::<(Entity, &Kaart)>()
-            .iter(world)
-            .map(|(e, k)| (e, k.fase))
-            .collect()
+        world.query::<(Entity, &Kaart)>().iter(world).map(|(e, k)| (e, k.fase)).collect()
     }
 
     #[test]
-    fn een_renderer_die_halverwege_start_toont_meteen_het_eindbeeld_en_houdt_het_bij_herverbinden()
-    {
+    fn een_renderer_die_halverwege_start_toont_meteen_het_eindbeeld_en_houdt_het_bij_herverbinden() {
         let kopie = tempfile::tempdir().unwrap();
         let mut app = app(kopie.path());
 
@@ -1224,11 +1138,7 @@ mod tests {
 
     fn stijlen(app: &mut App) -> Vec<Stijl> {
         let world = app.world_mut();
-        world
-            .query::<&Kaart>()
-            .iter(world)
-            .map(|k| k.stijl.clone())
-            .collect()
+        world.query::<&Kaart>().iter(world).map(|k| k.stijl.clone()).collect()
     }
 
     /// Een Renderer die halverwege start (zoals de Reserve), na een nieuwe Stijl: de Graphic in
@@ -1247,10 +1157,7 @@ mod tests {
         // Bijwerken van dezelfde Toon houdt de vorm; een nieuwe Toon neemt de nieuwe vorm.
         let e = s.stand.ether.as_mut().unwrap();
         e.versie = 10;
-        e.graphic = Graphic::Titelkaart {
-            kop: "Oude vorm, bijgewerkt".into(),
-            regel: "Voorbeeldgegevens".into(),
-        };
+        e.graphic = Graphic::Titelkaart { kop: "Oude vorm, bijgewerkt".into(), regel: "Voorbeeldgegevens".into() };
         s.volgnummer = 10;
         ontvang(&mut app, s.clone());
         assert_eq!(stijlen(&mut app), [Stijl::default()]);
@@ -1265,9 +1172,7 @@ mod tests {
     /// Een eigen Sjabloon (voorbeeldgegevens): een kop uit een invulveld op de Zaal, donker en
     /// onscherp.
     fn eigen_sjabloon(kop_grootte: u16) -> Sjabloon {
-        use gedeeld::sjabloon::{
-            self as sj, Blok, Kleurkeuze, Stijlkleur, Stijlletter, Stoelen, Tekstbron,
-        };
+        use gedeeld::sjabloon::{self as sj, Blok, Kleurkeuze, Stijlkleur, Stijlletter, Stoelen, Tekstbron};
         Sjabloon {
             id: "eigen-proef".into(),
             naam: "Proef".into(),
@@ -1306,10 +1211,7 @@ mod tests {
         let e = s.stand.ether.as_mut().unwrap();
         e.graphic = graphic.clone();
         e.sjabloon = Some(eigen_sjabloon(80));
-        s.stand.sjablonen.push(gedeeld::sjabloon::BewerktSjabloon {
-            sjabloon: eigen_sjabloon(60),
-            standaard: None,
-        });
+        s.stand.sjablonen.push(gedeeld::sjabloon::BewerktSjabloon { sjabloon: eigen_sjabloon(60), standaard: None });
         s.stand.klaar = Some(gedeeld::KlaargezetteGraphic {
             id: 2,
             versie: 3,
@@ -1327,35 +1229,15 @@ mod tests {
             .iter(world)
             .map(|(k, ouder)| {
                 let bron = world.get::<Laag>(ouder.parent()).unwrap().bron;
-                let Inhoud::Tekst { grootte, .. } = &k.blokken[1].inhoud else {
-                    panic!("{:?}", k.blokken[1])
-                };
+                let Inhoud::Tekst { grootte, .. } = &k.blokken[1].inhoud else { panic!("{:?}", k.blokken[1]) };
                 (bron, *grootte, k.blokken[0].inhoud.clone())
             })
             .collect();
         grootten.sort_by_key(|(b, ..)| *b == Bron::Klaar);
-        assert_eq!(
-            grootten
-                .iter()
-                .map(|(b, g, _)| (*b, *g))
-                .collect::<Vec<_>>(),
-            [(Bron::Ether, 80), (Bron::Klaar, 60)]
-        );
-        assert!(
-            matches!(
-                grootten[0].2,
-                Inhoud::Vlak {
-                    dekking: gedeeld::sjabloon::DONKER,
-                    ..
-                }
-            ),
-            "{:?}",
-            grootten[0].2
-        );
+        assert_eq!(grootten.iter().map(|(b, g, _)| (*b, *g)).collect::<Vec<_>>(), [(Bron::Ether, 80), (Bron::Klaar, 60)]);
+        assert!(matches!(grootten[0].2, Inhoud::Vlak { dekking: gedeeld::sjabloon::DONKER, .. }), "{:?}", grootten[0].2);
         app.update();
-        assert!(
-            app.world().get::<DepthOfField>(voorbeeld).is_some(),
-            "het Voorbeeld is meteen onscherp"
-        );
+        assert!(app.world().get::<DepthOfField>(voorbeeld).is_some(), "het Voorbeeld is meteen onscherp");
     }
+
 }

@@ -59,16 +59,8 @@ impl OfficieleUitslag {
     /// Dezelfde uitslag, los van bron en hamerslag.
     fn zelfde_stemmen(&self, ander: &OfficieleUitslag) -> bool {
         let gesorteerd = |u: &OfficieleUitslag| {
-            let mut f: Vec<_> = u
-                .fracties
-                .iter()
-                .map(|g| (g.fractie.clone(), g.stem))
-                .collect();
-            let mut a: Vec<_> = u
-                .afwijkend
-                .iter()
-                .map(|g| (g.kamerlid.clone(), g.stem))
-                .collect();
+            let mut f: Vec<_> = u.fracties.iter().map(|g| (g.fractie.clone(), g.stem)).collect();
+            let mut a: Vec<_> = u.afwijkend.iter().map(|g| (g.kamerlid.clone(), g.stem)).collect();
             f.sort();
             a.sort();
             (u.besluit, f, a)
@@ -177,11 +169,7 @@ impl Stemming {
     /// Of de Regie iets invoerde voor deze Stemming.
     pub fn ingevoerd(&self) -> bool {
         self.vastgelegd
-            || self.stemgedrag
-                != Stemgedrag {
-                    hoofdelijk: self.stemgedrag.hoofdelijk,
-                    ..Stemgedrag::default()
-                }
+            || self.stemgedrag != Stemgedrag { hoofdelijk: self.stemgedrag.hoofdelijk, ..Stemgedrag::default() }
     }
 
     /// Rekent status, verschillen en de officiële uitkomst opnieuw uit.
@@ -199,15 +187,8 @@ impl Stemming {
             return;
         };
         let officieel = o.als_stemgedrag();
-        c.officiele_uitkomst = Some(Uitkomst {
-            besluit: Some(o.besluit),
-            ..officieel.uitkomst(kamer)
-        });
-        c.afgehandeld = c
-            .beoordeling
-            .as_ref()
-            .filter(|b| b.over.zelfde_stemmen(o))
-            .map(|b| b.keuze);
+        c.officiele_uitkomst = Some(Uitkomst { besluit: Some(o.besluit), ..officieel.uitkomst(kamer) });
+        c.afgehandeld = c.beoordeling.as_ref().filter(|b| b.over.zelfde_stemmen(o)).map(|b| b.keuze);
         if !ingevoerd {
             return;
         }
@@ -215,41 +196,24 @@ impl Stemming {
         for f in &kamer.fracties {
             let (a, b) = (onze.stem_van(&f.id), officieel.stem_van(&f.id));
             if a != b {
-                c.verschillen.push(Verschil {
-                    wie: f.afkorting.clone(),
-                    kamerlid: None,
-                    onze: a,
-                    officieel: b,
-                });
+                c.verschillen.push(Verschil { wie: f.afkorting.clone(), kamerlid: None, onze: a, officieel: b });
             }
         }
         // Een Kamerlid telt mee als het in een van beide anders stemt dan zijn Fractie.
-        let leden = onze
-            .afwijkend
-            .iter()
-            .chain(&officieel.afwijkend)
-            .map(|a| a.kamerlid.as_str());
+        let leden = onze.afwijkend.iter().chain(&officieel.afwijkend).map(|a| a.kamerlid.as_str());
         let mut gezien = Vec::new();
         for id in leden {
             if gezien.contains(&id) {
                 continue;
             }
             gezien.push(id);
-            let Some(k) = kamer.kamerlid(id) else {
-                continue;
-            };
+            let Some(k) = kamer.kamerlid(id) else { continue };
             let stem = |sg: &Stemgedrag| {
-                sg.afwijkend
-                    .iter()
-                    .find(|a| a.kamerlid == id)
-                    .map(|a| a.stem)
-                    .or_else(|| sg.stem_van(&k.fractie))
+                sg.afwijkend.iter().find(|a| a.kamerlid == id).map(|a| a.stem).or_else(|| sg.stem_van(&k.fractie))
             };
             let (a, b) = (stem(onze), stem(&officieel));
             if a != b {
-                let fractie = kamer
-                    .fractie(&k.fractie)
-                    .map_or(k.fractie.as_str(), |f| f.afkorting.as_str());
+                let fractie = kamer.fractie(&k.fractie).map_or(k.fractie.as_str(), |f| f.afkorting.as_str());
                 c.verschillen.push(Verschil {
                     wie: format!("{} ({fractie})", k.naam()),
                     kamerlid: Some(id.to_owned()),

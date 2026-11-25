@@ -68,37 +68,19 @@ async fn stand(server: &Server) -> gedeeld::GenummerdeStand {
 /// De Persoonskaart noemt een foto als `fotos/<soort>/<id>`: de Renderer haalt hem zo op, ook al
 /// staat hij naast de Stand en niet in de map `bestanden`.
 #[tokio::test]
-async fn de_renderer_haalt_een_foto_van_de_persoonskaart_op_en_de_regie_plaatst_een_foto_van_een_eigen_persoon()
- {
+async fn de_renderer_haalt_een_foto_van_de_persoonskaart_op_en_de_regie_plaatst_een_foto_van_een_eigen_persoon() {
     use gedeeld::Opdracht;
     use gedeeld::persoonskaart::EigenPersoon;
     let map = tempfile::tempdir().unwrap();
     std::fs::create_dir_all(map.path().join("fotos/open-data")).unwrap();
     std::fs::create_dir_all(map.path().join("fotos/eigen")).unwrap();
     // VOORBEELDGEGEVENS: het begin van een JPEG en een PNG
-    std::fs::write(
-        map.path().join("fotos/open-data/abc-1.jpg"),
-        b"\xFF\xD8\xFF uit de open data",
-    )
-    .unwrap();
-    std::fs::write(
-        map.path().join("fotos/eigen/abc-1.png"),
-        b"\x89PNG\r\n\x1a\n eigen",
-    )
-    .unwrap();
+    std::fs::write(map.path().join("fotos/open-data/abc-1.jpg"), b"\xFF\xD8\xFF uit de open data").unwrap();
+    std::fs::write(map.path().join("fotos/eigen/abc-1.png"), b"\x89PNG\r\n\x1a\n eigen").unwrap();
     let server = start(map.path()).await;
-    assert_eq!(
-        haal(&server, "fotos/open-data/abc-1", SLEUTEL).await,
-        (200, b"\xFF\xD8\xFF uit de open data".to_vec())
-    );
-    assert_eq!(
-        haal(&server, "fotos/eigen/abc-1", SLEUTEL).await,
-        (200, b"\x89PNG\r\n\x1a\n eigen".to_vec())
-    );
-    assert_eq!(
-        haal(&server, "fotos/eigen/bestaat-niet", SLEUTEL).await.0,
-        404
-    );
+    assert_eq!(haal(&server, "fotos/open-data/abc-1", SLEUTEL).await, (200, b"\xFF\xD8\xFF uit de open data".to_vec()));
+    assert_eq!(haal(&server, "fotos/eigen/abc-1", SLEUTEL).await, (200, b"\x89PNG\r\n\x1a\n eigen".to_vec()));
+    assert_eq!(haal(&server, "fotos/eigen/bestaat-niet", SLEUTEL).await.0, 404);
     assert_eq!(haal(&server, "fotos/anders/abc-1", SLEUTEL).await.0, 404);
 
     // een eigen persoon: eerst bewaren, dan de foto plaatsen
@@ -132,10 +114,7 @@ async fn de_renderer_haalt_een_foto_van_de_persoonskaart_op_en_de_regie_plaatst_
         .unwrap();
     assert_eq!(r.status(), 200);
     assert!(stand(&server).await.stand.personen[0].foto);
-    assert_eq!(
-        haal(&server, &format!("fotos/personen/{id}"), SLEUTEL).await,
-        (200, foto)
-    );
+    assert_eq!(haal(&server, &format!("fotos/personen/{id}"), SLEUTEL).await, (200, foto));
     let r = client
         .delete(format!("http://{}/api/foto/{id}", server.adres()))
         .bearer_auth(SLEUTEL)
@@ -144,12 +123,7 @@ async fn de_renderer_haalt_een_foto_van_de_persoonskaart_op_en_de_regie_plaatst_
         .unwrap();
     assert_eq!(r.status(), 200);
     assert!(!stand(&server).await.stand.personen[0].foto);
-    assert_eq!(
-        haal(&server, &format!("fotos/personen/{id}"), SLEUTEL)
-            .await
-            .0,
-        404
-    );
+    assert_eq!(haal(&server, &format!("fotos/personen/{id}"), SLEUTEL).await.0, 404);
     server.stop().await;
 }
 
@@ -168,8 +142,7 @@ async fn plaats(server: &Server, naam: &str, inhoud: &[u8]) -> (u16, serde_json:
 /// bij zijn inhoud, zodat een Renderer met een kopie van het oude logo nooit het verkeerde
 /// toont en de Graphic in de Ether het oude logo houdt.
 #[tokio::test]
-async fn de_regie_plaatst_een_logo_of_lettertype_onder_een_nieuwe_naam_en_de_renderer_haalt_het_op()
-{
+async fn de_regie_plaatst_een_logo_of_lettertype_onder_een_nieuwe_naam_en_de_renderer_haalt_het_op() {
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
     // VOORBEELDGEGEVENS: het begin van een PNG en van een TrueType-lettertype
@@ -182,13 +155,8 @@ async fn de_regie_plaatst_een_logo_of_lettertype_onder_een_nieuwe_naam_en_de_ren
     assert_eq!(haal(&server, &naam, SLEUTEL).await, (200, logo.to_vec()));
 
     // Hetzelfde bestand nog eens: dezelfde naam. Een ander logo: een andere naam.
-    assert_eq!(
-        plaats(&server, "Mijn logo.png", logo).await.1["naam"],
-        naam.as_str()
-    );
-    let ander = plaats(&server, "Mijn logo.png", b"\x89PNG\r\n\x1a\n ander logo")
-        .await
-        .1;
+    assert_eq!(plaats(&server, "Mijn logo.png", logo).await.1["naam"], naam.as_str());
+    let ander = plaats(&server, "Mijn logo.png", b"\x89PNG\r\n\x1a\n ander logo").await.1;
     assert_ne!(ander["naam"], naam.as_str());
 
     let letter = plaats(&server, "Huisletter-Bold.ttf", b"\0\x01\0\0 letters").await;
@@ -198,10 +166,7 @@ async fn de_regie_plaatst_een_logo_of_lettertype_onder_een_nieuwe_naam_en_de_ren
     // Geen beeld en geen lettertype: geweigerd, met de reden.
     let (status, antwoord) = plaats(&server, "virus.exe", b"MZ niets").await;
     assert_eq!(status, 422);
-    assert!(
-        antwoord["reden"].as_str().unwrap().contains("PNG"),
-        "{antwoord}"
-    );
+    assert!(antwoord["reden"].as_str().unwrap().contains("PNG"), "{antwoord}");
     server.stop().await;
 }
 
@@ -218,18 +183,15 @@ async fn een_oude_stand_met_de_oude_standaardstijl_krijgt_de_nieuwe_standaard() 
     });
     for (stijl, verwacht) in [
         (oude_stijl.clone(), Stijl::default()),
-        (
-            {
-                let mut eigen = oude_stijl.clone();
-                eigen["snelheid"] = 80.into();
-                eigen
-            },
-            {
-                let mut eigen: Stijl = serde_json::from_value(oude_stijl.clone()).unwrap();
-                eigen.snelheid = 80;
-                eigen
-            },
-        ),
+        ({
+            let mut eigen = oude_stijl.clone();
+            eigen["snelheid"] = 80.into();
+            eigen
+        }, {
+            let mut eigen: Stijl = serde_json::from_value(oude_stijl.clone()).unwrap();
+            eigen.snelheid = 80;
+            eigen
+        }),
     ] {
         let map = tempfile::tempdir().unwrap();
         let oud = serde_json::json!({"volgnummer": 12, "stand": {"stijl": stijl}});

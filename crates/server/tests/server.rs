@@ -7,8 +7,8 @@ use futures_util::{SinkExt, StreamExt};
 use gedeeld::cijfers::{Bewerking, Soort};
 use gedeeld::volger::{Gebeurtenis, Volger, volg, volg_als};
 use gedeeld::{
-    Afzender, BerichtAanServer, BerichtVanServer, GenummerdeStand, Graphic, Opdracht,
-    RendererOpMachine, Rol, Stand,
+    Afzender, BerichtAanServer, BerichtVanServer, GenummerdeStand, Graphic, Opdracht, RendererOpMachine,
+    Rol, Stand,
 };
 use server::{Instellingen, Server};
 use tokio_tungstenite::tungstenite::{self, Message};
@@ -30,10 +30,7 @@ async fn start(map: &Path) -> Server {
 }
 
 /// Wacht (zonder de runtime te blokkeren) op de eerste Stand van de volger die aan `past` voldoet.
-async fn wacht_op_stand(
-    volger: &Volger,
-    past: impl Fn(&GenummerdeStand) -> bool,
-) -> GenummerdeStand {
+async fn wacht_op_stand(volger: &Volger, past: impl Fn(&GenummerdeStand) -> bool) -> GenummerdeStand {
     let tot = tokio::time::Instant::now() + Duration::from_secs(10);
     loop {
         while let Ok(g) = volger.gebeurtenissen.try_recv() {
@@ -43,37 +40,26 @@ async fn wacht_op_stand(
                 }
             }
         }
-        assert!(
-            tokio::time::Instant::now() < tot,
-            "geen passende Stand binnen 10 s"
-        );
+        assert!(tokio::time::Instant::now() < tot, "geen passende Stand binnen 10 s");
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
 }
 
-type Ws =
-    tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
+type Ws = tokio_tungstenite::WebSocketStream<tokio_tungstenite::MaybeTlsStream<tokio::net::TcpStream>>;
 
 /// Verbindt zoals het dashboard: sleutel in de URL, dan Hallo als Werkplek.
 async fn dashboard(server: &Server, naam: &str) -> Ws {
     let url = format!("ws://{}/ws?sleutel={SLEUTEL}", server.adres());
-    let (mut ws, _) = tokio_tungstenite::connect_async(url)
-        .await
-        .expect("verbinden");
-    stuur(
-        &mut ws,
-        &BerichtAanServer::Hallo {
-            afzender: Afzender::Werkplek { naam: naam.into() },
-        },
-    )
+    let (mut ws, _) = tokio_tungstenite::connect_async(url).await.expect("verbinden");
+    stuur(&mut ws, &BerichtAanServer::Hallo {
+        afzender: Afzender::Werkplek { naam: naam.into() },
+    })
     .await;
     ws
 }
 
 async fn stuur(ws: &mut Ws, b: &BerichtAanServer) {
-    ws.send(Message::text(serde_json::to_string(b).unwrap()))
-        .await
-        .unwrap();
+    ws.send(Message::text(serde_json::to_string(b).unwrap())).await.unwrap();
 }
 
 /// Het volgende tekstbericht, zonder de camera.
@@ -97,10 +83,7 @@ async fn ontvang(ws: &mut Ws) -> BerichtVanServer {
 /// Een Titelkaart klaarzetten (voorbeeldgegevens).
 fn zet_klaar(kop: &str) -> Opdracht {
     Opdracht::ZetKlaar {
-        graphic: Graphic::Titelkaart {
-            kop: kop.into(),
-            regel: "Voorbeeldgegevens".into(),
-        },
+        graphic: Graphic::Titelkaart { kop: kop.into(), regel: "Voorbeeldgegevens".into() },
         standpunt: None,
     }
 }
@@ -141,13 +124,8 @@ async fn opdracht_uit_dashboard_geeft_renderer_nieuwe_stand_met_hoger_volgnummer
 
     let mut ws = dashboard(&server, "Regie links").await;
     assert!(matches!(ontvang(&mut ws).await, BerichtVanServer::Stand(_)));
-    stuur(
-        &mut ws,
-        &BerichtAanServer::Opdracht {
-            opdracht: zet_klaar("Goedenavond, Den Haag"),
-        },
-    )
-    .await;
+    stuur(&mut ws, &BerichtAanServer::Opdracht { opdracht: zet_klaar("Goedenavond, Den Haag") })
+        .await;
     let BerichtVanServer::Uitgevoerd { volgnummer } = antwoord(&mut ws).await else {
         panic!("Opdracht niet uitgevoerd");
     };
@@ -172,19 +150,9 @@ async fn server_weigert_verbinding_zonder_of_met_verkeerde_sleutel() {
     }
 
     let opdracht = zet_klaar("zonder sleutel");
-    let r = http()
-        .post(format!("http://{a}/api/opdracht"))
-        .json(&opdracht)
-        .send()
-        .await
-        .unwrap();
+    let r = http().post(format!("http://{a}/api/opdracht")).json(&opdracht).send().await.unwrap();
     assert_eq!(r.status(), 401);
-    let r = http()
-        .get(format!("http://{a}/api/stand"))
-        .bearer_auth("fout")
-        .send()
-        .await
-        .unwrap();
+    let r = http().get(format!("http://{a}/api/stand")).bearer_auth("fout").send().await.unwrap();
     assert_eq!(r.status(), 401);
 
     let stand: GenummerdeStand = http()
@@ -241,13 +209,7 @@ async fn stand_is_er_nog_na_herstart() {
         .await
         .unwrap();
     let klaar = stand.stand.klaar.expect("Graphic klaar na herstart");
-    assert_eq!(
-        klaar.graphic,
-        Graphic::Titelkaart {
-            kop: "Na de herstart".into(),
-            regel: "Voorbeeldgegevens".into()
-        }
-    );
+    assert_eq!(klaar.graphic, Graphic::Titelkaart { kop: "Na de herstart".into(), regel: "Voorbeeldgegevens".into() });
     assert_eq!(stand.volgnummer, 1);
 }
 
@@ -266,41 +228,25 @@ async fn logboek_bewaart_tijd_afzender_en_opdracht() {
         .unwrap();
     let mut ws = dashboard(&server, "Regie rechts").await;
     ontvang(&mut ws).await;
-    stuur(
-        &mut ws,
-        &BerichtAanServer::Opdracht {
-            opdracht: zet_klaar(&"x".repeat(gedeeld::MAX_KOP + 1)),
-        },
-    )
-    .await;
-    assert!(matches!(
-        antwoord(&mut ws).await,
-        BerichtVanServer::Geweigerd { .. }
-    ));
+    stuur(&mut ws, &BerichtAanServer::Opdracht { opdracht: zet_klaar(&"x".repeat(gedeeld::MAX_KOP + 1)) })
+        .await;
+    assert!(matches!(antwoord(&mut ws).await, BerichtVanServer::Geweigerd { .. }));
     server.stop().await;
 
     let logboek = std::fs::read_to_string(map.path().join("logboek.jsonl")).unwrap();
-    let regels: Vec<serde_json::Value> = logboek
-        .lines()
-        .map(|r| serde_json::from_str(r).unwrap())
-        .collect();
+    let regels: Vec<serde_json::Value> =
+        logboek.lines().map(|r| serde_json::from_str(r).unwrap()).collect();
     assert_eq!(regels.len(), 2);
 
     let knop = &regels[0];
-    assert_eq!(
-        knop["afzender"],
-        serde_json::json!({ "soort": "Knop", "naam": "Stream Deck" })
-    );
+    assert_eq!(knop["afzender"], serde_json::json!({ "soort": "Knop", "naam": "Stream Deck" }));
     assert_eq!(knop["opdracht"], serde_json::to_value(&opdracht).unwrap());
     assert_eq!(knop["volgnummer"], 1);
     let tijd: jiff::Timestamp = knop["tijd"].as_str().unwrap().parse().unwrap();
     assert!(jiff::Timestamp::now().duration_since(tijd).as_secs().abs() < 60);
 
     let geweigerd = &regels[1];
-    assert_eq!(
-        geweigerd["afzender"],
-        serde_json::json!({ "soort": "Werkplek", "naam": "Regie rechts" })
-    );
+    assert_eq!(geweigerd["afzender"], serde_json::json!({ "soort": "Werkplek", "naam": "Regie rechts" }));
     assert!(geweigerd["geweigerd"].is_string());
 }
 
@@ -310,21 +256,15 @@ async fn server_weigert_renderer_met_andere_versie() {
     let server = start(map.path()).await;
     let url = format!("ws://{}/ws?sleutel={SLEUTEL}", server.adres());
     let (mut ws, _) = tokio_tungstenite::connect_async(url).await.unwrap();
-    stuur(
-        &mut ws,
-        &BerichtAanServer::Hallo {
-            afzender: Afzender::Renderer {
-                rol: Rol::Reserve,
-                versie: "0.0.0-anders".into(),
-                machine: "studio-reserve".into(),
-            },
+    stuur(&mut ws, &BerichtAanServer::Hallo {
+        afzender: Afzender::Renderer {
+            rol: Rol::Reserve,
+            versie: "0.0.0-anders".into(),
+            machine: "studio-reserve".into(),
         },
-    )
+    })
     .await;
-    assert!(matches!(
-        ontvang(&mut ws).await,
-        BerichtVanServer::Geweigerd { .. }
-    ));
+    assert!(matches!(ontvang(&mut ws).await, BerichtVanServer::Geweigerd { .. }));
 }
 
 #[tokio::test]
@@ -335,57 +275,26 @@ async fn toon_weigert_na_wijziging_door_een_andere_werkplek_en_slaagt_daarna() {
     let mut regie = dashboard(&server, "Regie").await;
     let mut rechts = dashboard(&server, "Regie rechts").await;
 
-    stuur(
-        &mut regie,
-        &BerichtAanServer::Opdracht {
-            opdracht: zet_klaar("De Uitslagavond"),
-        },
-    )
-    .await;
+    stuur(&mut regie, &BerichtAanServer::Opdracht { opdracht: zet_klaar("De Uitslagavond") }).await;
     let BerichtVanServer::Uitgevoerd { volgnummer } = antwoord(&mut regie).await else {
         panic!("klaarzetten mislukt");
     };
-    let gezien = stand_vanaf(&mut regie, volgnummer)
-        .await
-        .stand
-        .klaar
-        .unwrap();
+    let gezien = stand_vanaf(&mut regie, volgnummer).await.stand.klaar.unwrap();
 
     let wijziging = Opdracht::WijzigKlaar {
         id: gezien.id,
-        graphic: Graphic::Titelkaart {
-            kop: "Uitslagavond 2025".into(),
-            regel: "Voorbeeldgegevens".into(),
-        },
+        graphic: Graphic::Titelkaart { kop: "Uitslagavond 2025".into(), regel: "Voorbeeldgegevens".into() },
         standpunt: None,
     };
-    stuur(
-        &mut rechts,
-        &BerichtAanServer::Opdracht {
-            opdracht: wijziging,
-        },
-    )
-    .await;
+    stuur(&mut rechts, &BerichtAanServer::Opdracht { opdracht: wijziging }).await;
     let BerichtVanServer::Uitgevoerd { volgnummer: _ } = antwoord(&mut rechts).await else {
         panic!("wijzigen mislukt");
     };
 
     // De Regie drukt op Toon met de versie die zijn scherm liet zien: die is al veranderd.
-    stuur(
-        &mut regie,
-        &BerichtAanServer::Opdracht {
-            opdracht: Opdracht::Toon {
-                versie: Some(gezien.versie),
-            },
-        },
-    )
-    .await;
-    assert_eq!(
-        antwoord(&mut regie).await,
-        BerichtVanServer::Geweigerd {
-            reden: "gewijzigd door Regie rechts".into()
-        }
-    );
+    stuur(&mut regie, &BerichtAanServer::Opdracht { opdracht: Opdracht::Toon { versie: Some(gezien.versie) } })
+        .await;
+    assert_eq!(antwoord(&mut regie).await, BerichtVanServer::Geweigerd { reden: "gewijzigd door Regie rechts".into() });
 
     // Zijn scherm toont nu de nieuwe versie; daarmee slaagt Toon.
     let nu: GenummerdeStand = http()
@@ -399,15 +308,8 @@ async fn toon_weigert_na_wijziging_door_een_andere_werkplek_en_slaagt_daarna() {
         .unwrap();
     let nu = nu.stand.klaar.unwrap();
     assert_eq!(nu.gewijzigd_door, "Regie rechts");
-    stuur(
-        &mut regie,
-        &BerichtAanServer::Opdracht {
-            opdracht: Opdracht::Toon {
-                versie: Some(nu.versie),
-            },
-        },
-    )
-    .await;
+    stuur(&mut regie, &BerichtAanServer::Opdracht { opdracht: Opdracht::Toon { versie: Some(nu.versie) } })
+        .await;
     let BerichtVanServer::Uitgevoerd { volgnummer } = antwoord(&mut regie).await else {
         panic!("Toon mislukt na de nieuwe versie");
     };
@@ -435,24 +337,13 @@ async fn huidige_stand(server: &Server) -> Stand {
 /// Verbindt zoals de tablet van de Presentator op /tablet.
 async fn tablet(server: &Server) -> Ws {
     let url = format!("ws://{}/ws?sleutel={SLEUTEL}", server.adres());
-    let (mut ws, _) = tokio_tungstenite::connect_async(url)
-        .await
-        .expect("verbinden");
-    stuur(
-        &mut ws,
-        &BerichtAanServer::Hallo {
-            afzender: Afzender::Tablet {
-                naam: "Tablet".into(),
-            },
-        },
-    )
-    .await;
+    let (mut ws, _) = tokio_tungstenite::connect_async(url).await.expect("verbinden");
+    stuur(&mut ws, &BerichtAanServer::Hallo { afzender: Afzender::Tablet { naam: "Tablet".into() } }).await;
     ws
 }
 
 #[tokio::test]
-async fn de_tablet_zet_alleen_klaar_en_toon_van_de_regie_weigert_daarna_met_gewijzigd_door_tablet()
-{
+async fn de_tablet_zet_alleen_klaar_en_toon_van_de_regie_weigert_daarna_met_gewijzigd_door_tablet() {
     let map = tempfile::tempdir().unwrap();
     let server = start(map.path()).await;
     let mut regie = dashboard(&server, "Regie").await;
@@ -460,124 +351,51 @@ async fn de_tablet_zet_alleen_klaar_en_toon_van_de_regie_weigert_daarna_met_gewi
 
     // De Regie bewaart een Preset, zet hem op de tablet en zet zelf iets anders klaar (voorbeeldgegevens).
     let preset = Opdracht::BewaarPreset {
-        graphic: Graphic::Titelkaart {
-            kop: "Van de tablet".into(),
-            regel: "Voorbeeldgegevens".into(),
-        },
+        graphic: Graphic::Titelkaart { kop: "Van de tablet".into(), regel: "Voorbeeldgegevens".into() },
         standpunt: None,
     };
-    for opdracht in [
-        preset,
-        Opdracht::ZetPresetOpTablet {
-            nummer: 1,
-            aan: true,
-        },
-        zet_klaar("De Uitslagavond"),
-    ] {
+    for opdracht in [preset, Opdracht::ZetPresetOpTablet { nummer: 1, aan: true }, zet_klaar("De Uitslagavond")] {
         stuur(&mut regie, &BerichtAanServer::Opdracht { opdracht }).await;
-        assert!(
-            matches!(
-                antwoord(&mut regie).await,
-                BerichtVanServer::Uitgevoerd { .. }
-            ),
-            "Regie geweigerd"
-        );
+        assert!(matches!(antwoord(&mut regie).await, BerichtVanServer::Uitgevoerd { .. }), "Regie geweigerd");
     }
     let gezien = huidige_stand(&server).await.klaar.unwrap();
 
     // De tablet kan niet tonen, alleen klaarzetten.
-    stuur(
-        &mut tablet,
-        &BerichtAanServer::Opdracht {
-            opdracht: Opdracht::Toon {
-                versie: Some(gezien.versie),
-            },
-        },
-    )
-    .await;
+    stuur(&mut tablet, &BerichtAanServer::Opdracht { opdracht: Opdracht::Toon { versie: Some(gezien.versie) } }).await;
     assert_eq!(
         antwoord(&mut tablet).await,
-        BerichtVanServer::Geweigerd {
-            reden: "de tablet zet alleen klaar: de Regie zet het in de Ether".into()
-        }
+        BerichtVanServer::Geweigerd { reden: "de tablet zet alleen klaar: de Regie zet het in de Ether".into() }
     );
-    stuur(
-        &mut tablet,
-        &BerichtAanServer::Opdracht {
-            opdracht: Opdracht::ZetPresetKlaar { nummer: 1 },
-        },
-    )
-    .await;
-    assert!(
-        matches!(
-            antwoord(&mut tablet).await,
-            BerichtVanServer::Uitgevoerd { .. }
-        ),
-        "tablet kon niet klaarzetten"
-    );
+    stuur(&mut tablet, &BerichtAanServer::Opdracht { opdracht: Opdracht::ZetPresetKlaar { nummer: 1 } }).await;
+    assert!(matches!(antwoord(&mut tablet).await, BerichtVanServer::Uitgevoerd { .. }), "tablet kon niet klaarzetten");
 
     // De Regie drukt op Toon met wat zijn scherm liet zien: dat is niet meer wat klaarstaat.
-    stuur(
-        &mut regie,
-        &BerichtAanServer::Opdracht {
-            opdracht: Opdracht::Toon {
-                versie: Some(gezien.versie),
-            },
-        },
-    )
-    .await;
-    assert_eq!(
-        antwoord(&mut regie).await,
-        BerichtVanServer::Geweigerd {
-            reden: "gewijzigd door Tablet".into()
-        }
-    );
+    stuur(&mut regie, &BerichtAanServer::Opdracht { opdracht: Opdracht::Toon { versie: Some(gezien.versie) } }).await;
+    assert_eq!(antwoord(&mut regie).await, BerichtVanServer::Geweigerd { reden: "gewijzigd door Tablet".into() });
 
     let nu = huidige_stand(&server).await;
     assert!(nu.ether.is_none(), "niets in de Ether");
     let klaar = nu.klaar.unwrap();
     assert_eq!(klaar.klaargezet_door, "Tablet");
-    stuur(
-        &mut regie,
-        &BerichtAanServer::Opdracht {
-            opdracht: Opdracht::Toon {
-                versie: Some(klaar.versie),
-            },
-        },
-    )
-    .await;
-    assert!(
-        matches!(
-            antwoord(&mut regie).await,
-            BerichtVanServer::Uitgevoerd { .. }
-        ),
-        "met de nieuwe versie toont de Regie"
-    );
+    stuur(&mut regie, &BerichtAanServer::Opdracht { opdracht: Opdracht::Toon { versie: Some(klaar.versie) } }).await;
+    assert!(matches!(antwoord(&mut regie).await, BerichtVanServer::Uitgevoerd { .. }), "met de nieuwe versie toont de Regie");
 
     // Het logboek noemt de tablet als afzender, ook van de weigering.
     let logboek = std::fs::read_to_string(map.path().join("logboek.jsonl")).unwrap();
-    assert!(
-        logboek
-            .lines()
-            .any(|r| r.contains(r#""soort":"Tablet""#) && r.contains("de tablet zet alleen klaar")),
-        "{logboek}"
-    );
+    assert!(logboek.lines().any(|r| r.contains(r#""soort":"Tablet""#) && r.contains("de tablet zet alleen klaar")), "{logboek}");
 }
 
 /// Verbindt zoals de Renderer met rol Voorbeeld.
 async fn voorbeeld_renderer(server: &Server) -> Ws {
     let url = format!("ws://{}/ws?sleutel={SLEUTEL}", server.adres());
     let (mut ws, _) = tokio_tungstenite::connect_async(url).await.unwrap();
-    stuur(
-        &mut ws,
-        &BerichtAanServer::Hallo {
-            afzender: Afzender::Renderer {
-                rol: Rol::Voorbeeld,
-                versie: gedeeld::VERSIE.into(),
-                machine: "regie-pc".into(),
-            },
+    stuur(&mut ws, &BerichtAanServer::Hallo {
+        afzender: Afzender::Renderer {
+            rol: Rol::Voorbeeld,
+            versie: gedeeld::VERSIE.into(),
+            machine: "regie-pc".into(),
         },
-    )
+    })
     .await;
     ws
 }
@@ -607,10 +425,7 @@ async fn kleine_beelden_van_het_voorbeeld_gaan_naar_elke_werkplek() {
 
     let mut ether_beeld = vec![Monitor::Ether.byte()];
     ether_beeld.extend_from_slice(b"\xff\xd8 een JPEG");
-    voorbeeld
-        .send(Message::binary(ether_beeld.clone()))
-        .await
-        .unwrap();
+    voorbeeld.send(Message::binary(ether_beeld.clone())).await.unwrap();
     assert_eq!(beeld(&mut regie).await, ether_beeld);
 
     // Een Werkplek die later opent, krijgt meteen het laatste beeld.
@@ -618,14 +433,8 @@ async fn kleine_beelden_van_het_voorbeeld_gaan_naar_elke_werkplek() {
     assert_eq!(beeld(&mut later).await, ether_beeld);
 
     // Een Werkplek kan geen beelden sturen.
-    regie
-        .send(Message::binary(vec![Monitor::Voorbeeld.byte(), 1, 2, 3]))
-        .await
-        .unwrap();
-    assert!(matches!(
-        antwoord(&mut regie).await,
-        BerichtVanServer::Geweigerd { .. }
-    ));
+    regie.send(Message::binary(vec![Monitor::Voorbeeld.byte(), 1, 2, 3])).await.unwrap();
+    assert!(matches!(antwoord(&mut regie).await, BerichtVanServer::Geweigerd { .. }));
 
     // Valt het Voorbeeld weg, dan krijgt elke Werkplek "geen beeld" (alleen de byte).
     drop(voorbeeld);
@@ -634,10 +443,7 @@ async fn kleine_beelden_van_het_voorbeeld_gaan_naar_elke_werkplek() {
         leeg.push(beeld(&mut later).await);
     }
     leeg.sort();
-    assert_eq!(
-        leeg,
-        vec![vec![Monitor::Voorbeeld.byte()], vec![Monitor::Ether.byte()]]
-    );
+    assert_eq!(leeg, vec![vec![Monitor::Voorbeeld.byte()], vec![Monitor::Ether.byte()]]);
 }
 
 /// De volgende melding over de Renderers die aan `past` voldoet.
@@ -646,12 +452,7 @@ async fn renderers(
     past: impl Fn(&[RendererOpMachine], &[RendererOpMachine]) -> bool,
 ) -> (Vec<RendererOpMachine>, Vec<RendererOpMachine>) {
     loop {
-        if let BerichtVanServer::Renderers {
-            verbonden,
-            geweigerd,
-            ..
-        } = ontvang(ws).await
-        {
+        if let BerichtVanServer::Renderers { verbonden, geweigerd, .. } = ontvang(ws).await {
             if past(&verbonden, &geweigerd) {
                 return (verbonden, geweigerd);
             }
@@ -666,21 +467,11 @@ async fn werkplek_ziet_welke_renderers_verbonden_zijn_met_machine_en_versie() {
     let mut regie = dashboard(&server, "Regie").await;
 
     renderers(&mut regie, |v, _| v.is_empty()).await;
-    let ether = volg_als(
-        &server.adres().to_string(),
-        SLEUTEL,
-        Rol::Ether,
-        gedeeld::VERSIE,
-        "studio-ether",
-    );
+    let ether = volg_als(&server.adres().to_string(), SLEUTEL, Rol::Ether, gedeeld::VERSIE, "studio-ether");
     let (verbonden, _) = renderers(&mut regie, |v, _| !v.is_empty()).await;
     assert_eq!(
         verbonden,
-        vec![RendererOpMachine {
-            rol: Rol::Ether,
-            machine: "studio-ether".into(),
-            versie: gedeeld::VERSIE.into()
-        }]
+        vec![RendererOpMachine { rol: Rol::Ether, machine: "studio-ether".into(), versie: gedeeld::VERSIE.into() }]
     );
     drop(ether);
     renderers(&mut regie, |v, _| v.is_empty()).await;
@@ -696,45 +487,25 @@ async fn werkplek_ziet_welke_machine_met_een_andere_versie_geweigerd_is() {
     };
     assert_eq!(versie, gedeeld::VERSIE);
 
-    let oud = volg_als(
-        &server.adres().to_string(),
-        SLEUTEL,
-        Rol::Reserve,
-        "0.0.9+oud",
-        "studio-reserve",
-    );
+    let oud = volg_als(&server.adres().to_string(), SLEUTEL, Rol::Reserve, "0.0.9+oud", "studio-reserve");
     let reden = wacht_op(&oud, |g| match g {
         Gebeurtenis::Geweigerd(r) => Some(r.clone()),
         _ => None,
     })
     .await;
-    assert!(
-        reden.contains("0.0.9+oud") && reden.contains(gedeeld::VERSIE),
-        "{reden}"
-    );
+    assert!(reden.contains("0.0.9+oud") && reden.contains(gedeeld::VERSIE), "{reden}");
     let (verbonden, geweigerd) = renderers(&mut regie, |_, g| !g.is_empty()).await;
-    assert!(
-        verbonden.is_empty(),
-        "een geweigerde Renderer telt niet als verbonden"
-    );
+    assert!(verbonden.is_empty(), "een geweigerde Renderer telt niet als verbonden");
     assert_eq!(
         geweigerd,
-        vec![RendererOpMachine {
-            rol: Rol::Reserve,
-            machine: "studio-reserve".into(),
-            versie: "0.0.9+oud".into()
-        }]
+        vec![RendererOpMachine { rol: Rol::Reserve, machine: "studio-reserve".into(), versie: "0.0.9+oud".into() }]
     );
     // de Renderer blijft het proberen; zolang hij dat doet blijft hij in de lijst, ook na de
     // bewaartijd van een weigering
     tokio::time::sleep(server::WEIGERING_BLIJFT + Duration::from_secs(1)).await;
     let mut later = dashboard(&server, "Later").await;
     let (_, geweigerd) = renderers(&mut later, |_, _| true).await;
-    assert_eq!(
-        geweigerd.len(),
-        1,
-        "een Renderer die het blijft proberen staat er nog"
-    );
+    assert_eq!(geweigerd.len(), 1, "een Renderer die het blijft proberen staat er nog");
 
     // Staat hij uit, dan verdwijnt hij na de bewaartijd uit de lijst.
     drop(oud);
@@ -759,10 +530,7 @@ async fn wacht_op<T>(volger: &Volger, past: impl Fn(&Gebeurtenis) -> Option<T>) 
                 return t;
             }
         }
-        assert!(
-            tokio::time::Instant::now() < tot,
-            "geen passende gebeurtenis binnen 10 s"
-        );
+        assert!(tokio::time::Instant::now() < tot, "geen passende gebeurtenis binnen 10 s");
         tokio::time::sleep(Duration::from_millis(20)).await;
     }
 }
@@ -798,18 +566,12 @@ async fn renderer_houdt_de_stand_vast_als_de_server_wegvalt_en_verbindt_weer_als
     let voor = wacht_op_stand(&ether, |s| s.volgnummer >= volgnummer).await;
 
     server.stop().await;
-    wacht_op(&ether, |g| {
-        matches!(g, Gebeurtenis::Verbroken(_)).then_some(())
-    })
-    .await;
+    wacht_op(&ether, |g| matches!(g, Gebeurtenis::Verbroken(_)).then_some(())).await;
 
     // De server komt terug op hetzelfde adres en leest de Stand van schijf; de Renderer verbindt
     // uit zichzelf opnieuw en krijgt dezelfde Stand, dus er verandert niets in beeld.
     let server = start_op(map.path(), adres).await;
-    wacht_op(&ether, |g| {
-        matches!(g, Gebeurtenis::Verbonden).then_some(())
-    })
-    .await;
+    wacht_op(&ether, |g| matches!(g, Gebeurtenis::Verbonden).then_some(())).await;
     let na = wacht_op_stand(&ether, |_| true).await;
     assert_eq!(na, voor);
     assert!(na.stand.ether.is_some());
@@ -842,10 +604,7 @@ async fn een_herstarte_renderer_krijgt_meteen_de_hele_stand_met_de_graphic_in_de
 }
 
 /// Verzamelt een tijd lang de camerabeelden van een volger, op tiknummer.
-fn camerabeelden(
-    volger: &Volger,
-    in_: &mut std::collections::BTreeMap<u64, gedeeld::camera::Camerabeeld>,
-) {
+fn camerabeelden(volger: &Volger, in_: &mut std::collections::BTreeMap<u64, gedeeld::camera::Camerabeeld>) {
     while let Ok(g) = volger.gebeurtenissen.try_recv() {
         if let Gebeurtenis::Camera { beeld: c, .. } = g {
             in_.insert(c.tik, c);
@@ -868,10 +627,7 @@ async fn twee_renderers_krijgen_dezelfde_reeks_camerastanden() {
     let antwoord = http()
         .post(format!("http://{adres}/api/opdracht"))
         .bearer_auth(SLEUTEL)
-        .json(&Opdracht::KiesStandpunt {
-            letter: "G".into(),
-            knip: false,
-        })
+        .json(&Opdracht::KiesStandpunt { letter: "G".into(), knip: false })
         .send()
         .await
         .unwrap();
@@ -887,11 +643,7 @@ async fn twee_renderers_krijgen_dezelfde_reeks_camerastanden() {
 
     for (naam, reeks) in [("Ether", &e), ("Reserve", &r)] {
         let (eerste, laatste) = (*reeks.keys().next().unwrap(), *reeks.keys().last().unwrap());
-        assert_eq!(
-            laatste - eerste + 1,
-            reeks.len() as u64,
-            "{naam} mist tikken"
-        );
+        assert_eq!(laatste - eerste + 1, reeks.len() as u64, "{naam} mist tikken");
         assert!(reeks.len() >= 250, "{naam}: {} beelden in 3 s", reeks.len());
     }
     let samen: Vec<u64> = e.keys().filter(|t| r.contains_key(t)).copied().collect();
@@ -905,14 +657,8 @@ async fn twee_renderers_krijgen_dezelfde_reeks_camerastanden() {
     let posities: Vec<[f32; 3]> = samen.iter().map(|t| e[t].ether.stand.positie).collect();
     assert_eq!(posities.first(), Some(&a.positie));
     assert_eq!(e[samen.last().unwrap()].ether.stand, g);
-    let tussen = posities
-        .iter()
-        .filter(|p| **p != a.positie && **p != g.positie)
-        .count();
-    assert!(
-        (150..=210).contains(&tussen),
-        "{tussen} tikken onderweg, verwacht ongeveer 200"
-    );
+    let tussen = posities.iter().filter(|p| **p != a.positie && **p != g.positie).count();
+    assert!((150..=210).contains(&tussen), "{tussen} tikken onderweg, verwacht ongeveer 200");
 }
 
 /// Voert een Opdracht uit vanaf deze Werkplek en geeft het volgnummer.
@@ -936,12 +682,7 @@ async fn bewerkingen(ws: &mut Ws, past: impl Fn(&[Bewerking]) -> bool) -> Vec<Be
 }
 
 fn zetels(ws_stand: &GenummerdeStand, partij: &str) -> u32 {
-    ws_stand
-        .stand
-        .cijfers
-        .set("exitpoll")
-        .unwrap()
-        .zetels_van(partij)
+    ws_stand.stand.cijfers.set("exitpoll").unwrap().zetels_van(partij)
 }
 
 #[tokio::test]
@@ -952,67 +693,22 @@ async fn twee_werkplekken_bewerken_dezelfde_set_per_vakje_telt_de_laatste_wijzig
     let mut invoer = dashboard(&server, "Invoer").await;
 
     // Voorbeeldgegevens: drie Partijen en een lege Exitpoll.
-    for (naam, kort) in [
-        ("Alfa Partij", "ALFA"),
-        ("Beta Unie", "BETA"),
-        ("Gamma Lijst", "GAM"),
-    ] {
-        let o = Opdracht::VoegPartijToe {
-            naam: naam.into(),
-            kort: kort.into(),
-            kleur: None,
-            logo: None,
-            fractie_zonder_lijst: false,
-        };
+    for (naam, kort) in [("Alfa Partij", "ALFA"), ("Beta Unie", "BETA"), ("Gamma Lijst", "GAM")] {
+        let o = Opdracht::VoegPartijToe { naam: naam.into(), kort: kort.into(), kleur: None, logo: None, fractie_zonder_lijst: false };
         voer_uit(&mut regie, o).await;
     }
-    voer_uit(
-        &mut regie,
-        Opdracht::MaakSet {
-            setsoort: Soort::Exitpoll,
-            label: "Exitpoll".into(),
-        },
-    )
-    .await;
+    voer_uit(&mut regie, Opdracht::MaakSet { setsoort: Soort::Exitpoll, label: "Exitpoll".into() }).await;
 
     // Allebei openen ze de Exitpoll. Elk scherm ziet dat de ander hem open heeft; niets gaat op slot.
-    stuur(
-        &mut regie,
-        &BerichtAanServer::Bewerk {
-            set: Some("exitpoll".into()),
-        },
-    )
-    .await;
-    stuur(
-        &mut invoer,
-        &BerichtAanServer::Bewerk {
-            set: Some("exitpoll".into()),
-        },
-    )
-    .await;
+    stuur(&mut regie, &BerichtAanServer::Bewerk { set: Some("exitpoll".into()) }).await;
+    stuur(&mut invoer, &BerichtAanServer::Bewerk { set: Some("exitpoll".into()) }).await;
     let bij_regie = bewerkingen(&mut regie, |b| !b.is_empty()).await;
-    assert_eq!(
-        bij_regie,
-        [Bewerking {
-            werkplek: "Invoer".into(),
-            set: "exitpoll".into()
-        }]
-    );
+    assert_eq!(bij_regie, [Bewerking { werkplek: "Invoer".into(), set: "exitpoll".into() }]);
     let bij_invoer = bewerkingen(&mut invoer, |b| !b.is_empty()).await;
-    assert_eq!(
-        bij_invoer,
-        [Bewerking {
-            werkplek: "Regie".into(),
-            set: "exitpoll".into()
-        }]
-    );
+    assert_eq!(bij_invoer, [Bewerking { werkplek: "Regie".into(), set: "exitpoll".into() }]);
 
     // Verschillende vakjes: allebei gaan door.
-    let zet = |partij: &str, zetels: u16| Opdracht::ZetZetels {
-        set: "exitpoll".into(),
-        partij: partij.into(),
-        zetels,
-    };
+    let zet = |partij: &str, zetels: u16| Opdracht::ZetZetels { set: "exitpoll".into(), partij: partij.into(), zetels };
     voer_uit(&mut regie, zet("alfa", 30)).await;
     voer_uit(&mut invoer, zet("beta", 20)).await;
     // Hetzelfde vakje: de laatste wijziging telt.
@@ -1021,22 +717,13 @@ async fn twee_werkplekken_bewerken_dezelfde_set_per_vakje_telt_de_laatste_wijzig
 
     for ws in [&mut regie, &mut invoer] {
         let s = stand_vanaf(ws, laatste).await;
-        assert_eq!(
-            (zetels(&s, "alfa"), zetels(&s, "beta"), zetels(&s, "gam")),
-            (30, 20, 12)
-        );
+        assert_eq!((zetels(&s, "alfa"), zetels(&s, "beta"), zetels(&s, "gam")), (30, 20, 12));
     }
 
     // Invoer sluit de set (of valt weg): de Regie ziet niemand meer bewerken.
     stuur(&mut invoer, &BerichtAanServer::Bewerk { set: None }).await;
     bewerkingen(&mut regie, |b| b.is_empty()).await;
-    stuur(
-        &mut invoer,
-        &BerichtAanServer::Bewerk {
-            set: Some("exitpoll".into()),
-        },
-    )
-    .await;
+    stuur(&mut invoer, &BerichtAanServer::Bewerk { set: Some("exitpoll".into()) }).await;
     bewerkingen(&mut regie, |b| !b.is_empty()).await;
     drop(invoer);
     bewerkingen(&mut regie, |b| b.is_empty()).await;

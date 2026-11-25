@@ -39,11 +39,7 @@ fn de_stoelen_lopen_van_links_naar_rechts_in_beeld_vanaf_de_voorzitter() {
     assert_eq!(volgorde.len(), 150);
     let mut gezien = volgorde.clone();
     gezien.sort();
-    assert_eq!(
-        gezien,
-        (0..150).collect::<Vec<_>>(),
-        "elke Stoel precies één keer"
-    );
+    assert_eq!(gezien, (0..150).collect::<Vec<_>>(), "elke Stoel precies één keer");
     // Vak 1 staat rechts in beeld vanaf de Voorzitter (#7), dus vak 6 links.
     let alle: Vec<Stoel> = Stoel::alle().collect();
     assert_eq!(alle[volgorde[0]].vak, 6);
@@ -65,10 +61,7 @@ fn elke_partij_krijgt_aaneengesloten_stoelen_en_grijs_staat_rechts_achteraan() {
     assert_eq!(zaal.len(), 150);
 
     // Van links naar rechts in beeld: 30 rood, 1 groen, 50 blauw, 59 geel, 10 grijs.
-    let rij: Vec<Kleur> = stoelen_van_links_naar_rechts()
-        .iter()
-        .map(|&i| zaal[i])
-        .collect();
+    let rij: Vec<Kleur> = stoelen_van_links_naar_rechts().iter().map(|&i| zaal[i]).collect();
     let mut blokken: Vec<(Kleur, usize)> = Vec::new();
     for k in rij {
         match blokken.last_mut() {
@@ -133,20 +126,11 @@ fn partijlijst() -> Cijfers {
 fn een_nieuwe_partij_staat_rechts_achteraan_met_een_waarschuwing() {
     let c = partijlijst();
     let v = Uitslagvolgorde {
-        lijst: vec![
-            "c".into(),
-            "a".into(),
-            "b".into(),
-            "groep-b".into(),
-            "lid-b".into(),
-        ],
+        lijst: vec!["c".into(), "a".into(), "b".into(), "groep-b".into(), "lid-b".into()],
         herkomst: BTreeMap::new(),
     }
     .bepaal(&c);
-    assert_eq!(
-        v.partijen,
-        ["c", "a", "b", "groep-b", "lid-b", "nieuw", "klein"]
-    );
+    assert_eq!(v.partijen, ["c", "a", "b", "groep-b", "lid-b", "nieuw", "klein"]);
     // "klein" heeft nergens Zetels: geen waarschuwing
     assert_eq!(v.niet_op_lijst, ["nieuw"]);
 }
@@ -155,38 +139,20 @@ fn een_nieuwe_partij_staat_rechts_achteraan_met_een_waarschuwing() {
 fn een_fractie_zonder_lijst_staat_direct_rechts_naast_haar_oude_fractie() {
     let c = partijlijst();
     let v = Uitslagvolgorde {
-        lijst: vec![
-            "c".into(),
-            "b".into(),
-            "a".into(),
-            "nieuw".into(),
-            "klein".into(),
-        ],
+        lijst: vec!["c".into(), "b".into(), "a".into(), "nieuw".into(), "klein".into()],
         herkomst: [("groep-b".into(), "b".into()), ("lid-b".into(), "b".into())].into(),
     }
     .bepaal(&c);
-    assert_eq!(
-        v.partijen,
-        ["c", "b", "groep-b", "lid-b", "a", "nieuw", "klein"]
-    );
+    assert_eq!(v.partijen, ["c", "b", "groep-b", "lid-b", "a", "nieuw", "klein"]);
     assert!(v.niet_op_lijst.is_empty());
 
     // vóór de uitzending verschoven: dan geldt de lijst
     let v = Uitslagvolgorde {
-        lijst: vec![
-            "lid-b".into(),
-            "c".into(),
-            "b".into(),
-            "a".into(),
-            "nieuw".into(),
-        ],
+        lijst: vec!["lid-b".into(), "c".into(), "b".into(), "a".into(), "nieuw".into()],
         herkomst: [("groep-b".into(), "b".into()), ("lid-b".into(), "b".into())].into(),
     }
     .bepaal(&c);
-    assert_eq!(
-        v.partijen,
-        ["lid-b", "c", "b", "groep-b", "a", "nieuw", "klein"]
-    );
+    assert_eq!(v.partijen, ["lid-b", "c", "b", "groep-b", "a", "nieuw", "klein"]);
 }
 
 #[test]
@@ -203,11 +169,7 @@ fn de_lijn_bij_76_scheidt_de_eerste_75_stoelen_van_links_van_de_rest() {
     for (rang, &i) in volgorde.iter().enumerate() {
         let k = kant(STOELPLEKKEN[i]);
         assert!(k.abs() > 0.05, "Stoel {rang} ligt bijna op de lijn");
-        assert_eq!(
-            k.signum() == links,
-            rang < 75,
-            "Stoel {rang} ligt aan de verkeerde kant"
-        );
+        assert_eq!(k.signum() == links, rang < 75, "Stoel {rang} ligt aan de verkeerde kant");
     }
     // de lijn loopt van voor de voorste rij tot achter de achterste
     let straal = |p: [f32; 3]| p[0].hypot(p[2]);
@@ -223,17 +185,6 @@ fn de_lijn_bij_76_scheidt_de_eerste_75_stoelen_van_links_van_de_rest() {
         assert!(straal(b) >= straal(a));
         assert!(kant(b).abs() < 1e-3, "{b:?} ligt niet op de lijn");
     }
-    assert!(
-        voor[1] < 0.05,
-        "de lijn begint op de vloer, niet op de hoogte van de rugleuningen"
-    );
-    assert_eq!(
-        lijn.iter()
-            .filter(|p| p[1] > voor[1])
-            .map(|p| p[1].to_bits())
-            .collect::<std::collections::BTreeSet<_>>()
-            .len(),
-        5,
-        "vijf treden omhoog"
-    );
+    assert!(voor[1] < 0.05, "de lijn begint op de vloer, niet op de hoogte van de rugleuningen");
+    assert_eq!(lijn.iter().filter(|p| p[1] > voor[1]).map(|p| p[1].to_bits()).collect::<std::collections::BTreeSet<_>>().len(), 5, "vijf treden omhoog");
 }

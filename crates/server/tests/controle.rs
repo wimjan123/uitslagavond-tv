@@ -45,11 +45,7 @@ const CDA: &str = "62c1a13c-85ff-40ed-90f7-a9546d61f869";
 
 /// Een Stand met de Kamer en de Stemmingslijst van `dag`.
 fn stand_met(kamer: &str, peildatum: Date, lijst: &str, dag: Date) -> Stand {
-    let h = Herkomst {
-        door: "Proef",
-        volgnummer: 1,
-        tijd_ms: 0,
-    };
+    let h = Herkomst { door: "Proef", volgnummer: 1, tijd_ms: 0 };
     let personen = server::opendata::lees_pagina(kamer).unwrap().personen;
     let k = server::opendata::kamer_op(&personen, peildatum);
     let mut s = Stand::default();
@@ -63,16 +59,10 @@ fn stand_met(kamer: &str, peildatum: Date, lijst: &str, dag: Date) -> Stand {
         &h,
     )
     .unwrap();
-    let activiteiten = server::stemmingslijst::lees_pagina(lijst)
-        .unwrap()
-        .activiteiten;
+    let activiteiten = server::stemmingslijst::lees_pagina(lijst).unwrap().activiteiten;
     let punten = server::stemmingslijst::punten_op(&activiteiten, dag);
     s.voer_uit(
-        &Opdracht::LeesStemmingslijst {
-            dag: dag.to_string(),
-            ingelezen: "2026-11-22T08:00:00+01:00".into(),
-            punten,
-        },
+        &Opdracht::LeesStemmingslijst { dag: dag.to_string(), ingelezen: "2026-11-22T08:00:00+01:00".into(), punten },
         &h,
     )
     .unwrap();
@@ -96,19 +86,12 @@ fn uit_open_data(stand: &Stand) -> Vec<OpgehaaldeUitslag> {
 }
 
 fn van<'a>(u: &'a [OpgehaaldeUitslag], stemming: &str) -> &'a OpgehaaldeUitslag {
-    u.iter()
-        .find(|u| u.stemming == stemming)
-        .unwrap_or_else(|| panic!("geen uitslag voor {stemming}"))
+    u.iter().find(|u| u.stemming == stemming).unwrap_or_else(|| panic!("geen uitslag voor {stemming}"))
 }
 
 fn voor(u: &OpgehaaldeUitslag) -> Vec<&str> {
-    let mut v: Vec<&str> = u
-        .uitslag
-        .fracties
-        .iter()
-        .filter(|f| f.stem == Stem::Voor)
-        .map(|f| f.fractie.as_str())
-        .collect();
+    let mut v: Vec<&str> =
+        u.uitslag.fracties.iter().filter(|f| f.stem == Stem::Voor).map(|f| f.fractie.as_str()).collect();
     v.sort();
     v
 }
@@ -122,14 +105,7 @@ fn debat_direct_geeft_de_stemmingen_van_19_november_per_fractie() {
     // de tekst na "over". De aangehouden motie van Van der Plas heeft geen ronde.
     let mut ids: Vec<&str> = u.iter().map(|u| u.stemming.as_str()).collect();
     ids.sort();
-    let mut verwacht = vec![
-        WILDERS,
-        PRICKAERTZ,
-        GOUDZWAARD,
-        KROGER,
-        "0e6421c0-a03c-4994-9679-fcd466c00e1a",
-        "6d2f0407-cae5-47bc-9ae6-23b0b10d1e33",
-    ];
+    let mut verwacht = vec![WILDERS, PRICKAERTZ, GOUDZWAARD, KROGER, "0e6421c0-a03c-4994-9679-fcd466c00e1a", "6d2f0407-cae5-47bc-9ae6-23b0b10d1e33"];
     verwacht.sort();
     assert_eq!(ids, verwacht);
 
@@ -137,22 +113,12 @@ fn debat_direct_geeft_de_stemmingen_van_19_november_per_fractie() {
     assert_eq!(w.uitslag.bron, Bron::DebatDirect);
     assert_eq!(w.uitslag.besluit, Besluit::Verworpen);
     assert!(!w.uitslag.hoofdelijk);
-    assert_eq!(
-        w.uitslag.fracties.len(),
-        17,
-        "elke Fractie van Debat Direct hoort bij een Fractie van de Kamer"
-    );
+    assert_eq!(w.uitslag.fracties.len(), 17, "elke Fractie van Debat Direct hoort bij een Fractie van de Kamer");
     let mut pvv_sp_fvd = vec![PVV, SP, FVD];
     pvv_sp_fvd.sort();
     assert_eq!(voor(w), pvv_sp_fvd);
-    assert_eq!(
-        w.uitslag.hamerslag.as_deref(),
-        Some("2026-11-19T13:34:52+01:00")
-    );
-    assert!(
-        u.iter()
-            .all(|u| !u.uitslag.fracties.is_empty() && u.uitslag.afwijkend.is_empty())
-    );
+    assert_eq!(w.uitslag.hamerslag.as_deref(), Some("2026-11-19T13:34:52+01:00"));
+    assert!(u.iter().all(|u| !u.uitslag.fracties.is_empty() && u.uitslag.afwijkend.is_empty()));
 }
 
 #[test]
@@ -168,41 +134,23 @@ fn de_open_data_geeft_dezelfde_stemmen_als_debat_direct() {
         let d = van(&dd, &u.stemming);
         assert_eq!(u.uitslag.besluit, d.uitslag.besluit, "{}", u.stemming);
         let gesorteerd = |f: &[GetikteFractie]| {
-            let mut f: Vec<(String, Stem)> =
-                f.iter().map(|g| (g.fractie.clone(), g.stem)).collect();
+            let mut f: Vec<(String, Stem)> = f.iter().map(|g| (g.fractie.clone(), g.stem)).collect();
             f.sort();
             f
         };
-        assert_eq!(
-            gesorteerd(&u.uitslag.fracties),
-            gesorteerd(&d.uitslag.fracties),
-            "{}",
-            u.stemming
-        );
+        assert_eq!(gesorteerd(&u.uitslag.fracties), gesorteerd(&d.uitslag.fracties), "{}", u.stemming);
     }
 }
 
 #[test]
 fn een_hoofdelijke_stemming_in_debat_direct_telt_per_kamerlid() {
     // Donderdag 12 november: het Belastingplan 2027, hoofdelijk, aangenomen.
-    let stand = stand_met(
-        KAMER_15_NOV,
-        date(2026, 11, 15),
-        LIJST_12_NOV,
-        date(2026, 11, 12),
-    );
+    let stand = stand_met(KAMER_15_NOV, date(2026, 11, 15), LIJST_12_NOV, date(2026, 11, 12));
     let u = uit_debat_direct(&stand, DD_DEBAT_12_NOV);
     let bp = u
         .iter()
         .find(|u| {
-            stand
-                .stemmingen
-                .stemming(&u.stemming)
-                .unwrap()
-                .punt
-                .nummer
-                .as_deref()
-                == Some("37022")
+            stand.stemmingen.stemming(&u.stemming).unwrap().punt.nummer.as_deref() == Some("37022")
         })
         .expect("het wetsvoorstel 37022 komt op titel uit Debat Direct");
     assert!(bp.uitslag.hoofdelijk);
@@ -211,25 +159,11 @@ fn een_hoofdelijke_stemming_in_debat_direct_telt_per_kamerlid() {
     let mut s = stand.clone();
     let id = bp.stemming.clone();
     s.voer_uit(
-        &Opdracht::LeesOfficieleUitslagen {
-            opgehaald: "2026-11-12T23:30:00+01:00".into(),
-            uitslagen: u.clone(),
-        },
-        &Herkomst {
-            door: "Proef",
-            volgnummer: 2,
-            tijd_ms: 0,
-        },
+        &Opdracht::LeesOfficieleUitslagen { opgehaald: "2026-11-12T23:30:00+01:00".into(), uitslagen: u.clone() },
+        &Herkomst { door: "Proef", volgnummer: 2, tijd_ms: 0 },
     )
     .unwrap();
-    let o = s
-        .stemmingen
-        .stemming(&id)
-        .unwrap()
-        .controle
-        .officiele_uitkomst
-        .clone()
-        .unwrap();
+    let o = s.stemmingen.stemming(&id).unwrap().controle.officiele_uitkomst.clone().unwrap();
     assert_eq!(o.voor + o.tegen + o.open, 150);
     assert!(o.voor > o.tegen, "aangenomen: {o:?}");
     assert_eq!(o.besluit, Some(Besluit::Aangenomen));
@@ -240,35 +174,21 @@ fn een_hoofdelijke_stemming_in_debat_direct_telt_per_kamerlid() {
 /// Een nep-API voor de open data en Debat Direct, met de antwoorden van 19 november.
 async fn nep_api() -> String {
     let app = Router::new()
-        .route(
-            "/Persoon",
-            get(|| async { ([(header::CONTENT_TYPE, "application/json")], KAMER) }),
-        )
+        .route("/Persoon", get(|| async { ([(header::CONTENT_TYPE, "application/json")], KAMER) }))
         .route(
             "/Activiteit",
             get(|RawQuery(q): RawQuery| async move {
                 let q = q.unwrap_or_default();
-                let antwoord = if q.contains("Besluit") {
-                    STEMMING_19_NOV
-                } else {
-                    LIJST_19_NOV
-                };
+                let antwoord = if q.contains("Besluit") { STEMMING_19_NOV } else { LIJST_19_NOV };
                 ([(header::CONTENT_TYPE, "application/json")], antwoord)
             }),
         )
-        .route(
-            "/dd/actors",
-            get(|| async { ([(header::CONTENT_TYPE, "application/json")], DD_ACTORS) }),
-        )
+        .route("/dd/actors", get(|| async { ([(header::CONTENT_TYPE, "application/json")], DD_ACTORS) }))
         .route(
             "/dd/agenda/{dag}",
             get(|Path(dag): Path<String>| async move {
                 if dag == "2026-11-19" {
-                    (
-                        [(header::CONTENT_TYPE, "application/json")],
-                        DD_AGENDA_19_NOV,
-                    )
-                        .into_response()
+                    ([(header::CONTENT_TYPE, "application/json")], DD_AGENDA_19_NOV).into_response()
                 } else {
                     StatusCode::NOT_FOUND.into_response()
                 }
@@ -278,18 +198,10 @@ async fn nep_api() -> String {
             "/dd/agenda/{dag}/debates/{id}",
             get(|Path((dag, id)): Path<(String, String)>| async move {
                 if dag == "2026-11-19" && id == "1e7725ce-08dd-46d8-8105-08c4a50e2e67" {
-                    (
-                        [(header::CONTENT_TYPE, "application/json")],
-                        DD_DEBAT_19_NOV,
-                    )
-                        .into_response()
+                    ([(header::CONTENT_TYPE, "application/json")], DD_DEBAT_19_NOV).into_response()
                 } else {
                     // Een ander debat van die dag: geen Stemmingen.
-                    (
-                        [(header::CONTENT_TYPE, "application/json")],
-                        r#"{"votings":[]}"#,
-                    )
-                        .into_response()
+                    ([(header::CONTENT_TYPE, "application/json")], r#"{"votings":[]}"#).into_response()
                 }
             }),
         );
@@ -319,11 +231,7 @@ async fn opdracht(server: &Server, o: &Opdracht) {
         .send()
         .await
         .unwrap();
-    assert!(
-        r.status().is_success(),
-        "{o:?}: {}",
-        r.text().await.unwrap()
-    );
+    assert!(r.status().is_success(), "{o:?}: {}", r.text().await.unwrap());
 }
 
 async fn wacht_op(server: &Server, past: impl Fn(&GenummerdeStand) -> bool) -> GenummerdeStand {
@@ -339,12 +247,7 @@ async fn wacht_op(server: &Server, past: impl Fn(&GenummerdeStand) -> bool) -> G
 }
 
 fn status(s: &GenummerdeStand, stemming: &str) -> Option<Controlestatus> {
-    s.stand
-        .stemmingen
-        .stemming(stemming)
-        .unwrap()
-        .controle
-        .status
+    s.stand.stemmingen.stemming(stemming).unwrap().controle.status
 }
 
 /// Voorbeeldinvoer: `voor` getikt voor, de rest "Overige tegen".
@@ -352,13 +255,7 @@ fn invoer(stemming: &str, voor: &[impl AsRef<str>]) -> Opdracht {
     Opdracht::ZetStemgedrag {
         stemming: stemming.into(),
         stemgedrag: Stemgedrag {
-            getikt: voor
-                .iter()
-                .map(|f| GetikteFractie {
-                    fractie: f.as_ref().into(),
-                    stem: Stem::Voor,
-                })
-                .collect(),
+            getikt: voor.iter().map(|f| GetikteFractie { fractie: f.as_ref().into(), stem: Stem::Voor }).collect(),
             overige: Some(Stem::Tegen),
             ..Default::default()
         },
@@ -385,10 +282,7 @@ async fn de_server_haalt_de_officiele_uitslag_op_en_zet_hem_naast_de_invoer() {
     })
     .await
     .expect("server start");
-    wacht_op(&server, |s| {
-        s.stand.stemmingen.lijst.len() == 7 && s.stand.kamer.fracties.len() == 17
-    })
-    .await;
+    wacht_op(&server, |s| s.stand.stemmingen.lijst.len() == 7 && s.stand.kamer.fracties.len() == 17).await;
 
     // Voorbeeldinvoer van de Regie, zoals tijdens de uitzending.
     // Wilders: PVV, SP en FVD voor, de rest tegen. Klopt.
@@ -407,16 +301,10 @@ async fn de_server_haalt_de_officiele_uitslag_op_en_zet_hem_naast_de_invoer() {
     // Van der Plas: aangehouden, nooit een officiële uitslag.
     opdracht(&server, &invoer(VAN_DER_PLAS, &[PVV])).await;
 
-    let s = wacht_op(&server, |s| {
-        status(s, WILDERS) == Some(Controlestatus::Gelijk)
-    })
-    .await;
+    let s = wacht_op(&server, |s| status(s, WILDERS) == Some(Controlestatus::Gelijk)).await;
     assert_eq!(status(&s, PRICKAERTZ), Some(Controlestatus::UitkomstAnders));
     assert_eq!(status(&s, KROGER), Some(Controlestatus::VerschilPerFractie));
-    assert_eq!(
-        status(&s, VAN_DER_PLAS),
-        Some(Controlestatus::WachtOpOfficieel)
-    );
+    assert_eq!(status(&s, VAN_DER_PLAS), Some(Controlestatus::WachtOpOfficieel));
     assert_eq!(status(&s, GOUDZWAARD), None, "niet ingevoerd");
 
     // De open data gaat voor Debat Direct; de server weet nog wanneer Debat Direct de uitslag had.
@@ -431,34 +319,14 @@ async fn de_server_haalt_de_officiele_uitslag_op_en_zet_hem_naast_de_invoer() {
     let p = s.stand.stemmingen.stemming(PRICKAERTZ).unwrap();
     assert_eq!(p.uitkomst.besluit, Some(Besluit::Aangenomen));
 
-    opdracht(
-        &server,
-        &Opdracht::NeemOfficieelOver {
-            stemming: PRICKAERTZ.into(),
-        },
-    )
-    .await;
-    let s = wacht_op(&server, |s| {
-        status(s, PRICKAERTZ) == Some(Controlestatus::Gelijk)
-    })
-    .await;
-    assert_eq!(
-        s.stand
-            .stemmingen
-            .stemming(PRICKAERTZ)
-            .unwrap()
-            .uitkomst
-            .besluit,
-        Some(Besluit::Verworpen)
-    );
+    opdracht(&server, &Opdracht::NeemOfficieelOver { stemming: PRICKAERTZ.into() }).await;
+    let s = wacht_op(&server, |s| status(s, PRICKAERTZ) == Some(Controlestatus::Gelijk)).await;
+    assert_eq!(s.stand.stemmingen.stemming(PRICKAERTZ).unwrap().uitkomst.besluit, Some(Besluit::Verworpen));
     server.stop().await;
 }
 
 /// Welke Fracties officieel voor stemden, volgens de vastgelegde `Stemming`-regels.
 fn officieel_voor(stemming: &str) -> Vec<String> {
     let u = uit_open_data(&stand_19_nov());
-    voor(van(&u, stemming))
-        .into_iter()
-        .map(str::to_owned)
-        .collect()
+    voor(van(&u, stemming)).into_iter().map(str::to_owned).collect()
 }

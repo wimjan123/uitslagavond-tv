@@ -46,16 +46,7 @@ pub struct Occlusie {
 
 impl Occlusie {
     pub fn new(straal: f32, sterkte: f32) -> Self {
-        Occlusie {
-            near: 0.05,
-            tan_x: 1.0,
-            tan_y: 1.0,
-            straal,
-            sterkte,
-            _a: 0.0,
-            _b: 0.0,
-            _c: 0.0,
-        }
+        Occlusie { near: 0.05, tan_x: 1.0, tan_y: 1.0, straal, sterkte, _a: 0.0, _b: 0.0, _c: 0.0 }
     }
 }
 
@@ -204,11 +195,9 @@ fn occlusie(
     if *msaa == Msaa::Off {
         return;
     }
-    let (Some(pijplijn), Some(render_pijplijn), Some(instellingen)) = (
-        pijplijn,
-        cache.get_render_pipeline(id.0),
-        uniformen.uniforms().binding(),
-    ) else {
+    let (Some(pijplijn), Some(render_pijplijn), Some(instellingen)) =
+        (pijplijn, cache.get_render_pipeline(id.0), uniformen.uniforms().binding())
+    else {
         return;
     };
     let post = doel.post_process_write();
@@ -223,21 +212,19 @@ fn occlusie(
         &cache.get_bind_group_layout(&pijplijn.diepte),
         &BindGroupEntries::single(&diepte.attachment.texture.default_view),
     );
-    let mut pas = ctx
-        .command_encoder()
-        .begin_render_pass(&RenderPassDescriptor {
-            label: Some("occlusie"),
-            color_attachments: &[Some(RenderPassColorAttachment {
-                view: post.destination,
-                depth_slice: None,
-                resolve_target: None,
-                ops: Operations::default(),
-            })],
-            depth_stencil_attachment: None,
-            timestamp_writes: None,
-            occlusion_query_set: None,
-            multiview_mask: None,
-        });
+    let mut pas = ctx.command_encoder().begin_render_pass(&RenderPassDescriptor {
+        label: Some("occlusie"),
+        color_attachments: &[Some(RenderPassColorAttachment {
+            view: post.destination,
+            depth_slice: None,
+            resolve_target: None,
+            ops: Operations::default(),
+        })],
+        depth_stencil_attachment: None,
+        timestamp_writes: None,
+        occlusion_query_set: None,
+        multiview_mask: None,
+    });
     pas.set_pipeline(render_pijplijn);
     pas.set_bind_group(0, &bron, &[index.index()]);
     pas.set_bind_group(1, &diepte, &[]);

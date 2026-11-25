@@ -52,15 +52,13 @@ struct Opties {
 async fn main() -> anyhow::Result<()> {
     tracing_subscriber::fmt()
         .with_env_filter(
-            tracing_subscriber::EnvFilter::try_from_default_env().unwrap_or_else(|_| "info".into()),
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| "info".into()),
         )
         .init();
     let o = Opties::parse();
     if !o.dashboard.join("index.html").exists() {
-        tracing::warn!(
-            "geen dashboard in {}: bouw het met `npm run build` in dashboard/",
-            o.dashboard.display()
-        );
+        tracing::warn!("geen dashboard in {}: bouw het met `npm run build` in dashboard/", o.dashboard.display());
     }
     let server = Server::start(Instellingen {
         adres: o.adres,

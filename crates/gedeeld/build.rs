@@ -7,9 +7,7 @@ use std::process::Command;
 
 fn git(args: &[&str]) -> Option<String> {
     let uit = Command::new("git").args(args).output().ok()?;
-    uit.status
-        .success()
-        .then(|| String::from_utf8_lossy(&uit.stdout).trim().to_string())
+    uit.status.success().then(|| String::from_utf8_lossy(&uit.stdout).trim().to_string())
 }
 
 fn main() {
@@ -21,14 +19,10 @@ fn main() {
     println!("cargo:rustc-env=UITSLAGAVOND_VERSIE={versie}");
     println!("cargo:rerun-if-env-changed=CARGO_PKG_VERSION");
     // Opnieuw bij een nieuwe commit: HEAD, de branch waar HEAD naar wijst, en packed-refs.
-    if let (Some(map), Some(gemeen)) = (
-        git(&["rev-parse", "--git-dir"]),
-        git(&["rev-parse", "--git-common-dir"]),
-    ) {
-        let mut paden = vec![
-            Path::new(&map).join("HEAD"),
-            Path::new(&gemeen).join("packed-refs"),
-        ];
+    if let (Some(map), Some(gemeen)) =
+        (git(&["rev-parse", "--git-dir"]), git(&["rev-parse", "--git-common-dir"]))
+    {
+        let mut paden = vec![Path::new(&map).join("HEAD"), Path::new(&gemeen).join("packed-refs")];
         if let Some(r) = git(&["symbolic-ref", "-q", "HEAD"]) {
             paden.push(Path::new(&gemeen).join(r));
         }

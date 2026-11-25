@@ -46,19 +46,13 @@ pub fn delen(set: &Cijferset, volgorde: &[String], gekozen: &[String]) -> Vec<Ba
     let mut uit: Vec<Balkdeel> = volgorde
         .iter()
         .filter(|p| gekozen.contains(p))
-        .map(|p| Balkdeel {
-            partij: Some(p.clone()),
-            zetels: set.zetels_van(p),
-        })
+        .map(|p| Balkdeel { partij: Some(p.clone()), zetels: set.zetels_van(p) })
         .filter(|d| d.zetels > 0)
         .collect();
     let eigen: u32 = uit.iter().map(|d| d.zetels).sum();
     let overig = set.totaal().saturating_sub(eigen);
     if overig > 0 {
-        uit.push(Balkdeel {
-            partij: None,
-            zetels: overig,
-        });
+        uit.push(Balkdeel { partij: None, zetels: overig });
     }
     uit
 }
@@ -95,12 +89,7 @@ pub fn as_van(grootste: u32) -> (u32, u32) {
 /// De rijen van de Winst-en-verliesgrafiek: van de grootste winst naar het grootste verlies, bij
 /// een gelijk verschil op `volgorde`.
 pub fn van_winst_naar_verlies(mut regels: Vec<Regel>, volgorde: &[String]) -> Vec<Regel> {
-    let plaats = |p: &str| {
-        volgorde
-            .iter()
-            .position(|v| v == p)
-            .unwrap_or(volgorde.len())
-    };
+    let plaats = |p: &str| volgorde.iter().position(|v| v == p).unwrap_or(volgorde.len());
     regels.sort_by_key(|r| (std::cmp::Reverse(r.verschil), plaats(&r.partij)));
     regels
 }

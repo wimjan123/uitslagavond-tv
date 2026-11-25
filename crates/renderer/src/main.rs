@@ -26,8 +26,8 @@ mod meting;
 mod occlusie;
 mod omgeving;
 mod opname;
-mod scherm;
 mod schil;
+mod scherm;
 mod stemmingsblokken;
 mod volging;
 mod voorbeeld;
@@ -137,10 +137,9 @@ pub fn maak_app(i: &Instelling) -> App {
         std::fs::canonicalize(m).unwrap_or_else(|e| panic!("--zaal {}: {e}", m.display()))
     });
     let assets = AssetPlugin {
-        file_path: zaal.as_ref().map_or_else(
-            || "assets".to_string(),
-            |m| m.to_string_lossy().into_owned(),
-        ),
+        file_path: zaal
+            .as_ref()
+            .map_or_else(|| "assets".to_string(), |m| m.to_string_lossy().into_owned()),
         ..default()
     };
     let mut app = App::new();
@@ -160,18 +159,11 @@ pub fn maak_app(i: &Instelling) -> App {
                 })
                 .disable::<WinitPlugin>(),
         );
-        let grootte = if i.rol == Rol::Voorbeeld {
-            voorbeeld::KLEIN
-        } else {
-            (BREEDTE, HOOGTE)
-        };
+        let grootte = if i.rol == Rol::Voorbeeld { voorbeeld::KLEIN } else { (BREEDTE, HOOGTE) };
         let doel = opname::maak_doel(&mut app, grootte);
         app.insert_resource(doel);
     } else {
-        let render = RenderPlugin {
-            render_creation: scherm::wgpu_instelling().into(),
-            ..default()
-        };
+        let render = RenderPlugin { render_creation: scherm::wgpu_instelling().into(), ..default() };
         app.add_plugins(DefaultPlugins.set(assets).set(render).set(WindowPlugin {
             primary_window: Some(Window {
                 title: format!("Renderer: {:?}", i.rol),
@@ -188,10 +180,7 @@ pub fn maak_app(i: &Instelling) -> App {
     .init_resource::<volging::Standen>()
     .init_resource::<volging::Verbinding>()
     .add_plugins((
-        bestanden::BestandenPlugin {
-            kopie: i.kopie.clone(),
-            bron: i.bron.clone(),
-        },
+        bestanden::BestandenPlugin { kopie: i.kopie.clone(), bron: i.bron.clone() },
         beeld::BeeldPlugin,
         graphic::GraphicPlugin,
         zaal::ZaalPlugin { map: zaal },
@@ -229,10 +218,7 @@ fn main() -> AppExit {
         info: o.info,
         zaal: o.zaal,
         kopie: o.kopie.unwrap_or_else(bestanden::standaard_kopie),
-        bron: Some(bestanden::Bron {
-            adres: o.server.clone(),
-            sleutel: o.sleutel.clone(),
-        }),
+        bron: Some(bestanden::Bron { adres: o.server.clone(), sleutel: o.sleutel.clone() }),
     });
     if !zonder_venster {
         app.add_plugins(scherm::SchermPlugin {
@@ -250,9 +236,7 @@ fn main() -> AppExit {
     if let Some(seconden) = o.meet {
         app.set_runner(meting::runner(Duration::from_secs(seconden), o.uitslag));
     } else if zonder_venster {
-        app.add_plugins(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(
-            1.0 / 50.0,
-        )));
+        app.add_plugins(ScheduleRunnerPlugin::run_loop(Duration::from_secs_f64(1.0 / 50.0)));
     }
     if rol == Rol::Voorbeeld {
         app.add_plugins(voorbeeld::VoorbeeldPlugin);

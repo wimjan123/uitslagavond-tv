@@ -85,9 +85,7 @@ impl Opslag {
         };
         let mut tekst = serde_json::to_string(&regel)?;
         tekst.push('\n');
-        self.logboek
-            .write_all(tekst.as_bytes())
-            .context("logboek schrijven")?;
+        self.logboek.write_all(tekst.as_bytes()).context("logboek schrijven")?;
         Ok(())
     }
 }

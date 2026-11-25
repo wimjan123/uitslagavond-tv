@@ -58,8 +58,8 @@ use std::time::{Duration, Instant};
 use anyhow::Context;
 use axum::Json;
 use axum::Router;
-use axum::body::Bytes;
 use axum::extract::ws::{Message, WebSocket, WebSocketUpgrade};
+use axum::body::Bytes;
 use axum::extract::{DefaultBodyLimit, Path, Query, Request, State};
 use axum::http::{HeaderMap, StatusCode, header};
 use axum::middleware::{self, Next};
@@ -112,6 +112,7 @@ pub struct OpenData {
     pub debat_direct: Option<String>,
 }
 
+
 /// Een draaiende server.
 pub struct Server {
     adres: SocketAddr,
@@ -158,21 +159,16 @@ impl Server {
         tokio::spawn(vergeet_weigeringen(gedeeld.clone()));
         gamepad::volg(gedeeld.clone());
 
+
         let beveiligd = Router::new()
             .route("/ws", get(websocket))
             .route("/api/stand", get(stand))
             .route("/api/opdracht", post(opdracht))
             .route("/api/knoppen", get(knoppen::alle_velden))
             .route("/api/knoppen/{veld}", get(knoppen::een_veld))
-            .route(
-                "/api/vrije-camera/wissel",
-                post(knoppen::wissel_vrije_camera),
-            )
+            .route("/api/vrije-camera/wissel", post(knoppen::wissel_vrije_camera))
             .route("/api/bestand/{*naam}", get(bestand))
-            .route(
-                "/api/bestand",
-                post(plaats_bestand).layer(DefaultBodyLimit::max(MAX_FOTO)),
-            )
+            .route("/api/bestand", post(plaats_bestand).layer(DefaultBodyLimit::max(MAX_FOTO)))
             .route(
                 "/api/foto/{id}",
                 get(foto)
@@ -275,10 +271,7 @@ struct Bewerker {
 impl Bewerker {
     fn bewerk(&self, set: Option<String>) {
         self.g.bewerkingen.send_if_modified(|b| {
-            let nieuw = set.map(|set| Bewerking {
-                werkplek: self.werkplek.clone(),
-                set,
-            });
+            let nieuw = set.map(|set| Bewerking { werkplek: self.werkplek.clone(), set });
             let oud = match nieuw {
                 Some(n) => b.insert(self.verbinding, n.clone()).filter(|o| *o == n),
                 None => return b.remove(&self.verbinding).is_some(),
@@ -290,10 +283,7 @@ impl Bewerker {
     /// Wat de andere Werkplekken open hebben.
     fn van_anderen(&self) -> Vec<Bewerking> {
         let b = self.g.bewerkingen.borrow();
-        b.iter()
-            .filter(|(v, _)| **v != self.verbinding)
-            .map(|(_, b)| b.clone())
-            .collect()
+        b.iter().filter(|(v, _)| **v != self.verbinding).map(|(_, b)| b.clone()).collect()
     }
 }
 
@@ -330,11 +320,7 @@ async fn camera_lus(g: Arc<Gedeeld>) {
             let st = *stuur.borrow();
             regie.stap(tik, &st);
             let beeld = regie.beeld(tik);
-            let nu = if regie.oefent() {
-                beeld.voorbeeld
-            } else {
-                beeld.ether
-            };
+            let nu = if regie.oefent() { beeld.voorbeeld } else { beeld.ether };
             g.camera_nu.send_replace(Some(nu.stand));
             beeld
         };
@@ -382,14 +368,8 @@ impl Aanwezig {
     fn nieuw(g: Arc<Gedeeld>, renderer: RendererOpMachine) -> Self {
         let verbinding = g.verbindingen.fetch_add(1, Ordering::Relaxed);
         let rol = renderer.rol;
-        g.geweigerd
-            .lock()
-            .expect("geweigerd")
-            .remove(&(rol, renderer.machine.clone()));
-        g.verbonden
-            .lock()
-            .expect("verbonden")
-            .insert(verbinding, renderer);
+        g.geweigerd.lock().expect("geweigerd").remove(&(rol, renderer.machine.clone()));
+        g.verbonden.lock().expect("verbonden").insert(verbinding, renderer);
         g.meld_renderers();
         Aanwezig { g, verbinding, rol }
     }
@@ -397,11 +377,7 @@ impl Aanwezig {
 
 impl Drop for Aanwezig {
     fn drop(&mut self) {
-        self.g
-            .verbonden
-            .lock()
-            .expect("verbonden")
-            .remove(&self.verbinding);
+        self.g.verbonden.lock().expect("verbonden").remove(&self.verbinding);
         if self.rol == Rol::Voorbeeld {
             // Geen Voorbeeld meer: de beelden zijn niet meer bij.
             for (m, b) in Monitor::ALLE.iter().zip(&self.g.beelden) {
@@ -420,23 +396,15 @@ struct Kern {
 impl Gedeeld {
     /// Werkt de lijst van Renderers voor de Werkplekken bij, zonder de weigeringen die te oud zijn.
     fn meld_renderers(&self) {
-        let mut verbonden: Vec<RendererOpMachine> = self
-            .verbonden
-            .lock()
-            .expect("verbonden")
-            .values()
-            .cloned()
-            .collect();
+        let mut verbonden: Vec<RendererOpMachine> =
+            self.verbonden.lock().expect("verbonden").values().cloned().collect();
         verbonden.sort();
         let geweigerd: Vec<RendererOpMachine> = {
             let mut w = self.geweigerd.lock().expect("geweigerd");
             w.retain(|_, (_, laatst)| laatst.elapsed() < WEIGERING_BLIJFT);
             w.values().map(|(r, _)| r.clone()).collect()
         };
-        let nieuw = Renderers {
-            verbonden,
-            geweigerd,
-        };
+        let nieuw = Renderers { verbonden, geweigerd };
         self.renderers.send_if_modified(|r| {
             let anders = *r != nieuw;
             *r = nieuw;
@@ -446,32 +414,19 @@ impl Gedeeld {
 
     /// Onthoudt een Renderer die de server weigerde om zijn versie.
     fn weiger(&self, renderer: RendererOpMachine) {
-        self.geweigerd.lock().expect("geweigerd").insert(
-            (renderer.rol, renderer.machine.clone()),
-            (renderer, Instant::now()),
-        );
+        self.geweigerd
+            .lock()
+            .expect("geweigerd")
+            .insert((renderer.rol, renderer.machine.clone()), (renderer, Instant::now()));
         self.meld_renderers();
     }
 
     /// Voert één Opdracht uit. Het slot zorgt dat Opdrachten één voor één gaan.
     async fn voer_uit(&self, afzender: &Afzender, opdracht: &Opdracht) -> Result<u64, String> {
         // Bewaren zonder plek: waar de camera van de Ether nu staat. Zo komt de plek in het logboek.
-        let opname = matches!(
-            opdracht,
-            Opdracht::ZetOpnemen {
-                aan: false,
-                opname: None,
-                ..
-            }
-        )
-        .then(|| {
-            self.regie
-                .lock()
-                .expect("regie")
-                .opname()
-                .map(<[_]>::to_vec)
-        })
-        .flatten();
+        let opname = matches!(opdracht, Opdracht::ZetOpnemen { aan: false, opname: None, .. })
+            .then(|| self.regie.lock().expect("regie").opname().map(<[_]>::to_vec))
+            .flatten();
         let opdracht = &camera_ingevuld(opdracht, *self.camera_nu.borrow(), opname);
         let mut kern = self.kern.lock().await;
         let mut stand = kern.huidig.stand.clone();
@@ -483,18 +438,13 @@ impl Gedeeld {
             tijd_ms: u64::try_from(jiff::Timestamp::now().as_millisecond()).unwrap_or(0),
         };
         // De tablet van de Presentator zet alleen klaar; de server weigert de rest.
-        let uitkomst = match stand
-            .controleer_afzender(afzender, opdracht)
-            .and_then(|()| stand.voer_uit(opdracht, &herkomst))
-        {
+        let uitkomst = match stand.controleer_afzender(afzender, opdracht).and_then(|()| stand.voer_uit(opdracht, &herkomst)) {
             Err(w) => Err(w.to_string()),
             Ok(()) => {
                 let nieuw = GenummerdeStand { volgnummer, stand };
                 match kern.opslag.schrijf_stand(&nieuw) {
                     Ok(()) => {
-                        if let (Opdracht::GeefStoel { .. }, Some(pad)) =
-                            (opdracht, &self.zaalindeling)
-                        {
+                        if let (Opdracht::GeefStoel { .. }, Some(pad)) = (opdracht, &self.zaalindeling) {
                             schrijf_zaalindeling(pad, &nieuw.stand.zaalindeling);
                         }
                         let volgnummer = nieuw.volgnummer;
@@ -509,11 +459,10 @@ impl Gedeeld {
                 }
             }
         };
-        if let Err(e) = kern.opslag.log(
-            afzender,
-            opdracht,
-            uitkomst.as_ref().copied().map_err(|s| s.as_str()),
-        ) {
+        if let Err(e) = kern
+            .opslag
+            .log(afzender, opdracht, uitkomst.as_ref().copied().map_err(|s| s.as_str()))
+        {
             tracing::error!("{e:#}");
         }
         uitkomst
@@ -523,13 +472,9 @@ impl Gedeeld {
 /// Schrijft de Zaalindeling terug naar haar bestand, via een tijdelijk bestand ernaast.
 fn schrijf_zaalindeling(pad: &std::path::Path, z: &gedeeld::zaalindeling::Zaalindeling) {
     let tijdelijk = pad.with_extension("json.nieuw");
-    let gelukt =
-        std::fs::write(&tijdelijk, z.als_json()).and_then(|()| std::fs::rename(&tijdelijk, pad));
+    let gelukt = std::fs::write(&tijdelijk, z.als_json()).and_then(|()| std::fs::rename(&tijdelijk, pad));
     if let Err(e) = gelukt {
-        tracing::error!(
-            "Zaalindeling niet teruggeschreven naar {}: {e}",
-            pad.display()
-        );
+        tracing::error!("Zaalindeling niet teruggeschreven naar {}: {e}", pad.display());
     }
 }
 
@@ -545,9 +490,7 @@ fn camera_ingevuld(
         Opdracht::BewaarStandpunt { stand, .. } | Opdracht::OverschrijfStandpunt { stand, .. } => {
             *stand = stand.or(nu);
         }
-        Opdracht::ZetOpnemen {
-            aan: false, opname, ..
-        } if opname.is_none() => *opname = opgenomen,
+        Opdracht::ZetOpnemen { aan: false, opname, .. } if opname.is_none() => *opname = opgenomen,
         _ => {}
     }
     o
@@ -596,23 +539,17 @@ async fn bestand(
         return (StatusCode::BAD_REQUEST, "ongeldige bestandsnaam").into_response();
     }
     if let Some(rest) = naam.strip_prefix("fotos/") {
-        let pad = rest
-            .split_once('/')
-            .and_then(|(soort, id)| kamerleden::portret(&g.map, soort, id));
+        let pad = rest.split_once('/').and_then(|(soort, id)| kamerleden::portret(&g.map, soort, id));
         return match pad {
             Some(pad) => match tokio::fs::read(pad).await {
-                Ok(inhoud) => {
-                    ([(header::CONTENT_TYPE, "application/octet-stream")], inhoud).into_response()
-                }
+                Ok(inhoud) => ([(header::CONTENT_TYPE, "application/octet-stream")], inhoud).into_response(),
                 Err(_) => niet_gevonden(),
             },
             None => niet_gevonden(),
         };
     }
     match tokio::fs::read(g.bestanden.join(&naam)).await {
-        Ok(inhoud) => {
-            ([(header::CONTENT_TYPE, "application/octet-stream")], inhoud).into_response()
-        }
+        Ok(inhoud) => ([(header::CONTENT_TYPE, "application/octet-stream")], inhoud).into_response(),
         Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
             (StatusCode::NOT_FOUND, "geen bestand met die naam").into_response()
         }
@@ -638,9 +575,7 @@ async fn plaats_bestand(
     bytes: Bytes,
 ) -> Response {
     let Some(soort) = kamerleden::soort_beeld(&bytes).or_else(|| soort_lettertype(&bytes)) else {
-        return antwoord(Err(
-            "dit is geen PNG, JPEG of lettertype (TTF of OTF)".into()
-        ));
+        return antwoord(Err("dit is geen PNG, JPEG of lettertype (TTF of OTF)".into()));
     };
     let naam = bestandsnaam_bij_inhoud(q.naam.as_deref().unwrap_or(""), &bytes, soort);
     let pad = g.bestanden.join(&naam);
@@ -675,22 +610,16 @@ fn bestandsnaam_bij_inhoud(origineel: &str, inhoud: &[u8], soort: &str) -> Strin
     let stam = stam.rsplit_once('.').map_or(stam, |(s, _)| s);
     let mut schoon: String = stam
         .chars()
-        .map(|c| {
-            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
-                c
-            } else {
-                '-'
-            }
-        })
+        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
         .take(40)
         .collect();
     schoon = schoon.trim_matches('-').to_string();
     if schoon.is_empty() {
         schoon = "bestand".into();
     }
-    let hash = inhoud.iter().fold(0xcbf2_9ce4_8422_2325u64, |h, b| {
-        (h ^ u64::from(*b)).wrapping_mul(0x0100_0000_01b3)
-    });
+    let hash = inhoud
+        .iter()
+        .fold(0xcbf2_9ce4_8422_2325u64, |h, b| (h ^ u64::from(*b)).wrapping_mul(0x0100_0000_01b3));
     format!("{schoon}-{hash:016x}.{soort}")
 }
 
@@ -779,11 +708,7 @@ async fn eigen_foto(
 ) -> Response {
     let persoon = bekende_persoon(&g, &id);
     if !persoon && !bekend_kamerlid(&g, &id) {
-        return (
-            StatusCode::NOT_FOUND,
-            "geen Kamerlid of eigen persoon met dit id",
-        )
-            .into_response();
+        return (StatusCode::NOT_FOUND, "geen Kamerlid of eigen persoon met dit id").into_response();
     }
     let Some(ext) = kamerleden::soort_beeld(&bytes) else {
         return (
@@ -794,10 +719,7 @@ async fn eigen_foto(
         )
             .into_response();
     };
-    let map = g
-        .map
-        .join("fotos")
-        .join(if persoon { "personen" } else { "eigen" });
+    let map = g.map.join("fotos").join(if persoon { "personen" } else { "eigen" });
     let opgeslagen = async {
         tokio::fs::create_dir_all(&map).await?;
         kamerleden::schrijf_veilig(&map.join(format!("{id}.{ext}")), &bytes).await?;
@@ -810,10 +732,7 @@ async fn eigen_foto(
         return antwoord(Err("de server kon de foto niet opslaan".into()));
     }
     let opdracht = if persoon {
-        Opdracht::ZetFotoPersoon {
-            persoon: id,
-            foto: true,
-        }
+        Opdracht::ZetFotoPersoon { persoon: id, foto: true }
     } else {
         Opdracht::ZetFoto {
             kamerlid: id,
@@ -836,10 +755,7 @@ async fn weg_eigen_foto(
                 return antwoord(Err("de server kon de foto niet weghalen".into()));
             }
         }
-        let opdracht = Opdracht::ZetFotoPersoon {
-            persoon: id,
-            foto: false,
-        };
+        let opdracht = Opdracht::ZetFotoPersoon { persoon: id, foto: false };
         return antwoord(g.voer_uit(&knop(&koppen), &opdracht).await);
     }
     if !bekend_kamerlid(&g, &id) {
@@ -871,46 +787,27 @@ async fn scherm(g: Arc<Gedeeld>, mut ws: WebSocket) -> anyhow::Result<()> {
     let afzender = match tokio::time::timeout(Duration::from_secs(10), lees(&mut ws)).await {
         Ok(Some(Inkomend::Bericht(BerichtAanServer::Hallo { afzender }))) => afzender,
         _ => {
-            stuur(
-                &mut ws,
-                &BerichtVanServer::Geweigerd {
-                    reden: "begin met Hallo".into(),
-                },
-            )
+            stuur(&mut ws, &BerichtVanServer::Geweigerd {
+                reden: "begin met Hallo".into(),
+            })
             .await?;
             return Ok(());
         }
     };
     let renderer = match &afzender {
-        Afzender::Renderer {
-            rol,
-            versie,
-            machine,
-        } => Some(RendererOpMachine {
+        Afzender::Renderer { rol, versie, machine } => Some(RendererOpMachine {
             rol: *rol,
-            machine: if machine.trim().is_empty() {
-                "onbekende machine".into()
-            } else {
-                machine.clone()
-            },
+            machine: if machine.trim().is_empty() { "onbekende machine".into() } else { machine.clone() },
             versie: versie.clone(),
         }),
         _ => None,
     };
     if let Some(r) = renderer.as_ref().filter(|r| r.versie != VERSIE) {
-        tracing::warn!(
-            "Renderer {:?} op {} met versie {} geweigerd (server {VERSIE})",
-            r.rol,
-            r.machine,
-            r.versie
-        );
+        tracing::warn!("Renderer {:?} op {} met versie {} geweigerd (server {VERSIE})", r.rol, r.machine, r.versie);
         g.weiger(r.clone());
-        stuur(
-            &mut ws,
-            &BerichtVanServer::Geweigerd {
-                reden: format!("andere versie: Renderer {}, server {VERSIE}", r.versie),
-            },
-        )
+        stuur(&mut ws, &BerichtVanServer::Geweigerd {
+            reden: format!("andere versie: Renderer {}, server {VERSIE}", r.versie),
+        })
         .await?;
         return Ok(());
     }
@@ -947,13 +844,7 @@ async fn scherm(g: Arc<Gedeeld>, mut ws: WebSocket) -> anyhow::Result<()> {
         bewerkingen.mark_unchanged();
         if let Some(b) = &bewerker {
             gemeld = b.van_anderen();
-            stuur(
-                &mut ws,
-                &BerichtVanServer::Bewerkingen {
-                    open: gemeld.clone(),
-                },
-            )
-            .await?;
+            stuur(&mut ws, &BerichtVanServer::Bewerkingen { open: gemeld.clone() }).await?;
         }
     }
     loop {

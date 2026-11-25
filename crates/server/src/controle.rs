@@ -60,11 +60,7 @@ pub(crate) fn gewoon(t: &str) -> String {
 /// De tekst na het eerste " over " in een titel, zonder het nummer tussen haakjes aan het eind.
 pub(crate) fn over_tekst(titel: &str) -> Option<String> {
     let (_, rest) = titel.split_once(" over ")?;
-    let rest = match rest
-        .trim_end()
-        .strip_suffix(')')
-        .and_then(|r| r.rfind(" (").map(|i| &r[..i]))
-    {
+    let rest = match rest.trim_end().strip_suffix(')').and_then(|r| r.rfind(" (").map(|i| &r[..i])) {
         Some(zonder) => zonder,
         None => rest,
     };
@@ -83,20 +79,13 @@ fn nodig(s: &Stemmingen, kamer_leeg: bool, vandaag: Date) -> Option<(Date, bool,
     }
     let van_lijst = || s.lijst.iter().filter(|s| !s.met_de_hand);
     let dd = van_lijst().any(|s| s.controle.officieel.is_none());
-    let od = van_lijst().any(|s| {
-        s.controle
-            .officieel
-            .as_ref()
-            .is_none_or(|o| o.bron != Bron::OpenData)
-    });
+    let od = van_lijst().any(|s| s.controle.officieel.as_ref().is_none_or(|o| o.bron != Bron::OpenData));
     Some((dag, dd, od))
 }
 
 pub(crate) fn volg(g: Arc<Gedeeld>, inst: OpenData) {
     tokio::spawn(async move {
-        let afzender = Afzender::OpenData {
-            bron: inst.basis.clone(),
-        };
+        let afzender = Afzender::OpenData { bron: inst.basis.clone() };
         let mut gestopt = g.gestopt.clone();
         let Ok(client) = reqwest::Client::builder()
             .user_agent(concat!("uitslagavond-tv/", env!("CARGO_PKG_VERSION")))
@@ -109,30 +98,21 @@ pub(crate) fn volg(g: Arc<Gedeeld>, inst: OpenData) {
         let tik = DEBAT_DIRECT_ELKE.min(inst.elke);
         let mut open_data_om = tokio::time::Instant::now();
         loop {
-            let vandaag = inst
-                .peildatum
-                .unwrap_or_else(|| jiff::ZonedDateTime::now().date());
+            let vandaag = inst.peildatum.unwrap_or_else(|| jiff::ZonedDateTime::now().date());
             let nu_nodig = {
                 let s = g.uitzending.borrow();
-                nodig(
-                    &s.stand.stemmingen,
-                    s.stand.kamer.fracties.is_empty(),
-                    vandaag,
-                )
+                nodig(&s.stand.stemmingen, s.stand.kamer.fracties.is_empty(), vandaag)
             };
             if let Some((dag, dd, od)) = nu_nodig {
                 let ronde = async {
                     if let (true, Some(basis)) = (dd, &inst.debat_direct) {
-                        if let Err(e) = ronde_debat_direct(&g, &afzender, &client, basis, dag).await
-                        {
+                        if let Err(e) = ronde_debat_direct(&g, &afzender, &client, basis, dag).await {
                             tracing::warn!("Debat Direct niet opgehaald: {e:#}");
                         }
                     }
                     if od && tokio::time::Instant::now() >= open_data_om {
                         open_data_om = tokio::time::Instant::now() + inst.elke;
-                        if let Err(e) =
-                            ronde_open_data(&g, &afzender, &client, &inst.basis, dag).await
-                        {
+                        if let Err(e) = ronde_open_data(&g, &afzender, &client, &inst.basis, dag).await {
                             tracing::warn!("Stemmingen uit de open data niet opgehaald: {e:#}");
                         }
                     }
@@ -160,21 +140,14 @@ async fn wacht_op_lijst(g: &Gedeeld, niets: bool) {
     let mut standen = g.uitzending.subscribe();
     let (dag, lengte, kamer_leeg) = {
         let s = &g.uitzending.borrow().stand;
-        (
-            s.stemmingen.dag.clone(),
-            s.stemmingen.lijst.len(),
-            s.kamer.fracties.is_empty(),
-        )
+        (s.stemmingen.dag.clone(), s.stemmingen.lijst.len(), s.kamer.fracties.is_empty())
     };
     loop {
         if standen.changed().await.is_err() {
             return std::future::pending().await;
         }
         let s = &standen.borrow_and_update().stand;
-        if s.stemmingen.dag != dag
-            || s.stemmingen.lijst.len() != lengte
-            || !s.kamer.fracties.is_empty() && kamer_leeg
-        {
+        if s.stemmingen.dag != dag || s.stemmingen.lijst.len() != lengte || !s.kamer.fracties.is_empty() && kamer_leeg {
             return;
         }
     }
@@ -204,8 +177,7 @@ async fn ronde_debat_direct(
     let mut debatten = Vec::new();
     for id in agenda.stemmingen() {
         let json = haal(client, &debat_direct::debat(basis, dag, id)).await?;
-        debatten
-            .push(debat_direct::lees_debat(&json).context("debat van Debat Direct onleesbaar")?);
+        debatten.push(debat_direct::lees_debat(&json).context("debat van Debat Direct onleesbaar")?);
     }
     if debatten.iter().all(|d| d.votings.is_empty()) {
         return Ok(());
@@ -214,12 +186,7 @@ async fn ronde_debat_direct(
         .context("partijen van Debat Direct onleesbaar")?;
     let uitslagen = {
         let s = g.uitzending.borrow();
-        debat_direct::uitslagen(
-            &debatten,
-            &actors,
-            &s.stand.stemmingen.lijst,
-            &s.stand.kamer,
-        )
+        debat_direct::uitslagen(&debatten, &actors, &s.stand.stemmingen.lijst, &s.stand.kamer)
     };
     stuur(g, afzender, uitslagen).await
 }
@@ -243,8 +210,7 @@ async fn ronde_open_data(
             .error_for_status()?
             .text()
             .await?;
-        let pagina =
-            open_data::lees_pagina(&tekst).context("antwoord van de open data onleesbaar")?;
+        let pagina = open_data::lees_pagina(&tekst).context("antwoord van de open data onleesbaar")?;
         activiteiten.extend(pagina.activiteiten);
         match pagina.volgende {
             Some(volgende) => verzoek = client.get(volgende),
@@ -262,11 +228,7 @@ async fn ronde_open_data(
 
 /// Stuurt de uitslagen als Opdracht, alleen als de Stand er echt door verandert, en schrijft de
 /// vertraging van Debat Direct in het logboek.
-async fn stuur(
-    g: &Gedeeld,
-    afzender: &Afzender,
-    uitslagen: Vec<OpgehaaldeUitslag>,
-) -> anyhow::Result<()> {
+async fn stuur(g: &Gedeeld, afzender: &Afzender, uitslagen: Vec<OpgehaaldeUitslag>) -> anyhow::Result<()> {
     let nu = jiff::ZonedDateTime::now();
     let opgehaald = nu.strftime("%Y-%m-%dT%H:%M:%S%:z").to_string();
     let (voor, na) = {
@@ -281,11 +243,7 @@ async fn stuur(
     }
     for (o, n) in voor.lijst.iter().zip(&na.lijst) {
         if o.controle.debat_direct_gezien.is_none() && n.controle.debat_direct_gezien.is_some() {
-            let hamerslag = n
-                .controle
-                .officieel
-                .as_ref()
-                .and_then(|o| o.hamerslag.as_deref());
+            let hamerslag = n.controle.officieel.as_ref().and_then(|o| o.hamerslag.as_deref());
             let minuten = hamerslag
                 .and_then(|h| h.parse::<jiff::Timestamp>().ok())
                 .map(|h| (nu.timestamp().as_second() - h.as_second()) / 60);
@@ -300,15 +258,9 @@ async fn stuur(
         }
     }
     let n = uitslagen.len();
-    g.voer_uit(
-        afzender,
-        &Opdracht::LeesOfficieleUitslagen {
-            opgehaald,
-            uitslagen,
-        },
-    )
-    .await
-    .map_err(|e| anyhow::anyhow!("officiële uitslagen niet ingelezen: {e}"))?;
+    g.voer_uit(afzender, &Opdracht::LeesOfficieleUitslagen { opgehaald, uitslagen })
+        .await
+        .map_err(|e| anyhow::anyhow!("officiële uitslagen niet ingelezen: {e}"))?;
     tracing::info!("controle: {n} officiële uitslagen ingelezen");
     Ok(())
 }
@@ -319,10 +271,7 @@ mod tests {
 
     #[test]
     fn gewoon_haalt_hoofdletters_accenten_en_leestekens_weg() {
-        assert_eq!(
-            gewoon("Christen-Democratisch Appèl"),
-            "christen democratisch appel"
-        );
+        assert_eq!(gewoon("Christen-Democratisch Appèl"), "christen democratisch appel");
         assert_eq!(gewoon("37020-XV, nr. 8"), "37020 xv nr 8");
         assert_eq!(gewoon(" Kostić c.s. "), "kostic c s");
     }
@@ -330,19 +279,10 @@ mod tests {
     #[test]
     fn over_tekst_zonder_het_nummer_aan_het_eind() {
         assert_eq!(
-            over_tekst(
-                "de gewijzigde motie-Goudzwaard over overlastmelding (23645, nr. ??, was nr. 912)"
-            )
-            .as_deref(),
+            over_tekst("de gewijzigde motie-Goudzwaard over overlastmelding (23645, nr. ??, was nr. 912)").as_deref(),
             Some("overlastmelding")
         );
-        assert_eq!(
-            over_tekst("Gewijzigde motie van het lid Goudzwaard over overlastmelding").as_deref(),
-            Some("overlastmelding")
-        );
-        assert_eq!(
-            over_tekst("Wijziging van de Wet minimumbelasting 2024"),
-            None
-        );
+        assert_eq!(over_tekst("Gewijzigde motie van het lid Goudzwaard over overlastmelding").as_deref(), Some("overlastmelding"));
+        assert_eq!(over_tekst("Wijziging van de Wet minimumbelasting 2024"), None);
     }
 }

@@ -431,13 +431,7 @@ pub struct Bewerking {
 fn vrije_sleutel(basis: &str, bezet: impl Fn(&str) -> bool) -> String {
     let basis = if basis.is_empty() { "nieuw" } else { basis };
     (1..)
-        .map(|i| {
-            if i == 1 {
-                basis.to_owned()
-            } else {
-                format!("{basis}-{i}")
-            }
-        })
+        .map(|i| if i == 1 { basis.to_owned() } else { format!("{basis}-{i}") })
         .find(|s| s != OVERIG && !bezet(s))
         .expect("oneindig veel kandidaten")
 }
@@ -470,17 +464,11 @@ impl Cijfers {
         let kort = Some(kort.trim()).filter(|k| !k.is_empty()).unwrap_or(naam);
         let (a, b) = (kaal(naam), kaal(kort));
         if let Some(p) = self.partijen.iter().find(|p| {
-            [kaal(&p.naam), kaal(&p.kort)]
-                .iter()
-                .any(|w| *w == a || *w == b)
+            [kaal(&p.naam), kaal(&p.kort)].iter().any(|w| *w == a || *w == b)
         }) {
             return Err(CijferWeigering::PartijBestaatAl(p.kort.clone()));
         }
-        let kleur = kleur
-            .map(str::trim)
-            .filter(|k| !k.is_empty())
-            .map(nette_kleur)
-            .transpose()?;
+        let kleur = kleur.map(str::trim).filter(|k| !k.is_empty()).map(nette_kleur).transpose()?;
         let sleutel = vrije_sleutel(&b, |s| self.partij(s).is_some());
         let tijdelijk = kleur.is_none();
         let kleur = kleur.unwrap_or_else(|| {
@@ -492,10 +480,7 @@ impl Cijfers {
             kort: kort.into(),
             kleur,
             kleur_tijdelijk: tijdelijk,
-            logo: logo
-                .map(str::trim)
-                .filter(|l| !l.is_empty())
-                .map(str::to_owned),
+            logo: logo.map(str::trim).filter(|l| !l.is_empty()).map(str::to_owned),
             fractie_zonder_lijst,
             voorgangers: Vec::new(),
         });
@@ -515,11 +500,7 @@ impl Cijfers {
             p.naam = n.into();
         }
         if let Some(k) = a.kort.as_deref().map(str::trim) {
-            p.kort = if k.is_empty() {
-                p.naam.clone()
-            } else {
-                k.into()
-            };
+            p.kort = if k.is_empty() { p.naam.clone() } else { k.into() };
         }
         if let Some(k) = kleur {
             p.kleur = k;
@@ -558,8 +539,7 @@ impl Cijfers {
     /// Kiest de set waartegen winst en verlies wordt berekend, of geen.
     pub fn kies_vergelijkingsset(&mut self, set: Option<&str>) -> Result<(), CijferWeigering> {
         if let Some(id) = set {
-            self.set(id)
-                .ok_or_else(|| CijferWeigering::OnbekendeSet(id.into()))?;
+            self.set(id).ok_or_else(|| CijferWeigering::OnbekendeSet(id.into()))?;
         }
         self.vergelijk_met = set.map(str::to_owned);
         Ok(())

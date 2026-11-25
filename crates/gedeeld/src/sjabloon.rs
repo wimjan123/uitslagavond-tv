@@ -22,8 +22,8 @@ use ts_rs::TS;
 
 use crate::Kleur;
 use crate::cijfers::{Cijfers, OVERIG, ZETELS};
-use crate::coalitie;
 use crate::stemmingen::{Besluit, Stem};
+use crate::coalitie;
 use crate::zetelbalk::{self, Balkdeel, Pijl};
 
 /// Het ingebouwde vette lettertype. Elke Renderer heeft de lettertypes van [`INGEBOUWD`] zelf;
@@ -105,11 +105,7 @@ impl Kleurovergang {
     /// De Kleurovergang bij Bijwerken: de Opbouw is voor Toon, bij nieuwe cijfers gaan de
     /// Stoelen die veranderen als Golf.
     pub fn bij_bijwerken(self) -> Self {
-        if self.vorm == Overgangsvorm::Opbouw {
-            Kleurovergang::default()
-        } else {
-            self
-        }
+        if self.vorm == Overgangsvorm::Opbouw { Kleurovergang::default() } else { self }
     }
 
     /// Of de duur tussen [`MIN_KLEUROVERGANG_MS`] en [`MAX_KLEUROVERGANG_MS`] ligt.
@@ -134,11 +130,7 @@ pub enum Overgangsvorm {
 }
 
 /// De kleur van de Stoelen die in een Opbouw nog niet aan de beurt zijn.
-pub const OPBOUW_WACHTKLEUR: Kleur = Kleur {
-    r: 0x30,
-    g: 0x30,
-    b: 0x30,
-};
+pub const OPBOUW_WACHTKLEUR: Kleur = Kleur { r: 0x30, g: 0x30, b: 0x30 };
 
 /// De kortste en langste Kleurovergang, in milliseconden.
 pub const MIN_KLEUROVERGANG_MS: u16 = 100;
@@ -283,9 +275,7 @@ pub enum StijlWeigering {
     LogotekstTeLang,
     #[error("de beweging klopt niet: {0}")]
     Beweging(&'static str),
-    #[error(
-        "de Kleurovergang duurt {0} ms; kies tussen {MIN_KLEUROVERGANG_MS} en {MAX_KLEUROVERGANG_MS}"
-    )]
+    #[error("de Kleurovergang duurt {0} ms; kies tussen {MIN_KLEUROVERGANG_MS} en {MAX_KLEUROVERGANG_MS}")]
     Kleurovergang(u16),
     #[error("de Kleurkracht is {0} procent; kies tussen 0 en 100")]
     Kleurkracht(u8),
@@ -309,10 +299,7 @@ fn oude_standaard() -> Stijl {
             tekst: LETTER_GEWOON.into(),
             cijfers: LETTER_VET.into(),
         },
-        programmalogo: Programmalogo {
-            bestand: None,
-            tekst: "UITSLAGAVOND".into(),
-        },
+        programmalogo: Programmalogo { bestand: None, tekst: "UITSLAGAVOND".into() },
         snelheid: 100,
         beweging: Beweging::default(),
         kleurovergang: Kleurovergang::default(),
@@ -389,11 +376,7 @@ impl Stijl {
     /// eerste standaardstijl: die wordt de huidige standaard.
     /// Een Stijl die de Regie zelf aanpaste, blijft zoals hij is.
     pub fn na_laden(self) -> Stijl {
-        if self == oude_standaard() {
-            Stijl::default()
-        } else {
-            self
-        }
+        if self == oude_standaard() { Stijl::default() } else { self }
     }
 
     /// Alle bestanden die deze Stijl bij de server nodig heeft.
@@ -420,9 +403,7 @@ impl Beweging {
             return Err("de lijn moet verschijnen en het vlak moet opengaan");
         }
         if !(l.tekst_weg_pct < l.vlak_dicht_pct && l.vlak_dicht_pct < 100) {
-            return Err(
-                "bij sluiten naar lijn: eerst de tekst weg, dan het vlak dicht, dan de lijn weg",
-            );
+            return Err("bij sluiten naar lijn: eerst de tekst weg, dan het vlak dicht, dan de lijn weg");
         }
         Ok(())
     }
@@ -723,11 +704,7 @@ pub struct OmTekst {
 impl OmTekst {
     /// De breedte van het Vlak op `vlak`, bij teksten met deze Plek, uitlijning en echte
     /// breedte (in pixels). Een tekst is nooit breder dan zijn Plek.
-    pub fn breedte(
-        &self,
-        vlak: Plek,
-        teksten: impl IntoIterator<Item = (Plek, Uitlijning, f32)>,
-    ) -> f32 {
+    pub fn breedte(&self, vlak: Plek, teksten: impl IntoIterator<Item = (Plek, Uitlijning, f32)>) -> f32 {
         let rechts = teksten
             .into_iter()
             .map(|(p, u, b)| {
@@ -1185,11 +1162,7 @@ pub struct Naamgroep {
 pub fn tekst_op(achter: Kleur, licht: Kleur, donker: Kleur) -> Kleur {
     let lin = |c: u8| {
         let c = f32::from(c) / 255.0;
-        if c <= 0.04045 {
-            c / 12.92
-        } else {
-            ((c + 0.055) / 1.055).powf(2.4)
-        }
+        if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
     };
     let l = 0.2126 * lin(achter.r) + 0.7152 * lin(achter.g) + 0.0722 * lin(achter.b);
     if l > 0.32 { donker } else { licht }
@@ -1274,9 +1247,7 @@ impl Getalwaarde {
     pub fn tekst_bij(&self, waarde: i64) -> String {
         match self {
             // winst en verlies: "+5" en "−5" met een echt minteken, zoals in de vormgeving
-            Getalwaarde::Getal {
-                plus: true, achter, ..
-            } if waarde < 0 => {
+            Getalwaarde::Getal { plus: true, achter, .. } if waarde < 0 => {
                 format!("\u{2212}{}{achter}", waarde.unsigned_abs())
             }
             Getalwaarde::Getal { plus, achter, .. } => {
@@ -1328,17 +1299,9 @@ pub const GRIJS: Kleur = Kleur {
 };
 
 /// De stemkleur voor: geen Stijlkleur, gelijk in Sjabloon en Zaal (`docs/vormgeving.md`).
-pub const STEM_VOOR: Kleur = Kleur {
-    r: 0x17,
-    g: 0xa3,
-    b: 0x5b,
-};
+pub const STEM_VOOR: Kleur = Kleur { r: 0x17, g: 0xa3, b: 0x5b };
 /// De stemkleur tegen.
-pub const STEM_TEGEN: Kleur = Kleur {
-    r: 0xd9,
-    g: 0x3a,
-    b: 0x3a,
-};
+pub const STEM_TEGEN: Kleur = Kleur { r: 0xd9, g: 0x3a, b: 0x3a };
 
 /// De `id` van de vaste Sjablonen voor Stemmingen.
 pub const UITSLAG_STEMMING: &str = "uitslag-stemming";
@@ -1378,16 +1341,9 @@ impl Sjabloon {
             .map(|b| matches!(&b.inhoud, Inhoud::Tekst { tekst, .. } if tekst.trim().is_empty()))
             .collect();
         for (b, ingevuld) in self.blokken.iter().zip(&mut blokken) {
-            if let Bloksoort::Vlak {
-                bij_tekst: Some(n), ..
-            } = &b.soort
+            if let Bloksoort::Vlak { bij_tekst: Some(n), .. } = &b.soort
                 && leeg.get(usize::from(*n)).copied().unwrap_or(true)
-                && let Inhoud::Vlak {
-                    dekking,
-                    verloop,
-                    rand,
-                    ..
-                } = &mut ingevuld.inhoud
+                && let Inhoud::Vlak { dekking, verloop, rand, .. } = &mut ingevuld.inhoud
             {
                 *dekking = 0;
                 *verloop = None;
@@ -1410,11 +1366,7 @@ impl Sjabloon {
                 | Bloksoort::Fractielijst { tekstletter: l, .. } => Some(l),
                 _ => None,
             };
-            b.soort
-                .letter()
-                .into_iter()
-                .chain(tweede)
-                .map(|l| l.in_stijl(stijl))
+            b.soort.letter().into_iter().chain(tweede).map(|l| l.in_stijl(stijl))
         })
     }
 }
@@ -1422,11 +1374,7 @@ impl Sjabloon {
 /// De labels van de Zetelverdeling: per Partij met Zetels in de set, in de volgorde van de
 /// cijfers. De invulvelden [`crate::VELD_NAMEN`] en [`crate::VELD_ZETELS`] zetten naam en Zetels
 /// aan; beide uit: geen labels.
-fn partijlabels(
-    i: &Invulling,
-    set: Option<&crate::cijfers::Cijferset>,
-    cijfers: &Cijfers,
-) -> Vec<Partijlabel> {
+fn partijlabels(i: &Invulling, set: Option<&crate::cijfers::Cijferset>, cijfers: &Cijfers) -> Vec<Partijlabel> {
     let aan = |veld: &str| i.velden.get(veld).is_some_and(|v| v == "ja");
     let (namen, zetels) = (aan(crate::VELD_NAMEN), aan(crate::VELD_ZETELS));
     let Some(s) = set.filter(|_| namen || zetels) else {
@@ -1460,16 +1408,8 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
     let vorige_set = || i.vorige_set.as_deref().and_then(|s| cijfers.set(s));
     let volgorde: Vec<String> = cijfers.partijen.iter().map(|p| p.sleutel.clone()).collect();
     // De Partijen met een eigen deel: uit de gekozen (nieuwste) set, ook voor de vorige set.
-    let gekozen = || {
-        set()
-            .map(|s| zetelbalk::grootste(s, &volgorde, i.grootste))
-            .unwrap_or_default()
-    };
-    let telling = || {
-        set().map_or(coalitie::Telling { zetels: 0 }, |s| {
-            coalitie::Telling::van(s, &i.coalitie)
-        })
-    };
+    let gekozen = || set().map(|s| zetelbalk::grootste(s, &volgorde, i.grootste)).unwrap_or_default();
+    let telling = || set().map_or(coalitie::Telling { zetels: 0 }, |s| coalitie::Telling::van(s, &i.coalitie));
     let deel = |d: &Balkdeel, pijl: Option<Pijl>| {
         let zetels = d.zetels.min(ZETELS) as u16;
         match d.partij.as_deref().and_then(|p| cijfers.partij(p)) {
@@ -1636,13 +1576,7 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
                     if zetels == 0 {
                         continue;
                     }
-                    let mut d = deel(
-                        &Balkdeel {
-                            partij: Some(p.clone()),
-                            zetels,
-                        },
-                        None,
-                    );
+                    let mut d = deel(&Balkdeel { partij: Some(p.clone()), zetels }, None);
                     if !erin {
                         // een eigen sleutel: komt de Partij erbij, dan krimpt dit deel en groeit
                         // haar deel in de coalitie, zodat ze vloeiend naar links schuift
@@ -1721,27 +1655,15 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
                     Some(Zeteldeel {
                         partij: Some(p.sleutel.clone()),
                         kort: p.kort.clone(),
-                        kleur: if weg {
-                            stijl.kleur(Stijlkleur::Hoofd)
-                        } else {
-                            p.kleur.parse().unwrap_or(GRIJS)
-                        },
+                        kleur: if weg { stijl.kleur(Stijlkleur::Hoofd) } else { p.kleur.parse().unwrap_or(GRIJS) },
                         dekking: if weg { 60 } else { 100 },
                         zetels: r.zetels,
                         pijl: None,
-                        winst: Some(Winst {
-                            verschil: r.verschil,
-                            nieuw: r.nieuw,
-                        }),
+                        winst: Some(Winst { verschil: r.verschil, nieuw: r.nieuw }),
                     })
                 })
                 .collect();
-            let grootste = rijen
-                .iter()
-                .filter_map(|r| r.winst)
-                .map(|w| w.verschil.unsigned_abs())
-                .max()
-                .unwrap_or(0);
+            let grootste = rijen.iter().filter_map(|r| r.winst).map(|w| w.verschil.unsigned_abs()).max().unwrap_or(0);
             let (schaal, stap) = zetelbalk::as_van(grootste);
             Inhoud::Uitslaggrafiek {
                 rijen,
@@ -1808,12 +1730,7 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
             }
         }
         Bloksoort::Lijn { dekking } => Inhoud::Lijn { dekking: *dekking },
-        Bloksoort::Partijlabels {
-            letter,
-            naamletter,
-            grootte,
-            kaartjes,
-        } => Inhoud::Partijlabels {
+        Bloksoort::Partijlabels { letter, naamletter, grootte, kaartjes } => Inhoud::Partijlabels {
             labels: partijlabels(i, set(), cijfers),
             letter: letter.in_stijl(stijl),
             naamletter: naamletter.in_stijl(stijl),
@@ -1822,11 +1739,7 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
             naamkleur: stijl.kleur(Stijlkleur::Hoofd),
             kaartjes: *kaartjes,
         },
-        Bloksoort::Opbouwlabel {
-            letter,
-            naamletter,
-            grootte,
-        } => Inhoud::Opbouwlabel {
+        Bloksoort::Opbouwlabel { letter, naamletter, grootte } => Inhoud::Opbouwlabel {
             labels: partijlabels(i, set(), cijfers),
             letter: letter.in_stijl(stijl),
             naamletter: naamletter.in_stijl(stijl),
@@ -1834,10 +1747,7 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
             tekstkleur: stijl.kleur(Stijlkleur::Tekst),
             naamkleur: stijl.kleur(Stijlkleur::Hoofd),
         },
-        Bloksoort::Stemmingsbalk {
-            letter,
-            tekstletter,
-        } => {
+        Bloksoort::Stemmingsbalk { letter, tekstletter } => {
             let (voor, tegen, algemeen) = i
                 .stemming
                 .as_ref()
@@ -1870,13 +1780,8 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
             grootte,
             onder_balk,
         } => {
-            let kant = |stem: Stem| {
-                i.stemming
-                    .as_ref()
-                    .map_or_else(Vec::new, |u| fracties_aan_kant(u, stem, stijl))
-            };
-            let (aantal_voor, aantal_tegen) =
-                i.stemming.as_ref().map_or((0, 0), |u| (u.voor, u.tegen));
+            let kant = |stem: Stem| i.stemming.as_ref().map_or_else(Vec::new, |u| fracties_aan_kant(u, stem, stijl));
+            let (aantal_voor, aantal_tegen) = i.stemming.as_ref().map_or((0, 0), |u| (u.voor, u.tegen));
             Inhoud::Fractielijst {
                 voor: kant(Stem::Voor),
                 tegen: kant(Stem::Tegen),
@@ -1898,34 +1803,22 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
             // Fractie, want dat is het nieuws van een hoofdelijke stemming. 150 namen zijn op tv
             // niet te lezen.
             let kant = |stem: Stem| -> Vec<Naamgroep> {
-                let Some(u) = &i.stemming else {
-                    return Vec::new();
-                };
+                let Some(u) = &i.stemming else { return Vec::new() };
                 let labels = fracties_aan_kant(u, stem, stijl);
                 u.fracties
                     .iter()
                     .filter_map(|f| {
-                        let label = labels
-                            .iter()
-                            .find(|l| l.kort == f.kort.as_deref().unwrap_or(&f.afkorting))?;
+                        let label = labels.iter().find(|l| l.kort == f.kort.as_deref().unwrap_or(&f.afkorting))?;
                         let namen = if f.stem == stem {
                             Vec::new()
                         } else {
-                            u.afwijkend
-                                .iter()
-                                .filter(|a| a.fractie == f.afkorting && a.stem == stem)
-                                .map(|a| achternaam(u, a))
-                                .collect()
+                            u.afwijkend.iter().filter(|a| a.fractie == f.afkorting && a.stem == stem).map(|a| achternaam(u, a)).collect()
                         };
-                        Some(Naamgroep {
-                            fractie: label.clone(),
-                            namen,
-                        })
+                        Some(Naamgroep { fractie: label.clone(), namen })
                     })
                     .collect()
             };
-            let (aantal_voor, aantal_tegen) =
-                i.stemming.as_ref().map_or((0, 0), |u| (u.voor, u.tegen));
+            let (aantal_voor, aantal_tegen) = i.stemming.as_ref().map_or((0, 0), |u| (u.voor, u.tegen));
             Inhoud::Namenlijst {
                 voor: kant(Stem::Voor),
                 tegen: kant(Stem::Tegen),
@@ -1949,21 +1842,12 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
     }
 }
 
-fn fractielabel(
-    kort: &str,
-    kleur: Option<&str>,
-    logo: Option<String>,
-    stijl: &Stijl,
-) -> Fractielabel {
+fn fractielabel(kort: &str, kleur: Option<&str>, logo: Option<String>, stijl: &Stijl) -> Fractielabel {
     let kleur = kleur.and_then(|k| k.parse().ok()).unwrap_or(GRIJS);
     Fractielabel {
         kort: kort.into(),
         kleur,
-        tekstkleur: tekst_op(
-            kleur,
-            stijl.kleur(Stijlkleur::Tekst),
-            stijl.kleur(Stijlkleur::Vlak),
-        ),
+        tekstkleur: tekst_op(kleur, stijl.kleur(Stijlkleur::Tekst), stijl.kleur(Stijlkleur::Vlak)),
         logo,
         aantal: None,
         stemmen: 0,
@@ -1972,48 +1856,24 @@ fn fractielabel(
 
 /// De naam van een Kamerlid met een afwijkende stem zoals in de Namenlijst ("Van der Werf"),
 /// anders zijn volledige naam.
-fn achternaam(
-    u: &crate::stemmingen::Stemmingsuitslag,
-    a: &crate::stemmingen::AfwijkendInUitslag,
-) -> String {
-    u.kamerleden
-        .iter()
-        .find(|k| k.kamerlid == a.kamerlid)
-        .map_or_else(|| a.naam.clone(), |k| k.naam.clone())
+fn achternaam(u: &crate::stemmingen::Stemmingsuitslag, a: &crate::stemmingen::AfwijkendInUitslag) -> String {
+    u.kamerleden.iter().find(|k| k.kamerlid == a.kamerlid).map_or_else(|| a.naam.clone(), |k| k.naam.clone())
 }
 
 /// De Fracties aan één kant van een Stemming, in de volgorde van de Kamer. Een verdeelde Fractie
 /// staat aan beide kanten, elk met het aantal Kamerleden dat zo stemde: zo ziet de kijker dat
 /// niet de hele Fractie voor of tegen was.
-fn fracties_aan_kant(
-    u: &crate::stemmingen::Stemmingsuitslag,
-    stem: Stem,
-    stijl: &Stijl,
-) -> Vec<Fractielabel> {
+fn fracties_aan_kant(u: &crate::stemmingen::Stemmingsuitslag, stem: Stem, stijl: &Stijl) -> Vec<Fractielabel> {
     u.fracties
         .iter()
         .filter_map(|f| {
-            let afwijkers = |s: Stem| {
-                u.afwijkend
-                    .iter()
-                    .filter(|a| a.fractie == f.afkorting && a.stem == s)
-                    .count() as u16
-            };
+            let afwijkers = |s: Stem| u.afwijkend.iter().filter(|a| a.fractie == f.afkorting && a.stem == s).count() as u16;
             let anders = afwijkers(f.stem.andere());
-            let hier = if f.stem == stem {
-                f.zetels.saturating_sub(anders)
-            } else {
-                anders
-            };
+            let hier = if f.stem == stem { f.zetels.saturating_sub(anders) } else { anders };
             (hier > 0).then(|| Fractielabel {
                 aantal: (anders > 0).then_some(hier),
                 stemmen: hier,
-                ..fractielabel(
-                    f.kort.as_deref().unwrap_or(&f.afkorting),
-                    f.kleur.as_deref(),
-                    f.logo.clone(),
-                    stijl,
-                )
+                ..fractielabel(f.kort.as_deref().unwrap_or(&f.afkorting), f.kleur.as_deref(), f.logo.clone(), stijl)
             })
         })
         .collect()
@@ -2430,8 +2290,7 @@ fn persoonskaart() -> Sjabloon {
 /// Vijf Blokken.
 fn stemmingskop(x: i32, y: i32, kicker_tekst: &str) -> Vec<Blok> {
     let erin = animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0);
-    let [streepje, kicker_blok] =
-        kicker(x + 48, y + 38, 1000, Tekstbron::Vast(kicker_tekst.into()));
+    let [streepje, kicker_blok] = kicker(x + 48, y + 38, 1000, Tekstbron::Vast(kicker_tekst.into()));
     vec![
         streepje,
         kicker_blok,
@@ -2466,7 +2325,9 @@ fn uitslag_stemming() -> Sjabloon {
     // onder de balk is ruimte voor drie rijen labels van 30 px
     let (x, y) = (96, 532);
     let erin = animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0);
-    let mut blokken = vec![paneel(plek(x, y, 1728, 474))];
+    let mut blokken = vec![
+        paneel(plek(x, y, 1728, 474)),
+    ];
     blokken.extend(stemmingskop(x, y, "STEMMING"));
     blokken.extend([
         Blok {
@@ -2509,7 +2370,9 @@ fn uitslag_stemming() -> Sjabloon {
 /// title safe en begint daarom onder het programmalogo.
 fn groot_stemmingspaneel(id: &str, naam: &str, kicker_tekst: &str, groot: Bloksoort) -> Sjabloon {
     let (x, y, hoog) = (96, 196, 814);
-    let mut blokken = vec![paneel(plek(x, y, 1728, hoog))];
+    let mut blokken = vec![
+        paneel(plek(x, y, 1728, hoog)),
+    ];
     blokken.extend(stemmingskop(x, y, kicker_tekst));
     blokken.extend([
         Blok {
@@ -2566,14 +2429,7 @@ fn hoofdelijke_stemming() -> Sjabloon {
 }
 
 /// Een Tekst in een paneel: vervaagt erin als het paneel open is.
-fn paneeltekst(
-    p: Plek,
-    bron: Tekstbron,
-    letter: Stijlletter,
-    grootte: u16,
-    kleur: Stijlkleur,
-    uitlijning: Uitlijning,
-) -> Blok {
+fn paneeltekst(p: Plek, bron: Tekstbron, letter: Stijlletter, grootte: u16, kleur: Stijlkleur, uitlijning: Uitlijning) -> Blok {
     Blok {
         plek: p,
         soort: Bloksoort::Tekst {
@@ -2639,14 +2495,7 @@ fn zetelbalk_sjabloon() -> Sjabloon {
             paneel(plek(96, 646, 1728, 360)),
             streepje,
             kicker_tekst,
-            paneeltekst(
-                plek(144, 722, 1100, 80),
-                Tekstbron::Setnaam,
-                Stijlletter::Kop,
-                64,
-                Stijlkleur::Hoofd,
-                Uitlijning::Links,
-            ),
+            paneeltekst(plek(144, 722, 1100, 80), Tekstbron::Setnaam, Stijlletter::Kop, 64, Stijlkleur::Hoofd, Uitlijning::Links),
             meerderheid(plek(1176, 682, 600, 42)),
             zetelbalk_blok(plek(144, 830, 1632, 52), false, false),
             programmabug(),
@@ -2660,16 +2509,7 @@ fn zetelbalk_sjabloon() -> Sjabloon {
 /// voor het verschil. De kop is de naam van de nieuwste set; die kleurt de Stoelen.
 fn twee_sets() -> Sjabloon {
     let [streepje, kicker_tekst] = kicker(144, 452, 1000, Tekstbron::Vast("VERGELIJKING".into()));
-    let setnaam = |y, bron| {
-        paneeltekst(
-            plek(144, y, 760, 42),
-            bron,
-            Stijlletter::Tekst,
-            30,
-            Stijlkleur::Hoofd,
-            Uitlijning::Links,
-        )
-    };
+    let setnaam = |y, bron| paneeltekst(plek(144, y, 760, 42), bron, Stijlletter::Tekst, 30, Stijlkleur::Hoofd, Uitlijning::Links);
     Sjabloon {
         id: TWEE_SETS.into(),
         naam: "Twee sets naast elkaar".into(),
@@ -2682,14 +2522,7 @@ fn twee_sets() -> Sjabloon {
             paneel(plek(96, 412, 1728, 594)),
             streepje,
             kicker_tekst,
-            paneeltekst(
-                plek(144, 488, 1100, 80),
-                Tekstbron::Setnaam,
-                Stijlletter::Kop,
-                64,
-                Stijlkleur::Hoofd,
-                Uitlijning::Links,
-            ),
+            paneeltekst(plek(144, 488, 1100, 80), Tekstbron::Setnaam, Stijlletter::Kop, 64, Stijlkleur::Hoofd, Uitlijning::Links),
             meerderheid(plek(1176, 448, 600, 42)),
             setnaam(590, Tekstbron::VorigeSetnaam),
             zetelbalk_blok(plek(144, 644, 1632, 52), true, false),
@@ -2705,8 +2538,7 @@ fn twee_sets() -> Sjabloon {
 /// kicker "ZETELS PER PARTIJ", de naam van de set als kop, een witte lijn en de Uitslaggrafiek.
 /// De Stoelen kleuren zoals bij de Zetelverdeling.
 fn uitslag_per_partij() -> Sjabloon {
-    let [streepje, kicker_tekst] =
-        kicker(148, 160, 900, Tekstbron::Vast("ZETELS PER PARTIJ".into()));
+    let [streepje, kicker_tekst] = kicker(148, 160, 900, Tekstbron::Vast("ZETELS PER PARTIJ".into()));
     Sjabloon {
         id: UITSLAG_PER_PARTIJ.into(),
         naam: "Uitslag per Partij".into(),
@@ -2719,14 +2551,7 @@ fn uitslag_per_partij() -> Sjabloon {
             paneel(plek(96, 120, 1330, 890)),
             streepje,
             kicker_tekst,
-            paneeltekst(
-                plek(148, 196, 820, 108),
-                Tekstbron::Setnaam,
-                Stijlletter::Kop,
-                92,
-                Stijlkleur::Hoofd,
-                Uitlijning::Links,
-            ),
+            paneeltekst(plek(148, 196, 820, 108), Tekstbron::Setnaam, Stijlletter::Kop, 92, Stijlkleur::Hoofd, Uitlijning::Links),
             meerderheid(plek(774, 254, 600, 42)),
             Blok {
                 plek: plek(148, 314, 1226, 2),
@@ -2754,8 +2579,7 @@ fn uitslag_per_partij() -> Sjabloon {
 /// tegenover" en de vergelijkingsset, een witte lijn en de Winst-en-verliesgrafiek. De Stoelen
 /// kleuren zoals bij de Zetelverdeling.
 fn winst_en_verlies() -> Sjabloon {
-    let [streepje, kicker_tekst] =
-        kicker(148, 160, 900, Tekstbron::Vast("WINST EN VERLIES".into()));
+    let [streepje, kicker_tekst] = kicker(148, 160, 900, Tekstbron::Vast("WINST EN VERLIES".into()));
     Sjabloon {
         id: WINST_EN_VERLIES.into(),
         naam: "Winst en verlies".into(),
@@ -2768,22 +2592,8 @@ fn winst_en_verlies() -> Sjabloon {
             paneel(plek(96, 120, 1330, 890)),
             streepje,
             kicker_tekst,
-            paneeltekst(
-                plek(148, 196, 820, 108),
-                Tekstbron::Setnaam,
-                Stijlletter::Kop,
-                92,
-                Stijlkleur::Hoofd,
-                Uitlijning::Links,
-            ),
-            paneeltekst(
-                plek(774, 254, 600, 42),
-                Tekstbron::ZetelsTegenover,
-                Stijlletter::Tekst,
-                30,
-                Stijlkleur::Hoofd,
-                Uitlijning::Rechts,
-            ),
+            paneeltekst(plek(148, 196, 820, 108), Tekstbron::Setnaam, Stijlletter::Kop, 92, Stijlkleur::Hoofd, Uitlijning::Links),
+            paneeltekst(plek(774, 254, 600, 42), Tekstbron::ZetelsTegenover, Stijlletter::Tekst, 30, Stijlkleur::Hoofd, Uitlijning::Rechts),
             Blok {
                 plek: plek(148, 314, 1226, 2),
                 soort: Bloksoort::Lijn { dekking: 55 },
@@ -2835,26 +2645,12 @@ fn partij_uitgelicht() -> Sjabloon {
                 kleur: Kleurkeuze::Stijl(Stijlkleur::Tekst),
                 animatie: open,
             },
-            paneeltekst(
-                plek(140, 192, 200, 42),
-                Tekstbron::Vast("zetels".into()),
-                Stijlletter::Tekst,
-                30,
-                Stijlkleur::Hoofd,
-                Uitlijning::Rechts,
-            ),
+            paneeltekst(plek(140, 192, 200, 42), Tekstbron::Vast("zetels".into()), Stijlletter::Tekst, 30, Stijlkleur::Hoofd, Uitlijning::Rechts),
             // 3 en 4: de naam van de set als kicker
             streepje,
             kicker_tekst,
             // 5: de naam van de Partij
-            paneeltekst(
-                plek(380, 134, 1000, 92),
-                Tekstbron::Partijnaam,
-                Stijlletter::Kop,
-                76,
-                Stijlkleur::Hoofd,
-                Uitlijning::Links,
-            ),
+            paneeltekst(plek(380, 134, 1000, 92), Tekstbron::Partijnaam, Stijlletter::Kop, 76, Stijlkleur::Hoofd, Uitlijning::Links),
             programmabug(),
         ],
         kleurovergang: None,
@@ -2867,22 +2663,8 @@ fn partij_uitgelicht() -> Sjabloon {
 fn coalitieteller(rechts: i32, y: i32) -> [Blok; 3] {
     let regels_rechts = rechts - 160 - 22;
     [
-        paneeltekst(
-            plek(regels_rechts - 600, y, 600, 46),
-            Tekstbron::Vast("zetels samen".into()),
-            Stijlletter::Tekst,
-            34,
-            Stijlkleur::Tekst,
-            Uitlijning::Rechts,
-        ),
-        paneeltekst(
-            plek(regels_rechts - 600, y + 46, 600, 44),
-            Tekstbron::Coalitieregel,
-            Stijlletter::Cijfers,
-            32,
-            Stijlkleur::Accent,
-            Uitlijning::Rechts,
-        ),
+        paneeltekst(plek(regels_rechts - 600, y, 600, 46), Tekstbron::Vast("zetels samen".into()), Stijlletter::Tekst, 34, Stijlkleur::Tekst, Uitlijning::Rechts),
+        paneeltekst(plek(regels_rechts - 600, y + 46, 600, 44), Tekstbron::Coalitieregel, Stijlletter::Cijfers, 32, Stijlkleur::Accent, Uitlijning::Rechts),
         Blok {
             plek: plek(rechts - 160, y - 34, 160, 160),
             soort: Bloksoort::Getal {
@@ -3022,9 +2804,9 @@ impl BewerktSjabloon {
 /// FNV-1a-hash van de JSON, dus vast, ook na een nieuwe versie van Rust.
 pub fn vingerafdruk(s: &Sjabloon) -> String {
     let json = serde_json::to_vec(s).expect("een Sjabloon is altijd JSON");
-    let hash = json.iter().fold(0xcbf2_9ce4_8422_2325u64, |h, b| {
-        (h ^ u64::from(*b)).wrapping_mul(0x0100_0000_01b3)
-    });
+    let hash = json
+        .iter()
+        .fold(0xcbf2_9ce4_8422_2325u64, |h, b| (h ^ u64::from(*b)).wrapping_mul(0x0100_0000_01b3));
     format!("{hash:016x}")
 }
 
@@ -3039,9 +2821,7 @@ pub fn is_eigen_id(id: &str) -> bool {
     id.strip_prefix(EIGEN).is_some_and(|rest| {
         !rest.is_empty()
             && id.len() <= 60
-            && rest
-                .chars()
-                .all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
+            && rest.chars().all(|c| c.is_ascii_lowercase() || c.is_ascii_digit() || c == '-')
     })
 }
 
@@ -3056,9 +2836,7 @@ pub enum SjabloonWeigering {
     NaamTeLang,
     #[error("de snelheid is {0} procent; kies tussen {MIN_SNELHEID} en {MAX_SNELHEID}")]
     Snelheid(u16),
-    #[error(
-        "de Kleurovergang duurt {0} ms; kies tussen {MIN_KLEUROVERGANG_MS} en {MAX_KLEUROVERGANG_MS}"
-    )]
+    #[error("de Kleurovergang duurt {0} ms; kies tussen {MIN_KLEUROVERGANG_MS} en {MAX_KLEUROVERGANG_MS}")]
     Kleurovergang(u16),
     #[error("meer dan {MAX_BLOKKEN} Blokken")]
     TeVeelBlokken,
@@ -3104,38 +2882,21 @@ impl Sjabloon {
                 Letterkeuze::Stijl(_) => None,
             }));
             let verwijst = match &b.soort {
-                Bloksoort::Vlak {
-                    om_tekst,
-                    bij_tekst,
-                    ..
-                } => om_tekst
-                    .iter()
-                    .flat_map(|o| o.blokken.iter())
-                    .chain(bij_tekst)
-                    .copied()
-                    .collect(),
+                Bloksoort::Vlak { om_tekst, bij_tekst, .. } => {
+                    om_tekst.iter().flat_map(|o| o.blokken.iter()).chain(bij_tekst).copied().collect()
+                }
                 _ => Vec::new(),
             };
-            if verwijst
-                .iter()
-                .any(|&i| usize::from(i) >= self.blokken.len())
-            {
+            if verwijst.iter().any(|&i| usize::from(i) >= self.blokken.len()) {
                 return Err(SjabloonWeigering::Verwijzing(n));
             }
             match &b.soort {
                 Bloksoort::Afbeelding { bestand, .. } => bestanden.push(bestand),
-                Bloksoort::Tekst {
-                    bron: Tekstbron::Veld(v),
-                    ..
-                }
-                | Bloksoort::Partijregel {
-                    tekst: Tekstbron::Veld(v),
-                    ..
-                }
-                | Bloksoort::Getal {
-                    bron: Getalbron::Veld(v),
-                    ..
-                } if v.trim().is_empty() => {
+                Bloksoort::Tekst { bron: Tekstbron::Veld(v), .. }
+                | Bloksoort::Partijregel { tekst: Tekstbron::Veld(v), .. }
+                | Bloksoort::Getal { bron: Getalbron::Veld(v), .. }
+                    if v.trim().is_empty() =>
+                {
                     return Err(SjabloonWeigering::VeldZonderNaam(n));
                 }
                 _ => {}
@@ -3153,30 +2914,17 @@ impl Sjabloon {
     pub fn met_achtergrond(&self) -> Sjabloon {
         let soort_en_kleur = match &self.achtergrond {
             Achtergrond::Zaal => return self.clone(),
-            Achtergrond::ZaalDonker => {
-                (vlak(DONKER), Kleurkeuze::Eigen(Kleur { r: 0, g: 0, b: 0 }))
-            }
+            Achtergrond::ZaalDonker => (vlak(DONKER), Kleurkeuze::Eigen(Kleur { r: 0, g: 0, b: 0 })),
             Achtergrond::Kleur { kleur } => (vlak(100), *kleur),
             Achtergrond::Afbeelding { bestand } => (
-                Bloksoort::Afbeelding {
-                    bestand: bestand.clone(),
-                    dekking: 100,
-                },
+                Bloksoort::Afbeelding { bestand: bestand.clone(), dekking: 100 },
                 Kleurkeuze::Stijl(Stijlkleur::Achtergrond),
             ),
         };
         let mut s = self.clone();
         for b in &mut s.blokken {
-            if let Bloksoort::Vlak {
-                om_tekst,
-                bij_tekst,
-                ..
-            } = &mut b.soort
-            {
-                om_tekst
-                    .iter_mut()
-                    .flat_map(|o| o.blokken.iter_mut())
-                    .for_each(|i| *i += 1);
+            if let Bloksoort::Vlak { om_tekst, bij_tekst, .. } = &mut b.soort {
+                om_tekst.iter_mut().flat_map(|o| o.blokken.iter_mut()).for_each(|i| *i += 1);
                 if let Some(i) = bij_tekst {
                     *i += 1;
                 }
@@ -3206,10 +2954,7 @@ impl Sjabloon {
             if let Bloksoort::Afbeelding { bestand, .. } = &b.soort {
                 uit.push(bestand.clone());
             }
-            for l in [b.soort.letter(), tweede_letter(&b.soort)]
-                .into_iter()
-                .flatten()
-            {
+            for l in [b.soort.letter(), tweede_letter(&b.soort)].into_iter().flatten() {
                 if let Letterkeuze::Eigen(naam) = l {
                     uit.push(naam.clone());
                 }

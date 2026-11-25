@@ -175,10 +175,7 @@ pub fn erin(soort: Erin, aard: Aard, t: f32, m: &Maten) -> Toestand {
         },
         Erin::OpenenVanuitLijn => {
             let totaal = m.lijn_totaal();
-            let (lijn, open) = (
-                m.lijn_verschijnt / totaal,
-                (m.lijn_verschijnt + m.vlak_opent) / totaal,
-            );
+            let (lijn, open) = (m.lijn_verschijnt / totaal, (m.lijn_verschijnt + m.vlak_opent) / totaal);
             match aard {
                 Aard::Tekst | Aard::Getal => Toestand {
                     dekking: ((t - open) / (1.0 - open)).clamp(0.0, 1.0),
@@ -258,11 +255,7 @@ impl Tijden {
     pub fn new(beweging: &Beweging, stijl_snelheid: u16, sjabloon_snelheid: u16) -> Self {
         let maten = Maten::from(beweging);
         let rek = rek(stijl_snelheid, sjabloon_snelheid);
-        Tijden {
-            duur: maten.duur * rek,
-            rek,
-            maten,
-        }
+        Tijden { duur: maten.duur * rek, rek, maten }
     }
 
     /// "Start na" telt mee met de snelheid.
@@ -298,12 +291,7 @@ impl Tijden {
                 erin(Erin::Vervagen, aard, 0.0, &self.maten)
             };
         }
-        erin(
-            soort,
-            aard,
-            (sinds - self.start(a)) / self.duur_van(a, aard),
-            &self.maten,
-        )
+        erin(soort, aard, (sinds - self.start(a)) / self.duur_van(a, aard), &self.maten)
     }
 
     /// Hoe lang het duurt tot alle Blokken in beeld staan (optellen telt als getal: het langst).
@@ -326,14 +314,7 @@ impl Tijden {
 
     /// Blok `index` van `aantal` met animatie `a`, `sinds` seconden nadat de Graphic begon weg
     /// te gaan.
-    pub fn eruit(
-        &self,
-        a: &Animatie,
-        aard: Aard,
-        index: usize,
-        aantal: usize,
-        sinds: f32,
-    ) -> Toestand {
+    pub fn eruit(&self, a: &Animatie, aard: Aard, index: usize, aantal: usize, sinds: f32) -> Toestand {
         eruit(
             a.eruit,
             aard,
@@ -407,10 +388,7 @@ mod tests {
     #[test]
     fn elke_animatie_erin_begint_onzichtbaar_en_eindigt_in_het_eindbeeld() {
         for soort in Erin::ALLE {
-            assert!(
-                erin(soort, Aard::Vlak, 0.0).onzichtbaar(),
-                "{soort:?} begint zichtbaar"
-            );
+            assert!(erin(soort, Aard::Vlak, 0.0).onzichtbaar(), "{soort:?} begint zichtbaar");
             assert_eq!(erin(soort, Aard::Vlak, 1.0), Toestand::VOL, "{soort:?}");
             let half = erin(soort, Aard::Vlak, 0.5);
             assert_ne!(half, Toestand::VOL, "{soort:?} beweegt niet");
@@ -425,11 +403,7 @@ mod tests {
                 eruit(soort, Aard::Vlak, 1.0).onzichtbaar(),
                 "{soort:?} blijft zichtbaar"
             );
-            assert_ne!(
-                eruit(soort, Aard::Vlak, 0.5),
-                Toestand::VOL,
-                "{soort:?} beweegt niet"
-            );
+            assert_ne!(eruit(soort, Aard::Vlak, 0.5), Toestand::VOL, "{soort:?} beweegt niet");
         }
     }
 
@@ -499,10 +473,7 @@ mod tests {
             Toestand::VOL,
             "het achterste wacht nog"
         );
-        assert!(
-            t.eruit(&a, Aard::Vlak, 0, 3, t.eruit_klaar(3) + 1e-4)
-                .onzichtbaar()
-        );
+        assert!(t.eruit(&a, Aard::Vlak, 0, 3, t.eruit_klaar(3) + 1e-4).onzichtbaar());
     }
 
     #[test]
@@ -525,11 +496,7 @@ mod tests {
         // 300 ms: het vlak staat, de tekst begint te vervagen
         assert_eq!(vlak(0.3), Toestand::VOL);
         assert!(tekst(0.3).dekking < 0.05);
-        assert!(
-            (tekst(0.35).dekking - 0.5).abs() < 0.05,
-            "{:?}",
-            tekst(0.35)
-        );
+        assert!((tekst(0.35).dekking - 0.5).abs() < 0.05, "{:?}", tekst(0.35));
         assert_eq!(tekst(0.4), Toestand::VOL);
         assert!((t.erin_klaar(&[a]) - 0.4).abs() < 1e-5);
         // dubbel zo snel: alles in de helft van de tijd
@@ -542,22 +509,12 @@ mod tests {
         let a = anim(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0);
         // één Blok: geen wachten op Blokken ervoor
         // weggaan duurt 0,42 s: de tekst is weg na 40 procent, het vlak dicht na 80 procent
-        assert!(
-            t.eruit(&a, Aard::Tekst, 0, 1, 0.17).onzichtbaar(),
-            "tekst weg na 170 ms"
-        );
-        assert_eq!(
-            t.eruit(&a, Aard::Vlak, 0, 1, 0.1),
-            Toestand::VOL,
-            "het vlak wacht"
-        );
+        assert!(t.eruit(&a, Aard::Tekst, 0, 1, 0.17).onzichtbaar(), "tekst weg na 170 ms");
+        assert_eq!(t.eruit(&a, Aard::Vlak, 0, 1, 0.1), Toestand::VOL, "het vlak wacht");
         let dicht = t.eruit(&a, Aard::Vlak, 0, 1, 0.38);
         assert_eq!((dicht.hoogte, dicht.lijn), (0.0, 3.0), "{dicht:?}");
         assert!(dicht.dekking > 0.0);
-        assert!(
-            t.eruit(&a, Aard::Vlak, 0, 1, t.eruit_klaar(1))
-                .onzichtbaar()
-        );
+        assert!(t.eruit(&a, Aard::Vlak, 0, 1, t.eruit_klaar(1)).onzichtbaar());
     }
 
     #[test]
@@ -566,10 +523,7 @@ mod tests {
         traag.duur_ms = 1200;
         let a = anim(Erin::Vervagen, Eruit::Vervagen, 0);
         assert!((Tijden::new(&traag, 100, 100).erin_klaar(&[a]) - 1.2).abs() < 1e-5);
-        assert!(
-            (Tijden::new(&traag, 200, 100).erin_klaar(&[a]) - 0.6).abs() < 1e-5,
-            "snelheid telt erbovenop"
-        );
+        assert!((Tijden::new(&traag, 200, 100).erin_klaar(&[a]) - 0.6).abs() < 1e-5, "snelheid telt erbovenop");
     }
 
     #[test]

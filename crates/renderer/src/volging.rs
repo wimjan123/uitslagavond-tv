@@ -2,10 +2,10 @@
 
 use std::sync::Mutex;
 
-use crate::camera::Camerabeelden;
 use bevy::prelude::*;
 use gedeeld::GenummerdeStand;
 use gedeeld::Rol;
+use crate::camera::Camerabeelden;
 use gedeeld::volger::{Beeldzender, Gebeurtenis, Volger, volg};
 
 pub struct VolgingPlugin {

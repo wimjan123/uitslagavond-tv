@@ -32,10 +32,7 @@ pub enum Gebeurtenis {
     Verbonden,
     Stand(GenummerdeStand),
     /// Waar de camera's staan, 100 keer per seconde, met het moment van binnenkomen.
-    Camera {
-        beeld: Camerabeeld,
-        ontvangen: Instant,
-    },
+    Camera { beeld: Camerabeeld, ontvangen: Instant },
     /// De server weigert de Renderer, of een bericht van hem.
     Geweigerd(String),
     Verbroken(String),
@@ -105,11 +102,7 @@ pub fn volg(server: &str, sleutel: &str, rol: Rol) -> Volger {
 
 /// Als [`volg`], met een eigen versie en machinenaam (voor proeven).
 pub fn volg_als(server: &str, sleutel: &str, rol: Rol, versie: &str, machine: &str) -> Volger {
-    let afzender = Afzender::Renderer {
-        rol,
-        versie: versie.into(),
-        machine: machine.into(),
-    };
+    let afzender = Afzender::Renderer { rol, versie: versie.into(), machine: machine.into() };
     let (zender, gebeurtenissen) = channel();
     let (beelden, te_sturen) = channel();
     let stop = Arc::new(AtomicBool::new(false));
@@ -119,10 +112,7 @@ pub fn volg_als(server: &str, sleutel: &str, rol: Rol, versie: &str, machine: &s
     thread::Builder::new()
         .name("stand-volger".into())
         .spawn(move || {
-            let mut uit = Uitgaand {
-                te_sturen,
-                laatste: BTreeMap::new(),
-            };
+            let mut uit = Uitgaand { te_sturen, laatste: BTreeMap::new() };
             while !stop_thread.load(Ordering::Relaxed) {
                 match verbind_en_volg(&url, &sleutel, &afzender, &zender, &mut uit, &stop_thread) {
                     Einde::Klaar => return,
@@ -203,12 +193,7 @@ fn verbinding(
         s.set_read_timeout(Some(WACHTEN))
             .map_err(|e| e.to_string())?;
     }
-    stuur(
-        &mut ws,
-        &BerichtAanServer::Hallo {
-            afzender: afzender.clone(),
-        },
-    )?;
+    stuur(&mut ws, &BerichtAanServer::Hallo { afzender: afzender.clone() })?;
     // Aangenomen is de Renderer pas bij de eerste Stand; tot dan kan de server nog weigeren.
     let mut aangenomen = false;
     loop {
@@ -218,15 +203,12 @@ fn verbinding(
         }
         if aangenomen {
             for bericht in uit.nieuw() {
-                ws.send(Message::binary(bericht))
-                    .map_err(|e| e.to_string())?;
+                ws.send(Message::binary(bericht)).map_err(|e| e.to_string())?;
             }
         }
         let bericht = match ws.read() {
             Ok(Message::Text(t)) => t,
-            Ok(Message::Close(_)) => {
-                return Err(Einde::Verbroken("de server sloot de verbinding".into()));
-            }
+            Ok(Message::Close(_)) => return Err(Einde::Verbroken("de server sloot de verbinding".into())),
             Ok(_) => continue,
             Err(tungstenite::Error::Io(e))
                 if matches!(e.kind(), ErrorKind::WouldBlock | ErrorKind::TimedOut) =>
@@ -245,8 +227,7 @@ fn verbinding(
                     // het laatste kleine beeld per Monitor opnieuw, want de server vergat ze
                     uit.nieuw();
                     for bericht in uit.laatste.values() {
-                        ws.send(Message::binary(bericht.clone()))
-                            .map_err(|e| e.to_string())?;
+                        ws.send(Message::binary(bericht.clone())).map_err(|e| e.to_string())?;
                     }
                 }
                 Gebeurtenis::Stand(s)
@@ -255,21 +236,14 @@ fn verbinding(
                 let _ = zender.send(Gebeurtenis::Geweigerd(reden));
                 return Ok(Einde::Geweigerd);
             }
-            Ok(BerichtVanServer::Camera(beeld)) => Gebeurtenis::Camera {
-                beeld,
-                ontvangen: Instant::now(),
-            },
+            Ok(BerichtVanServer::Camera(beeld)) => Gebeurtenis::Camera { beeld, ontvangen: Instant::now() },
             Ok(BerichtVanServer::Geweigerd { reden }) => Gebeurtenis::Geweigerd(reden),
             Ok(
                 BerichtVanServer::Uitgevoerd { .. }
                 | BerichtVanServer::Renderers { .. }
                 | BerichtVanServer::Bewerkingen { .. },
             ) => continue,
-            Err(e) => {
-                return Err(Einde::Verbroken(format!(
-                    "onbekend bericht van de server: {e}"
-                )));
-            }
+            Err(e) => return Err(Einde::Verbroken(format!("onbekend bericht van de server: {e}"))),
         };
         if zender.send(gebeurtenis).is_err() {
             return Ok(Einde::Klaar);
@@ -277,10 +251,7 @@ fn verbinding(
     }
 }
 
-fn stuur(
-    ws: &mut WebSocket<MaybeTlsStream<TcpStream>>,
-    b: &BerichtAanServer,
-) -> Result<(), String> {
+fn stuur(ws: &mut WebSocket<MaybeTlsStream<TcpStream>>, b: &BerichtAanServer) -> Result<(), String> {
     let tekst = serde_json::to_string(b).map_err(|e| e.to_string())?;
     ws.send(Message::text(tekst)).map_err(|e| e.to_string())
 }
