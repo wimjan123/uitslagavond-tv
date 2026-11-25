@@ -76,7 +76,7 @@ Een waas in Achtergrond van 97 procent naar doorzichtig (90 graden, van 30 tot 9
 
 ### Zetelverdeling in de Zaal (gebouwd)
 
-Linksboven een naambalk met de kicker "ZETELVERDELING" en de naam van de set (64 px), rechtsboven het programmalogo. De Stoelen komen als Opbouw (1,5 seconde per Partij). Intussen staat op de vloer (y 760) het Opbouwlabel: een vlak (94 procent) met een streep van 18 px in de partijkleur, de Zetels (110 px, cijferletter), de korte naam (52 px, kopletter, Hoofd) en "zetels" eronder. Daarna staan in het plafond (y 236) de Partijlabels als kaartjes (92 procent), even breed, 8 px uit elkaar: de Zetels (44 px), de korte naam (21 px, Hoofd) en een streep van 5 px in de partijkleur onderaan. De plekken passen bij het eindbeeld van de Onthulling.
+Linksboven een naambalk met de kicker "ZETELVERDELING" en de naam van de set (64 px), rechtsboven het programmalogo. De Stoelen komen als Opbouw (1,5 seconde per Partij). Intussen staat op de vloer (y 760) het Opbouwlabel: een vlak (94 procent) met een streep van 18 px in de partijkleur, de Zetels (110 px, cijferletter), de korte naam (52 px, kopletter, Hoofd) en "zetels" eronder. Daarna staan in het plafond (y 236) de Partijlabels als kaartjes (92 procent), even breed, 8 px uit elkaar: de Zetels (44 px), de korte naam (21 px, Hoofd) en een streep van 5 px in de partijkleur onderaan. De camera staat stil op Standpunt A; de plekken passen daarbij en bij het eindbeeld van de Onthulling.
 
 ### Uitslag per Partij (#49, gebouwd)
 

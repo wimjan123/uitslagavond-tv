@@ -83,9 +83,25 @@ impl Opbouw {
         INLEIDING * self.per_stap
     }
 
-    /// Hoe lang de hele Opbouw duurt.
+    /// Hoe lang de hele Opbouw duurt, met de nagloed van de laatste stap.
     pub fn duur(&self) -> f32 {
-        self.inleiding() + self.stappen.len() as f32 * self.per_stap
+        self.inleiding() + (self.stappen.len() as f32 + OPLICHTEN) * self.per_stap
+    }
+
+    /// Hoe sterk Stoel `i` op `t` seconden gloeit (0 tot 1): de stap die aan de beurt is, licht
+    /// extra op, zodat je ook bij een donkere partijkleur ziet welk blok bij het label hoort. Na
+    /// zijn stap zakt hij terug naar zijn eigen kleur.
+    pub fn gloed(&self, i: usize, t: f32) -> f32 {
+        let Some(k) = self.stap_van.get(i).copied().flatten() else { return 0.0 };
+        let start = self.inleiding() + k as f32 * self.per_stap;
+        let (einde, overgang) = (start + self.per_stap, OPLICHTEN * self.per_stap);
+        if t < start {
+            0.0
+        } else if t < einde {
+            zacht(((t - start) / overgang).min(1.0))
+        } else {
+            1.0 - zacht(((t - einde) / overgang).min(1.0))
+        }
     }
 
     /// Waar Stoel `i` is op `t` seconden.
@@ -163,7 +179,7 @@ mod tests {
         let o = Opbouw::nieuw(&naar, &rang, 1.0);
         assert_eq!(o.stappen, [k(2), k(1), k(3)].map(Option::unwrap));
         assert_eq!(o.stap_van, [Some(1), Some(1), Some(0), Some(0), Some(0), None, Some(2), Some(2)]);
-        assert_eq!(o.duur(), 3.5, "een halve stap donker en drie stappen");
+        assert!((o.duur() - 3.9).abs() < 1e-6, "een halve stap donker, drie stappen en de nagloed");
     }
 
     #[test]
@@ -183,6 +199,17 @@ mod tests {
         assert_eq!(o.stap(inleiding + 1.6).map(|s| s.0), Some(1));
         assert_eq!(o.deel(0, inleiding + 1.5 + 0.6), Opbouwdeel::Oplichten(1.0));
         assert_eq!(o.stap(o.duur()), None, "na de laatste stap");
+    }
+
+    #[test]
+    fn de_stap_die_aan_de_beurt_is_gloeit_en_zakt_daarna_terug() {
+        let o = Opbouw::nieuw(&[k(1), k(2)], &[0, 1], 1.0);
+        // stap 0 loopt van 0,5 tot 1,5 seconde
+        assert_eq!(o.gloed(0, 0.4), 0.0);
+        assert_eq!(o.gloed(0, 1.0), 1.0);
+        assert!(o.gloed(0, 1.7) > 0.0 && o.gloed(0, 1.7) < 1.0, "na zijn stap zakt hij terug");
+        assert_eq!(o.gloed(0, 1.9), 0.0);
+        assert_eq!(o.gloed(1, 1.0), 0.0, "de volgende wacht nog");
     }
 
     #[test]

@@ -2067,8 +2067,9 @@ fn titelkaart() -> Sjabloon {
 /// een Blok), als Opbouw: één Partij tegelijk, de grootste eerst, met haar label groot op de
 /// vloer. Daarna staan alle Partijen als kaartjes op één rij in het plafond, in dezelfde volgorde
 /// als hun Stoelen van links naar rechts. Linksboven een naambalk met de kicker "ZETELVERDELING"
-/// en de naam van de set; rechtsboven het programmalogo. De plekken passen bij het eindbeeld van
-/// de Onthulling.
+/// en de naam van de set; rechtsboven het programmalogo. De camera staat stil op Standpunt A, met
+/// de hele halve cirkel in beeld: zo zie je bij elke stap het blok bij het label. De plekken passen
+/// daarbij en bij het eindbeeld van de Onthulling.
 fn zetelverdeling() -> Sjabloon {
     let [streepje, kicker_tekst] = kicker(140, 84, 1000, Tekstbron::Vast("ZETELVERDELING".into()));
     Sjabloon {
@@ -2078,8 +2079,8 @@ fn zetelverdeling() -> Sjabloon {
         snelheid: 100,
         achtergrond: Achtergrond::Zaal,
         stoelen: Stoelen::Gegevens,
-        // de Onthulling: eindigt met de hele halve cirkel in beeld (vaste Camerarit Q)
-        standpunt: Some("Q".into()),
+        // Standpunt A, zoals elke zetelgraphic: geen beweging tijdens de Opbouw
+        standpunt: None,
         blokken: vec![
             naambalk(plek(96, 54, 1100, 166), vec![2, 3]),
             streepje,

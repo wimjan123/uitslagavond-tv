@@ -44,7 +44,7 @@ fn mix(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
 }
 
 /// Dichtbij boven de voorste banken, dan terug en omhoog tot de hele halve cirkel in beeld is:
-/// zo eindigt de Zetelverdeling met elke Partij in beeld.
+/// zo eindigt hij met elke Partij in beeld.
 fn onthulling(t: f32) -> ([f32; 3], [f32; 3], f32) {
     let t = zacht(t);
     let plek = mix([0.0, 2.6, -1.0], [0.0, 4.0, 4.35], t);

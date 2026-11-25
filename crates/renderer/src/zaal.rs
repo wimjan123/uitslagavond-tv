@@ -455,8 +455,16 @@ impl Golf {
                     Opbouwdeel::Donker(f) => {
                         Stoelstand::Onderweg(van.mix(&lineair(wacht), f), van_straalt.mix(&LinearRgba::BLACK, f))
                     }
-                    Opbouwdeel::Oplichten(f) if f >= 1.0 => Stoelstand::Klaar,
-                    Opbouwdeel::Oplichten(f) => meng(lineair(wacht), LinearRgba::BLACK, naar, f),
+                    Opbouwdeel::Oplichten(f) => {
+                        let g = self.opbouw.gloed(i, self.tijd);
+                        if f >= 1.0 && g <= 0.0 {
+                            return Stoelstand::Klaar;
+                        }
+                        let leer = lineair(wacht).mix(&lineair(naar), f).mix(&lineair(Some(Kleur { r: 255, g: 255, b: 255 })), GLOED_LICHT * g);
+                        let eigen = naar.map_or(LinearRgba::BLACK, |k| LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)));
+                        let straling = LinearRgba::BLACK.mix(&straalt(naar), f) + eigen * (GLOED_STRAALT * g);
+                        Stoelstand::Onderweg(leer, straling)
+                    }
                 }
             }
         }
@@ -487,6 +495,10 @@ pub struct Opbouwstand {
 /// Hoe fel het leer bij Kleurkracht 100 straalt in zijn eigen kleur, bovenop het licht uit de bak:
 /// zo blijft de kleur vol, ook waar de bak donker is.
 const KLEUR_STRAALT: f32 = 0.25;
+/// Bij de Opbouw: hoeveel de Partij die aan de beurt is naar wit opschuift, en hoe fel ze extra
+/// straalt in haar eigen kleur.
+const GLOED_LICHT: f32 = 0.35;
+const GLOED_STRAALT: f32 = 0.4;
 /// Hoeveel licht de rest van de Zaal bij Kleurkracht 100 overhoudt, zolang er Stoelen gekleurd
 /// zijn. Daartussen daalt het licht in gelijke stappen voor het oog: bij 50 ongeveer een derde.
 const MINSTE_LICHT: f32 = 0.1;
@@ -1336,15 +1348,18 @@ mod tests {
         assert_eq!(stap(&app), None, "eerst worden de Stoelen donker");
         assert_eq!(tel(&mut app, OPBOUW_WACHTKLEUR), 150);
 
-        // de grootste Partij (nu rood, 110) eerst, de rest wacht donker
+        // de grootste Partij (nu rood, 110) eerst en gloeit; de rest wacht donker
         wacht(&mut app, 0.7);
         assert_eq!(stap(&app), Some(rood));
-        assert_eq!((tel(&mut app, rood), tel(&mut app, OPBOUW_WACHTKLEUR)), (110, 40));
+        assert_eq!(tel(&mut app, OPBOUW_WACHTKLEUR), 40);
+        assert_eq!(tel(&mut app, rood), 0, "rood gloeit nog, lichter dan zijn eigen kleur");
+        // in de volgende stap zakt rood terug naar zijn eigen kleur
         wacht(&mut app, 1.5);
         assert_eq!(stap(&app), Some(groen));
+        assert_eq!(tel(&mut app, rood), 110);
+        wacht(&mut app, 1.5);
         assert_eq!(tel(&mut app, groen), 40);
-        wacht(&mut app, 1.0);
-        assert!(!app.world().resource::<Opbouwstand>().bezig, "na de laatste Partij klaar");
+        assert!(!app.world().resource::<Opbouwstand>().bezig, "na de laatste Partij en haar nagloed klaar");
 
         // overslaan: dezelfde kleuren met Vervagen; de Partijen die nog wachtten, kleuren meteen mee
         app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 3, stand });
