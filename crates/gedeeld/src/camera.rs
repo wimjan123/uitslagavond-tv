@@ -304,6 +304,11 @@ const SHOT_PLEK_X: f32 = -0.42;
 /// soort Graphic.
 pub const AANSCHUIVEN: &str = "aanschuiven";
 
+/// Camera blijft staan: de keuze in een Sjabloon, Graphic of Preset die de camera van de Ether
+/// laat waar hij is bij Toon en Bijwerken, ook een Vrije camera of een lopende Camerarit. Het
+/// Voorbeeld toont dan de camera van de Ether.
+pub const BLIJF: &str = "blijf";
+
 /// Zo lang duurt Aanschuiven, in seconden bij snelheid 100.
 pub const AANSCHUIVEN_S: f32 = 8.0;
 
