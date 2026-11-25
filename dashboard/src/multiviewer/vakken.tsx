@@ -81,7 +81,7 @@ function Voorbeeld() {
     <Monitor
       label="Preview"
       kop={kop}
-      toestand={oefenen ? "oefenen" : klaar && !inBeeld ? "klaar" : "rust"}
+      toestand={oefenen ? "oefenen" : klaar ? "klaar" : "rust"}
       gestippeld={!!proef}
       {...(oefenen && !proef
         ? { naam: "Oefenen", detail: "De gamepad stuurt alleen dit beeld, de Ether blijft staan" }
@@ -154,7 +154,7 @@ function Take() {
     <div className="take">
       <span className="take-uitleg" title={kanToon ? "Take: zet wat in Preview staat Live (Spatie). Enter doet dit nooit." : waaromGeenToon(s)}>
         <button
-          className={`toon${oud ? " toon-oud" : ""}`}
+          className={`toon${oud ? " toon-oud" : ""}${typen && kanToon ? " toon-typen" : ""}`}
           disabled={!kanToon}
           // Enter toont nooit iets, ook niet als deze knop de focus heeft (DESIGN.md, Keyboard).
           onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
@@ -165,15 +165,16 @@ function Take() {
             <kbd>Spatie</kbd>
           </span>
           {oud && <span className="toon-let-op">oude cijfers (N)</span>}
-          {!kanToon && verbonden && <span className="toon-reden">{s?.klaar ? "staat al in beeld" : "niets klaar"}</span>}
+          {!kanToon && verbonden && <span className="toon-reden">{s?.klaar ? "staat al live" : "niets klaar"}</span>}
+          {typen && kanToon && <span className="toon-reden">je typt: eerst Esc</span>}
         </button>
       </span>
       <span
         className="take-uitleg"
         title={
           kan("Bijwerken", s)
-            ? "Zet de nieuwere versie of de nieuwere cijfers in de Ether, zonder opnieuw op te bouwen"
-            : "Kan als wat klaarstaat een nieuwere versie is van de Graphic in de Ether"
+            ? "Zet de nieuwere versie of de nieuwere cijfers in Live, zonder opnieuw op te bouwen"
+            : "Kan als wat klaarstaat een nieuwere versie is van de Graphic in Live"
         }
       >
         <button className="knop knop-take" disabled={!verbonden || !kan("Bijwerken", s)} onClick={() => voerUit(regie, "Bijwerken")}>
@@ -182,7 +183,7 @@ function Take() {
           <kbd>B</kbd>
         </button>
       </span>
-      <span className="take-uitleg" title={s?.ether ? "Haalt de Graphic uit de Ether. Daarna kun je hem nog terugzetten (Ctrl+Z)." : "Er staat niets in de Ether"}>
+      <span className="take-uitleg" title={s?.ether ? "Haalt de Graphic uit de Ether. Daarna kun je hem nog terugzetten (Ctrl+Z)." : "Er staat niets in Live"}>
         <button className="knop knop-take knop-uit" disabled={!verbonden || !kan("UitBeeld", s)} onClick={() => voerUit(regie, "UitBeeld")}>
           <UitBeeld />
           <span className="knop-woord">Take out</span>
@@ -193,7 +194,7 @@ function Take() {
         className="knop knop-take"
         disabled={!verbonden || !kan("KleurUit", s)}
         onClick={() => voerUit(regie, "KleurUit")}
-        title="De Stoelen in de Ether krijgen hun eigen leer terug; de Graphic blijft staan"
+        title="De Stoelen in Live krijgen hun eigen leer terug; de Graphic blijft staan"
       >
         <Druppel />
         <span className="knop-woord">Kleur uit</span>

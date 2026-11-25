@@ -393,7 +393,7 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
           <Microfoon />
           <span>
             {zin.length === 0 ? (
-              <span className="zacht">Tik de Fracties in de volgorde waarin de Voorzitter ze noemt.</span>
+              <span className="zacht">Klik de Fracties in de volgorde waarin de Voorzitter ze noemt</span>
             ) : (
               zin.map((d, i) =>
                 d.stem ? (
@@ -409,7 +409,7 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
         </p>
 
         <div className="kant">
-          <span className="zacht">Ik tik nu</span>
+          <span className="zacht">Kant</span>
           <div className="segment" role="group" aria-label="Kant">
             {(["Voor", "Tegen"] as const).map((k) => (
               <button key={k} className={`segment-${k.toLowerCase()}`} aria-pressed={kant === k} onClick={() => setKant(k)}>
@@ -488,7 +488,30 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
         <button className="knop" aria-pressed={sg.overige === andere(kant)} disabled={dicht} onClick={() => zetel(overige(sg, kant))}>
           Overige {kant === "Voor" ? "tegen" : "voor"}
         </button>
-        <button className="knop" aria-pressed={sg.algemene_stemmen} disabled={dicht} onClick={() => zetel(algemeen(sg))}>
+        <button
+          className="knop"
+          aria-pressed={sg.algemene_stemmen}
+          disabled={dicht}
+          title="Zet alle stemmen op Voor, met algemene stemmen. De invoer van nu kun je daarna terugzetten (Ctrl+Z)."
+          onClick={() => {
+            const voor = sg;
+            const na = algemeen(sg);
+            zetel(na);
+            // Aanzetten gooit de getikte Fracties weg: daar hoort een weg terug bij.
+            if (!sg.algemene_stemmen && !zelfdeStemgedrag(sg, { ...LEEG, hoofdelijk: sg.hoofdelijk })) {
+              biedHerstel({
+                tekst: "Met algemene stemmen",
+                wat: stemming.punt.titel,
+                knop: "Zet stemmen terug",
+                geldig: (nu) => {
+                  const x = nu.stemmingen.lijst.find((y) => y.punt.id === id);
+                  return !!x && !x.vergrendeld && zelfdeStemgedrag(x.stemgedrag, na);
+                },
+                doe: (r) => void r.stuur({ soort: "ZetStemgedrag", stemming: id, stemgedrag: voor }, BIJ),
+              });
+            }
+          }}
+        >
           Met algemene stemmen
         </button>
         <button className="knop" aria-pressed={zoeken} disabled={dicht || kamer.kamerleden.length === 0} onClick={() => setZoeken(!zoeken)}>
@@ -502,7 +525,7 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
           <button
             className="knop knop-commit"
             disabled={!verbonden || !u.besluit || wacht !== null}
-            title={u.besluit ? "Legt de uitslag vast en zet de Graphic klaar (Ctrl+Enter)" : `Nog ${u.open} Zetels open: tik de Fracties of kies Overige`}
+            title={u.besluit ? "Legt de uitslag vast en zet de Graphic klaar (Ctrl+Enter)" : `Nog ${u.open} Zetels open: klik de Fracties of kies Overige`}
             onClick={legVast}
           >
             Vastleggen en klaarzetten <kbd>Ctrl+Enter</kbd>

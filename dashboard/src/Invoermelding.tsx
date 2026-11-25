@@ -6,7 +6,6 @@ import "./invoermelding.css";
 export function Invoermelding({ cijfers }: { cijfers: Cijfers | undefined }) {
   const m = cijfers?.laatste_invoer;
   const zonderKleur = cijfers?.partijen.filter((p) => p.kleur_tijdelijk).map((p) => p.kort) ?? [];
-  const zonderLogo = cijfers?.partijen.filter((p) => !p.logo).length ?? 0;
   return (
     <section className="paneel invoermelding" aria-live="polite">
       <h2 className="label">Invoerbestand</h2>
@@ -54,7 +53,6 @@ export function Invoermelding({ cijfers }: { cijfers: Cijfers | undefined }) {
           <p>{zonderKleur.join(", ")}</p>
         </details>
       )}
-      {zonderLogo > 0 && <p className="stil">{zonderLogo} Partijen zonder logo: de korte naam staat op die plek</p>}
     </section>
   );
 }

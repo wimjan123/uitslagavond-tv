@@ -118,7 +118,7 @@ function Rij({ s }: { s: Stemming }) {
             </ul>
             {status === "UitkomstAnders" && ether && !c.afgehandeld && (
               <p className="controle-let-op">
-                Deze Stemming was om {ether} in de Ether met een andere uitkomst dan officieel. Of je dat in de uitzending rechtzet, beslist de Regie.
+                Deze Stemming was om {ether} in Live met een andere uitkomst dan officieel. Of je dat in de uitzending rechtzet, beslist de Regie.
               </p>
             )}
             {open && (
@@ -129,7 +129,7 @@ function Rij({ s }: { s: Stemming }) {
                 <button className="knop" disabled={regie.staat !== "verbonden"} onClick={() => kies("OnzeInvoerKlopt")}>
                   Onze invoer klopt
                 </button>
-                <span className="zacht">Een Preset en wat in de Ether stond houden hun eigen gegevens.</span>
+                <span className="zacht">Een Preset en wat in Live stond houden hun eigen gegevens.</span>
               </div>
             )}
             {melding && (

@@ -19,7 +19,7 @@ export function Vormgeving() {
   const [deel, setDeel] = useState<Deel>("stijl");
   return (
     <>
-      <Werkbalk naam="Vormgeving" hint="Een wijziging geldt na Opslaan, in de Ether pas bij de volgende Toon">
+      <Werkbalk naam="Vormgeving" hint="Een wijziging geldt na Opslaan, in Live pas bij de volgende Take">
         <div className="filters">
           <button className="filter" aria-pressed={deel === "stijl"} onClick={() => setDeel("stijl")}>
             Stijl
@@ -221,7 +221,7 @@ function StijlDeel() {
         <Schets stijl={stijl} logo={logo.url} />
         <p className="zacht">
           Alleen de kleuren en het logo. Het Voorbeeld bovenin toont de echte Graphic in de nieuwe Stijl, zodra je opslaat. De Ether houdt haar vorm tot
-          de volgende Toon.
+          de volgende Take.
         </p>
       </aside>
 

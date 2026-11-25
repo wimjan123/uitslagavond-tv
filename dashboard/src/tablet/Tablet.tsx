@@ -223,7 +223,7 @@ function Coalitiebouwer({ stand: s }: { stand: Stand }) {
       <TweeKeerKnop
         className="knop tablet-wis"
         tweeKeer={inEther}
-        vraag="Tik nog eens: wis alle Partijen uit de Ether"
+        vraag="Tik nog eens: wis alle Partijen uit Live"
         disabled={regie.staat !== "verbonden" || b.partijen.length === 0}
         onClick={() => stuur([])}
       >

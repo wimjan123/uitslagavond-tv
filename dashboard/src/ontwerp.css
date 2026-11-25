@@ -307,3 +307,18 @@ input::placeholder { color: var(--tekst-3); }
 .take-melding, .presets-melding { color: var(--warn-amber-ink); background: var(--warn-amber); border-radius: 6px; font-weight: 500; }
 .invoermelding, .systeem { font-size: 13px; }
 details > summary { cursor: pointer; }
+
+/* Take tijdens typen: Spatie typt dan in het veld, dus Take oogt uit. */
+.toon-typen { opacity: 0.45; }
+/* Partijkleur als bolletje voor de naam, geen streep. */
+.fractie-toets { box-shadow: none; }
+.toets-naam { display: inline-flex; align-items: center; gap: 6px; }
+.toets-naam::before { content: ""; flex: none; width: 8px; height: 8px; border-radius: 50%; background: var(--partij); }
+/* Presets: één regel per cel */
+.presets-tabel td { height: 44px; }
+.gegevens-regel { display: flex; align-items: baseline; gap: 4px; min-width: 0; }
+.gegevens-regel > div { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.preset-nummer { display: inline-grid; place-items: center; width: 22px; font-size: 12px; color: var(--tekst-3); }
+.presets-tabel tbody tr:first-child td { border-top: 0; }
+.herstel-knop { padding: 0 6px; gap: 6px; }
+.herstel-knop kbd { padding: 0 3px; font-size: 10.5px; }

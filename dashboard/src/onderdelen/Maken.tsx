@@ -156,8 +156,7 @@ function Titelkaart() {
     <div className="maken-met-schets">
     <form className="paneel-detail" onSubmit={zetKlaar}>
       <header>
-        <h3 className="kop-regel">Titelkaart</h3>
-        <p className="zacht">{SJABLONEN[0].uitleg}</p>
+        <h3 className="kop-regel" title={SJABLONEN[0].uitleg}>Titelkaart</h3>
       </header>
       <label className="veld">
         <span className="veld-kop">
@@ -180,7 +179,7 @@ function Titelkaart() {
       <label className="veld">
         <span className="veld-kop">
           <span className="label">Standpunt</span>
-          <span className="zacht">Waar Toon de camera heen stuurt</span>
+          <span className="zacht">Camera bij Take</span>
         </span>
         <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
           <option value="">Van het Sjabloon{standaard ? ` (${standaard.tekst})` : ""}</option>
@@ -205,7 +204,7 @@ function Titelkaart() {
           className="knop"
           type="button"
           disabled={!verbonden || !klaarIsTitelkaart || !graphic.kop || zelfde}
-          title={klaarIsTitelkaart ? "Past de Titelkaart in het Voorbeeld aan; staat die al in de Ether, dan pas na Bijwerken" : "Kan als er een Titelkaart klaarstaat"}
+          title={klaarIsTitelkaart ? "Past de Titelkaart in Preview aan; staat die al in Live, dan pas na Update" : "Kan als er een Titelkaart klaarstaat"}
           onClick={wijzig}
         >
           Wijzig klaargezette
@@ -276,8 +275,7 @@ function Zetelverdeling() {
   return (
     <form className="paneel-detail" onSubmit={zetKlaar}>
       <header>
-        <h3 className="kop-regel">{SJABLONEN[1].naam}</h3>
-        <p className="zacht">{SJABLONEN[1].uitleg}</p>
+        <h3 className="kop-regel" title={SJABLONEN[1].uitleg}>{SJABLONEN[1].naam}</h3>
       </header>
       <fieldset className="veld">
         <span className="veld-kop">
@@ -325,7 +323,7 @@ function Zetelverdeling() {
       <label className="veld">
         <span className="veld-kop">
           <span className="label">Standpunt</span>
-          <span className="zacht">Waar Toon de camera heen stuurt</span>
+          <span className="zacht">Camera bij Take</span>
         </span>
         <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
           <option value="">Van het Sjabloon{standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}</option>
@@ -432,8 +430,7 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
   return (
     <form className="paneel-detail" onSubmit={zetKlaar}>
       <header>
-        <h3 className="kop-regel">{sjabloon.naam}</h3>
-        <p className="zacht">{sjabloon.uitleg}</p>
+        <h3 className="kop-regel" title={sjabloon.uitleg}>{sjabloon.naam}</h3>
       </header>
       {sets.length < (twee ? 2 : 1) ? (
         <p className="melding">{twee ? "Er zijn twee sets nodig" : "Nog geen sets"}: lees eerst het invoerbestand in of maak een set (zie Systeem).</p>
@@ -465,7 +462,7 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
       <label className="veld">
         <span className="veld-kop">
           <span className="label">Standpunt</span>
-          <span className="zacht">Waar Toon de camera heen stuurt</span>
+          <span className="zacht">Camera bij Take</span>
         </span>
         <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
           <option value="">Van het Sjabloon{standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}</option>
@@ -559,7 +556,7 @@ function useCijferformulier() {
       <>
         <Keuze
           label="Standpunt"
-          uitleg="Waar Toon de camera heen stuurt"
+          uitleg="Camera bij Take"
           waarde={standpunt}
           zet={setStandpunt}
           opties={[
@@ -606,8 +603,7 @@ function WinstEnVerlies() {
   return (
     <form className="paneel-detail" onSubmit={zetKlaar(graphic)}>
       <header>
-        <h3 className="kop-regel">{sjabloon.naam}</h3>
-        <p className="zacht">{sjabloon.uitleg}</p>
+        <h3 className="kop-regel" title={sjabloon.uitleg}>{sjabloon.naam}</h3>
       </header>
       {sets.length < 2 ? (
         <p className="melding">Er zijn twee sets nodig: lees eerst het invoerbestand in of maak een set (zie Systeem).</p>
@@ -648,8 +644,7 @@ function PartijUitgelicht() {
   return (
     <form className="paneel-detail" onSubmit={zetKlaar(graphic)}>
       <header>
-        <h3 className="kop-regel">{sjabloon.naam}</h3>
-        <p className="zacht">{sjabloon.uitleg}</p>
+        <h3 className="kop-regel" title={sjabloon.uitleg}>{sjabloon.naam}</h3>
       </header>
       {sets.length === 0 ? (
         <p className="melding">Nog geen sets: lees eerst het invoerbestand in of maak een set (zie Systeem).</p>

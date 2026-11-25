@@ -152,7 +152,7 @@ export function Persoonskaart({ uitleg }: { uitleg: string }) {
         <label className="veld">
           <span className="veld-kop">
             <span className="label">Standpunt</span>
-            <span className="zacht">Waar Toon de camera heen stuurt</span>
+            <span className="zacht">Camera bij Take</span>
           </span>
           <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
             <option value="">Van het Sjabloon ({sjabloonTekst})</option>

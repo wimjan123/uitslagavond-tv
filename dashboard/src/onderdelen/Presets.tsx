@@ -70,17 +70,6 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
       )}
       <div className="werkvlak-inhoud">
         <table className="tabel presets-tabel">
-          <thead>
-            <tr>
-              <th className="kol-toets">Toets</th>
-              <th className="kol-status">Status</th>
-              <th className="kol-beeld">Beeld</th>
-              <th>Graphic</th>
-              <th>Gegevens</th>
-              <th className="kol-camera">Camera</th>
-              <th className="kol-tablet">Tablet</th>
-            </tr>
-          </thead>
           <tbody>
             {s &&
               zichtbaar.map((p) => (
@@ -127,9 +116,14 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
   const zetKlaar = () => verbonden && void regie.stuur({ soort: "ZetPresetKlaar", nummer: p.nummer }, PRESETS);
   const oud = nieuwereCijfers(s, p.graphic);
   return (
-    <tr className={rij} onClick={zetKlaar} title={`Zet Preset ${p.nummer} klaar (toets ${p.nummer})`}>
+    <tr
+      className={rij}
+      onClick={zetKlaar}
+      title={`Zet Preset ${p.nummer} klaar${p.nummer <= 9 ? ` (toets ${p.nummer})` : ""} · bewaard ${uurMinuut(p.bewaard_ms)} door ${p.bewaard_door}${oud ? " · er zijn nieuwere cijfers: druk N na klaarzetten" : ""}`}
+    >
       <td className="kol-toets">
-        <span className="toets-kap">{p.nummer}</span>
+        {/* Alleen 1 tot 9 zijn sneltoetsen; een hoger nummer krijgt geen toetsvorm. */}
+        <span className={p.nummer <= 9 ? "toets-kap" : "preset-nummer"}>{p.nummer}</span>
       </td>
       <td className="kol-status">
         <span className="status-cel">
@@ -142,23 +136,17 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
         <Schets graphic={p.graphic} kleuren={s.stijl.kleuren} />
       </td>
       <td className="cel-tekst">
-        <div className="titel-cel">{sjabloonNaam(p.graphic, s.sjablonen)}</div>
-        <div className="zacht een-regel">{p.graphic.sjabloon === "Titelkaart" ? p.graphic.kop : groepVan(p.graphic)}</div>
+        <div className="een-regel">
+          <span className="titel-cel">{sjabloonNaam(p.graphic, s.sjablonen)}</span>
+          <span className="zacht"> {p.graphic.sjabloon === "Titelkaart" ? p.graphic.kop : groepVan(p.graphic)}</span>
+        </div>
       </td>
       <td className="cel-tekst">
-        <Gegevens graphic={p.graphic} />
-        <div className="zacht een-regel">
-          {/* Rustig in de lijst: na de eerste nieuwe cijfers geldt het voor bijna elke Preset. De waarschuwing
-              staat in amber op het Voorbeeld en in Toon, waar je beslist. */}
-          {oud ? (
-            <span title="Er zijn sindsdien nieuwere cijfers. Zet klaar en druk N (Ververs) voor de cijfers van nu.">
-              cijfers van {uurMinuut(p.bewaard_ms)}, er zijn nieuwere · door {p.bewaard_door}
-            </span>
-          ) : (
-            <>
-              bewaard {uurMinuut(p.bewaard_ms)} door {p.bewaard_door}
-            </>
-          )}
+        {/* Eén regel. Wie en wanneer staat in de tooltip; oude cijfers rustig als tijdstip, want na de eerste
+            nieuwe cijfers geldt het voor bijna elke Preset (de waarschuwing staat in Take en bij Preview). */}
+        <div className="een-regel gegevens-regel">
+          <Gegevens graphic={p.graphic} />
+          {oud && <span className="zacht"> · cijfers {uurMinuut(p.bewaard_ms)}</span>}
         </div>
       </td>
       <td className="kol-camera" title={standpunt?.naam}>

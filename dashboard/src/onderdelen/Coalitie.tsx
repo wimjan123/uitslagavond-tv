@@ -61,7 +61,7 @@ export function Coalitie() {
     // toont een andere Werkplek intussen iets anders, ook een coalitie met dezelfde Partijen, dan vervalt het.
     biedHerstel({
       tekst,
-      wat: "Coalitie in de Ether",
+      wat: "Coalitie live",
       knop: "Zet terug",
       geldig: (nu) => {
         const g = nu.ether?.id === etherId ? nu.ether.graphic : undefined;
@@ -144,22 +144,23 @@ export function Coalitie() {
             <button
               className={inEther ? "knop" : "knop knop-commit"}
               disabled={!verbonden || !set || partijen.length === 0}
-              title={inEther ? "Deze coalitie staat al in de Ether en werkt bij elke tik bij. Dit zet een kopie klaar." : undefined}
+              title={inEther ? "Deze coalitie staat al in Live en werkt bij elke klik bij. Dit zet een kopie klaar." : undefined}
               onClick={zetKlaar}
             >
-              {inEther ? "Zet een kopie klaar" : `Zet klaar als ${SJABLONEN.find((x) => x.id === sjabloon)?.naam}`} · {setNaam} ·{" "}
-              {s ? telling(zetelsVan(s, set), partijen) : 0} Zetels
+              {inEther
+                ? `Kopie klaarzetten · ${setNaam} van nu · ${s ? telling(zetelsVan(s, set), partijen) : 0} Zetels`
+                : `Zet klaar · ${setNaam} · ${s ? telling(zetelsVan(s, set), partijen) : 0} Zetels`}
             </button>
-            {partijen.length === 0 && <span className="knop-reden">Tik eerst Partijen aan</span>}
+            {partijen.length === 0 && <span className="knop-reden">Kies eerst Partijen</span>}
             <TweeKeerKnop
               className="knop knop-gevaar"
               disabled={partijen.length === 0 || (!verbonden && !!inBeeld)}
               tweeKeer={inEther}
-              title={inEther ? "Haalt alle Partijen uit de coalitie in de Ether. Klik twee keer; daarna kun je ze nog terugzetten." : "Haalt alle Partijen uit de coalitie"}
-              vraag="Klik nog eens: wis uit de Ether"
+              title={inEther ? "Haalt alle Partijen uit de coalitie in Live. Klik twee keer; daarna kun je ze nog terugzetten." : "Haalt alle Partijen uit de coalitie"}
+              vraag="Klik nog eens: wis uit Live"
               onClick={wis}
             >
-              {inEther ? "Wis coalitie in de Ether" : "Wis coalitie"}
+              {inEther ? "Wis coalitie live" : "Wis coalitie"}
             </TweeKeerKnop>
           </div>
           {melding && (
@@ -202,7 +203,7 @@ export function CoalitieBoog({
     <section className={`coalitie-boog${live ? " coalitie-live" : ""}`} aria-label="Coalitiebouwer">
       {live && (
         <p className="coalitie-live-regel">
-          <span className="stempel stempel-live">Live</span> Elke tik werkt meteen bij in de Ether{liveSet && <span className="zacht"> · cijfers van {liveSet}</span>}
+          <span className="stempel stempel-live">Live</span> Elke klik werkt meteen bij in Live{liveSet && <span className="zacht"> · {liveSet}</span>}
         </p>
       )}
       {volgorde.length === 0 ? (
