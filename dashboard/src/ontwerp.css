@@ -428,8 +428,8 @@ details > summary { cursor: pointer; }
 /* Vormgeving: de laatste velden scrollen voorbij de vaste Opslaan-balk. */
 .stijl-velden { padding-bottom: 56px; }
 /* Live coalitie met oudere cijfers: de teller zelf waarschuwt. */
-.boog-oud .boog-totaal { color: var(--warn-amber); }
-.boog-oud .zacht { color: var(--warn-amber); }
+/* Oude cijfers in Live: de teller blijft rustig. Het amber staat alleen waar je er iets aan doet, bij de
+   kopieknop en in de Live-strook. */
 .tablet .coalitie-live-regel { padding-inline: 12px; }
 
 /* Tijdens typen: geen toetskappen in de multiviewer, want letters gaan naar het veld. */
