@@ -8,6 +8,7 @@ import type { Extra } from "./Extra";
 import type { GraphicInBeeld } from "./GraphicInBeeld";
 import type { Kamer } from "./Kamer";
 import type { KlaargezetteGraphic } from "./KlaargezetteGraphic";
+import type { Kleurovergang } from "./Kleurovergang";
 import type { Preset } from "./Preset";
 import type { Standpunt } from "./Standpunt";
 import type { Stemmingen } from "./Stemmingen";
@@ -34,6 +35,12 @@ ether: GraphicInBeeld | null,
  * zijn eigen kleur (het blauwe leer).
  */
 stoelkleuren: Array<string>, 
+/**
+ * Hoe de Stoelen naar `stoelkleuren` gaan: de Kleurovergang van het Sjabloon van de Graphic
+ * die ze kleurde, of die van de Stijl. De server zet hem bij elke nieuwe kleur, zodat Ether
+ * en Reserve dezelfde overgang tonen.
+ */
+kleurovergang: Kleurovergang, 
 /**
  * De partijlijst en de cijfersets.
  */

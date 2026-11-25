@@ -16,6 +16,18 @@ _Avoid_: zitplaats
 Een van de 150 politieke posities in de Tweede Kamer, toegekend aan een partij. Een Zetel wordt getoond op een Stoel.
 _Avoid_: seat, stoel (als politieke eenheid)
 
+**Kleurovergang**:
+De manier waarop de Stoelen van kleur wisselen: als Golf, van links naar rechts, of door Vervagen, alle Stoelen tegelijk.
+_Avoid_: fade, animatie (voor de Stoelen)
+
+**Kleur uit**:
+Een Opdracht die de Stoelen in de Ether direct hun eigen blauwe leer teruggeeft, los van de Graphic. De volgende Graphic die de Stoelen kleurt, zet de kleuren weer aan.
+_Avoid_: stoelen uit, reset
+
+**Kleurkracht**:
+Hoe sterk gekleurde Stoelen opvallen: hoe hoger, hoe voller de kleur van het leer en hoe donkerder de rest van de Zaal eromheen.
+_Avoid_: intensiteit, contrast
+
 **Zaalindeling**:
 De koppeling van Kamerleden aan Stoelen zoals de Kamer zelf de plekken in de echte zaal toewijst. Een Stoel krijgt de kleur van de Fractie van het Kamerlid dat er zit. Toont alleen de Kamer die nu zit: na een verkiezing is dat de oude Kamer tot de nieuwe beëdigd is.
 _Avoid_: plattegrond, zitplan
@@ -131,8 +143,12 @@ Een vooraf vastgelegde camerapositie in de Zaal, waar de camera vloeiend naartoe
 _Avoid_: preset, shot
 
 **Camerarit**:
-Een opgenomen camerabeweging door de Zaal met een begin en een eind, die je overal kiest waar je ook een Standpunt kiest.
+Een opgenomen camerabeweging door de Zaal met een begin en een eind, die je overal kiest waar je ook een Standpunt kiest. Een vaste Camerarit komt mee met het systeem, net als de vaste Standpunten, en kan terug naar zijn standaard; een eigen Camerarit neemt de Regie zelf op.
 _Avoid_: camerapad, animatie, move
+
+**Aanschuiven**:
+Een camerabeweging die langzaam naar het blok Stoelen van de gekozen Partij van de Graphic schuift. Anders dan een Camerarit is hij niet opgenomen: waar hij heen gaat, hangt af van de uitslag.
+_Avoid_: inzoomen, push-in
 
 **Vrije camera**:
 Een camera die de Regie live met de hand door de Zaal stuurt.

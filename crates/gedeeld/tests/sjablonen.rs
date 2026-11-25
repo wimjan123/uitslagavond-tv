@@ -108,6 +108,7 @@ fn eigen(blokken: Vec<Blok>) -> Sjabloon {
         stoelen: Default::default(),
         standpunt: None,
         blokken,
+        kleurovergang: None,
     }
 }
 

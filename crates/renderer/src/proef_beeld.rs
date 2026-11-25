@@ -282,6 +282,7 @@ fn scherp_sjabloon() -> Sjabloon {
                 start_na_ms: 0,
             },
         }],
+        kleurovergang: None,
     }
 }
 
@@ -651,6 +652,7 @@ fn alle_blokken(erin: Erin, eruit: Eruit) -> Sjabloon {
                 },
             },
         ],
+        kleurovergang: None,
     }
 }
 
@@ -814,6 +816,7 @@ fn een_kleurverloop_in_beeld_heeft_op_elk_punt_de_berekende_kleur() {
             kleur: Kleurkeuze::Stijl(Stijlkleur::Achtergrond),
             animatie: animatie(Erin::Geen, Eruit::Vervagen, 0),
         }],
+        kleurovergang: None,
     };
     let Inhoud::Vlak {
         verloop: Some(v), ..

@@ -1139,6 +1139,7 @@ mod tests {
             achtergrond: Achtergrond::ZaalDonker,
             stoelen: Stoelen::Houden,
             standpunt: None,
+            kleurovergang: None,
         }
     }
 

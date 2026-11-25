@@ -31,6 +31,7 @@ fn status(s: &Stand) -> BTreeMap<&'static str, String> {
         ("kan_bijwerken", ja(s.kan_bijwerken())),
         ("standpunt", s.camera.standpunt.clone()),
         ("vrije_camera", if s.camera.vrij { "aan" } else { "uit" }.into()),
+        ("kleur", if s.stoelkleuren.is_empty() { "uit" } else { "aan" }.into()),
         (
             "preset_klaar",
             preset(klaar.and_then(|k| s.presets.iter().find(|p| p.is_bron_van_klaar(k))).map(|p| p.nummer)),

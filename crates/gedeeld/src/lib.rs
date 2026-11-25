@@ -63,6 +63,11 @@ pub struct Stand {
     #[serde(default)]
     #[ts(type = "Array<string>")]
     pub stoelkleuren: Vec<Kleur>,
+    /// Hoe de Stoelen naar `stoelkleuren` gaan: de Kleurovergang van het Sjabloon van de Graphic
+    /// die ze kleurde, of die van de Stijl. De server zet hem bij elke nieuwe kleur, zodat Ether
+    /// en Reserve dezelfde overgang tonen.
+    #[serde(default)]
+    pub kleurovergang: sjabloon::Kleurovergang,
     /// De partijlijst en de cijfersets.
     #[serde(default)]
     pub cijfers: Cijfers,
@@ -119,6 +124,7 @@ impl Default for Stand {
             klaar: None,
             ether: None,
             stoelkleuren: Vec::new(),
+            kleurovergang: sjabloon::Kleurovergang::default(),
             cijfers: Cijfers::default(),
             kamer: Kamer::default(),
             stijl: sjabloon::Stijl::default(),
@@ -256,6 +262,10 @@ pub enum Opdracht {
     ZetCoalitie { partijen: Vec<String> },
     /// Haalt de Graphic uit de Ether.
     UitBeeld,
+    /// Kleur uit: de Stoelen in de Ether krijgen direct hun eigen leer terug, met de
+    /// Kleurovergang van de Stijl. De Graphic blijft staan; de volgende Graphic die de Stoelen
+    /// kleurt, zet de kleuren weer aan.
+    KleurUit,
     /// Stuurt de camera van de Ether naar een Standpunt of Camerarit: bewegen zoals het
     /// Standpunt zegt, of met `knip` meteen (Shift met de letter).
     KiesStandpunt {
@@ -477,6 +487,8 @@ pub enum Weigering {
     NietsBijTeWerken,
     #[error("er staat geen Graphic in beeld")]
     NietsInBeeld,
+    #[error("de Stoelen hebben al hun eigen kleur")]
+    KleurAlUit,
     #[error("er is geen Standpunt {0}")]
     OnbekendStandpunt(String),
     #[error("Standpunt {0} is vast")]
@@ -604,6 +616,7 @@ impl Stand {
                 self.kies_standpunt(&ether.standpunt(), false, h);
                 if let Some(k) = ether.stoelkleuren() {
                     self.stoelkleuren = k;
+                    self.kleurovergang = ether.kleurovergang();
                 }
                 self.presets.iter_mut().for_each(|p| p.getoond(&ether));
                 if let Some(id) = ether.graphic.stemming() {
@@ -628,6 +641,7 @@ impl Stand {
                 ether.standpunt = klaar.standpunt.clone();
                 if let Some(k) = ether.stoelkleuren() {
                     self.stoelkleuren = k;
+                    self.kleurovergang = ether.kleurovergang();
                 }
                 if ander_standpunt {
                     let letter = klaar.standpunt().into_owned();
@@ -639,6 +653,13 @@ impl Stand {
                 if self.ether.take().is_none() {
                     return Err(Weigering::NietsInBeeld);
                 }
+            }
+            Opdracht::KleurUit => {
+                if self.stoelkleuren.is_empty() {
+                    return Err(Weigering::KleurAlUit);
+                }
+                self.stoelkleuren.clear();
+                self.kleurovergang = self.stijl_van_ether().kleurovergang;
             }
             Opdracht::KiesStandpunt { letter, knip } => {
                 self.controleer_standpunt(Some(letter))?;
@@ -670,6 +691,7 @@ impl Stand {
                     return Err(Weigering::StoelkleurenAantal(kleuren.len()));
                 }
                 self.stoelkleuren = kleuren.clone();
+                self.kleurovergang = self.stijl_van_ether().kleurovergang;
             }
             Opdracht::LeesInvoer { bestand, ontvangen, invoer } => {
                 self.cijfers.lees_invoer(bestand, ontvangen, invoer)
@@ -1018,6 +1040,7 @@ impl Stand {
             e.versie = h.volgnummer;
             if let Some(k) = e.stoelkleuren() {
                 self.stoelkleuren = k;
+                self.kleurovergang = e.kleurovergang();
             }
             gedaan = true;
         }

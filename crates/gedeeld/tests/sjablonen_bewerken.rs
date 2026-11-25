@@ -4,8 +4,8 @@
 use std::collections::BTreeMap;
 
 use gedeeld::sjabloon::{
-    self, Achtergrond, BewerktSjabloon, Blok, Bloksoort, Kleurkeuze, Sjabloon, Stijlkleur, Stijlletter, Stoelen,
-    Tekstbron, vast_sjabloon,
+    self, Achtergrond, BewerktSjabloon, Blok, Bloksoort, Kleurkeuze, Kleurovergang, Overgangsvorm, Sjabloon,
+    Stijlkleur, Stijlletter, Stoelen, Tekstbron, vast_sjabloon,
 };
 use gedeeld::{Graphic, Herkomst, Opdracht, Stand, Weigering};
 
@@ -168,6 +168,7 @@ fn eigen_sjabloon() -> Sjabloon {
         achtergrond: Achtergrond::ZaalDonker,
         stoelen: Stoelen::Houden,
         standpunt: Some("G".into()),
+        kleurovergang: None,
     }
 }
 
@@ -256,4 +257,43 @@ fn een_eigen_sjabloon_in_een_preset_mag_niet_weg() {
         p.door("Vormgeving", Opdracht::WisSjabloon { id: "eigen-opkomst".into() }),
         Err(Weigering::SjabloonInGebruik(_))
     ));
+}
+
+#[test]
+fn stoelen_uit_in_een_sjabloon_geeft_de_stoelen_hun_eigen_leer_met_de_overgang_van_het_sjabloon() {
+    let mut p = Proef::new();
+    p.stand.stoelkleuren = vec!["#123456".parse().unwrap(); gedeeld::AANTAL_STOELEN];
+    let vervagen = Kleurovergang { vorm: Overgangsvorm::Vervagen, duur_ms: 2_500 };
+    let sjabloon = Sjabloon { stoelen: Stoelen::Uit, kleurovergang: Some(vervagen), ..eigen_sjabloon() };
+    p.door("Vormgeving", Opdracht::ZetSjabloon { sjabloon }).unwrap();
+    p.door("Regie", Opdracht::ZetKlaar { graphic: eigen_graphic("Kleur weg"), standpunt: None }).unwrap();
+    p.door("Regie", Opdracht::Toon { versie: None }).unwrap();
+
+    assert!(p.stand.stoelkleuren.is_empty());
+    assert_eq!(p.stand.kleurovergang, vervagen);
+}
+
+#[test]
+fn kleur_uit_neemt_de_overgang_van_de_stijl_ook_als_het_sjabloon_een_eigen_heeft() {
+    let mut p = Proef::new();
+    let eigen = Kleurovergang { vorm: Overgangsvorm::Vervagen, duur_ms: 4_000 };
+    let sjabloon = Sjabloon { stoelen: Stoelen::Gegevens, kleurovergang: Some(eigen), ..eigen_sjabloon() };
+    p.door("Vormgeving", Opdracht::ZetSjabloon { sjabloon }).unwrap();
+    p.door("Regie", Opdracht::ZetKlaar { graphic: eigen_graphic("Graphic blijft"), standpunt: None }).unwrap();
+    p.door("Regie", Opdracht::Toon { versie: None }).unwrap();
+    p.door("Regie", Opdracht::ZetStoelkleuren { kleuren: vec!["#d4202c".parse().unwrap(); gedeeld::AANTAL_STOELEN] })
+        .unwrap();
+
+    p.door("Regie", Opdracht::KleurUit).unwrap();
+    assert!(p.stand.stoelkleuren.is_empty());
+    assert_eq!(p.stand.kleurovergang, Kleurovergang::default(), "de Golf van de standaardstijl");
+    assert!(p.stand.ether.is_some(), "Kleur uit laat de Graphic staan");
+    assert_eq!(p.door("Regie", Opdracht::KleurUit), Err(Weigering::KleurAlUit));
+}
+
+#[test]
+fn een_kleurovergang_die_te_kort_duurt_wordt_geweigerd() {
+    let mut p = Proef::new();
+    let sjabloon = Sjabloon { kleurovergang: Some(Kleurovergang { vorm: Overgangsvorm::Golf, duur_ms: 0 }), ..eigen_sjabloon() };
+    assert!(p.door("Vormgeving", Opdracht::ZetSjabloon { sjabloon }).is_err());
 }

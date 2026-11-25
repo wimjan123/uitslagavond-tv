@@ -32,7 +32,12 @@ export const STANDAARD_STIJL: Stijl = {
       "tekst_weg_pct": 30,
       "vlak_dicht_pct": 80
     }
-  }
+  },
+  "kleurovergang": {
+    "vorm": "Golf",
+    "duur_ms": 1000
+  },
+  "kleurkracht": 50
 };
 
 /** De lettertypes die in elke Renderer zitten. */
