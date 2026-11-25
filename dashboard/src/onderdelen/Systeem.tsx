@@ -4,6 +4,7 @@
 import { Kamermelding } from "../Kamermelding";
 import { useRegie } from "../regie/regie";
 import { statusVan } from "../regie/systeem";
+import { TweeKeerKnop } from "./TweeKeerKnop";
 import { Werkbalk } from "./Werkbalk";
 import type { WerkvlakProps } from "./index";
 
@@ -19,9 +20,10 @@ export function Systeem({ kiesOnderdeel }: WerkvlakProps) {
           <h3 className="label">Werkplek</h3>
           <p className="kop-regel">{werkplek}</p>
           <div>
-            <button className="knop" onClick={afmelden}>
+            {/* Afmelden haalt deze Werkplek uit de uitzending: een tweede klik, net als wissen in Live. */}
+            <TweeKeerKnop className="knop" tweeKeer vraag="Klik nog eens: afmelden" onClick={afmelden}>
               Andere naam of sleutel
-            </button>
+            </TweeKeerKnop>
           </div>
         </section>
         <section className="blok blok-breed">

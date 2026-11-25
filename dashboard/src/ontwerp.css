@@ -462,3 +462,40 @@ details > summary { cursor: pointer; }
 /* Wat je tijdens de uitzending leest, is minstens 12 px. */
 .toets-volg, .strook-chip, .strook-knop, .rit-kop, .zetelbalk-76, .toon-let-op, .boog-naam { font-size: 12px; }
 .coalitie-zijkant .coalitie-nu { align-self: stretch; }
+
+/* Ronde 7 */
+/* Het herstelblok hangt onderin de kolom met Take: het duwt nooit de lijst eronder omlaag. */
+.take { position: relative; align-self: stretch; }
+.take > .herstel { position: absolute; left: 0; right: 0; bottom: 0; }
+.strook-knop-terug { color: var(--graphite-field); background: var(--paper-ink); border-color: var(--paper-ink); }
+.strook-knop-terug:hover { background: #fff; }
+/* Take tijdens typen: donkerder rood, want Spatie werkt dan niet; klikken wel. */
+.toon.toon-typen-stand { background: #8f2b30; }
+.toon.toon-typen-stand:hover:not(:disabled) { background: var(--ether-vul); }
+/* Uitgeschakelde knoppen zie je meteen als uit. */
+.knop:disabled, .knop-take:disabled, .knop-hoofd:disabled { opacity: 0.4; border-color: transparent; background: transparent; }
+.knop:disabled kbd, .knop:disabled svg { opacity: 0.6; }
+/* 12 px als ondergrens voor wat je tijdens de uitzending leest. */
+kbd, .toets-kap, .standpunt-duur, .tab-telling, .toon-typt, .boog-naam, .herstel-knop kbd { font-size: 12px; }
+.punt { width: 8px; height: 8px; }
+/* Coalitieboog: breed genoeg voor GL-PvdA. */
+.boog-partij { width: 64px; padding-inline: 3px; }
+.boog-partij[aria-pressed="true"] { background: color-mix(in srgb, var(--partij) 26%, var(--graphite-panel)); border-color: color-mix(in srgb, var(--partij) 70%, white 10%); }
+/* De gevaarlijkste zin op het scherm: elke klik is meteen live. */
+.coalitie-live-regel { font-size: 13px; font-weight: 600; color: var(--ether-red-text); }
+.coalitie-nu.coalitie-omslag { color: var(--warn-amber); background: rgb(227 162 59 / 0.12); border-color: var(--warn-amber); }
+.boog-doel { font-size: 0.45em; font-weight: 500; color: var(--slate-mute); }
+/* Cameraritten bewegen tot 50 seconden live: een rode stippelrand. */
+.camera .rit-toetsen .standpunt-toets { border-style: dashed; border-color: rgb(229 72 77 / 0.5); }
+.rit-kop { color: var(--ether-red-text); }
+/* Tijdens typen: toetskappen onzichtbaar maar op hun plek, zodat de namen niet verschuiven. */
+[data-typt] .multiviewer kbd { display: inline-flex; visibility: hidden; }
+/* Lange Fractienamen: afbreken met koppelteken, en anders toch binnen de tegel. */
+.toets-naam-tekst { word-break: break-word; hyphens: auto; }
+.tablet-knop:not([aria-pressed="true"]) { opacity: 0.55; }
+.tablet .tablet-klaarzetten { flex-direction: column; gap: 2px; }
+.tablet-vervangt { font-size: 12px; font-weight: 500; opacity: 0.85; }
+.tablet .toets-kap { font-size: 16px; font-weight: 700; }
+.ster:not(.ster-aan) { color: var(--tekst-3); }
+.ster-aan { color: var(--paper-ink); }
+.tablet-knop { white-space: nowrap; }

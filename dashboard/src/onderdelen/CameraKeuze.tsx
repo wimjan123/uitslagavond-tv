@@ -30,13 +30,13 @@ export function CameraKeuze({
       <span className="label">Camera bij Take</span>
       <div className="segment" role="group" aria-label="Camera bij Take">
         <button type="button" aria-pressed={waarde === ""} onClick={() => zet("")} title={standaard ?? undefined}>
-          Sjabloon
+          Van het Sjabloon
         </button>
         <button type="button" aria-pressed={waarde === BLIJF} onClick={() => zet(BLIJF)} title="De Live-camera blijft waar hij is; alleen de Graphic en de Stoelen veranderen">
           Blijft staan
         </button>
         <button type="button" aria-pressed={kiest} onClick={() => !kiest && lijst[0] && zet(lijst[0].waarde)}>
-          Kies
+          Ander Standpunt
         </button>
       </div>
       {waarde === "" && standaard && <span className="zacht een-regel">{standaard}</span>}

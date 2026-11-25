@@ -156,7 +156,7 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
             nieuwe cijfers geldt het voor bijna elke Preset (de waarschuwing staat in Take en bij Preview). */}
         <div className="een-regel gegevens-regel">
           <Gegevens graphic={p.graphic} />
-          {oud && <span className="zacht"> · cijfers {uurMinuut(p.bewaard_ms)}</span>}
+          {oud && <span className="zacht"> · bewaard {uurMinuut(p.bewaard_ms)}</span>}
         </div>
       </td>
       <td className="kol-camera" title={standpunt?.naam}>
@@ -178,7 +178,7 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
           className="tablet-knop"
           aria-pressed={p.op_tablet}
           aria-label={p.op_tablet ? `Preset ${p.nummer} van de tablet halen` : `Preset ${p.nummer} op de tablet zetten`}
-          title={p.op_tablet ? "Staat op de tablet. Klik om eraf te halen" : "Op de tablet zetten"}
+          title={p.op_tablet ? "Staat op de tablet van de Presentator. Klik om eraf te halen" : "Niet op de tablet. Klik om hem op de tablet van de Presentator te zetten"}
           disabled={!verbonden}
           onMouseDown={zonderFocus}
           onClick={(e) => {
@@ -187,7 +187,8 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
           }}
         >
           <Tablet />
-          <span>{p.op_tablet ? "Aan" : "Uit"}</span>
+          {/* Een toestand, geen opdracht: "Op tablet" als hij erop staat, anders alleen een gedimd icoon. */}
+          {p.op_tablet && <span>Op tablet</span>}
         </button>
       </td>
     </tr>

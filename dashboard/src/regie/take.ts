@@ -1,4 +1,5 @@
 // Toon, Bijwerken, Uit beeld, Kleur uit en Standpunten: dezelfde handelingen voor de knoppen en de sneltoetsen.
+import { meerderheidSlaatOm } from "../coalitie/coalitie";
 import { graphicTekst, nieuwereCijfers, sjabloonId, sjabloonNaam } from "../graphic";
 import { biedHerstel, herstel } from "./herstel";
 import { geldendSjabloon, gewijzigdSjabloon } from "../vormgeving/sjablonen";
@@ -46,7 +47,9 @@ export function kan(actie: TakeActie, s: Stand | undefined): boolean {
     case "Toon":
       return !!s.klaar && !klaarStaatInBeeld(s);
     case "Bijwerken":
-      return kanBijwerken(s);
+      // Een live coalitie die met de cijfers van nu over of onder de meerderheid gaat, werkt Update niet
+      // stil bij: zet een kopie klaar, zodat de omslag eerst in Preview te zien is.
+      return kanBijwerken(s) && !meerderheidSlaatOm(s);
     case "UitBeeld":
       return !!s.ether;
     case "KleurUit":

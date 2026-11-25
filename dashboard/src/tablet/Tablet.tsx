@@ -4,7 +4,7 @@
 // als Werkplek van de soort Tablet; de server weigert alles buiten klaarzetten en de Coalitiebouwer.
 import { useCallback, useEffect, useState } from "react";
 import { Aanmelden } from "../App";
-import { bouwer, telling, wissel, zetelsVan } from "../coalitie/coalitie";
+import { bouwer, nuVanLive, wissel } from "../coalitie/coalitie";
 import { graphicTekst, nieuwereCijfers, sjabloonNaam, uurMinuut } from "../graphic";
 import { HerstelKnop } from "../multiviewer/vakken";
 import { CoalitieBoog, biedCoalitieHerstel } from "../onderdelen/Coalitie";
@@ -151,7 +151,7 @@ function Rij({ preset: p, stand: s }: { preset: Preset; stand: Stand }) {
         <div className="zacht een-regel">{graphicTekst(p.graphic)}</div>
         {nieuwereCijfers(s, p.graphic) && (
           <div className="tablet-oud" >
-            cijfers van {uurMinuut(p.bewaard_ms)} · de Regie ververst ze voor Take
+            Preset bewaard om {uurMinuut(p.bewaard_ms)} · nieuwere cijfers beschikbaar
           </div>
         )}
       </div>
@@ -162,6 +162,8 @@ function Rij({ preset: p, stand: s }: { preset: Preset; stand: Stand }) {
         onClick={() => void regie.stuur({ soort: "ZetPresetKlaar", nummer: p.nummer }, TABLET)}
       >
         {status.klaar ? "Staat klaar" : status.live ? "Opnieuw klaarzetten" : "Klaarzetten"}
+        {/* Klaarzetten vervangt wat de Regie klaar had staan: zeg dat op de knop. */}
+        {!status.klaar && s.klaar && <span className="tablet-vervangt">vervangt {sjabloonNaam(s.klaar.graphic)}</span>}
       </button>
     </article>
   );
@@ -227,7 +229,7 @@ function Coalitiebouwer({ stand: s }: { stand: Stand }) {
         }}
         leeg="Geen Zetels in de set van deze Coalitie."
         live={inEther}
-        nu={inEther && "set" in inBeeld ? telling(zetelsVan(s, inBeeld.set), b.partijen) : undefined}
+        nu={inEther ? nuVanLive(s)?.nu : undefined}
         gebaar="tik"
         maat={maat}
       />

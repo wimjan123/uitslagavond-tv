@@ -3,7 +3,7 @@
 // Ether, dan werkt elke aangetikte Partij die direct bij, ook in de Ether (besluit #6).
 import { useState } from "react";
 import type { CSSProperties } from "react";
-import { HUIDIGE_KAMER, MEERDERHEID, boog, bouwer, coalitieInBeeld, regel, telling, wissel, zetelsVan } from "../coalitie/coalitie";
+import { HUIDIGE_KAMER, MEERDERHEID, nuVanLive, boog, bouwer, coalitieInBeeld, regel, telling, wissel, zetelsVan } from "../coalitie/coalitie";
 import type { Bouwer } from "../coalitie/coalitie";
 import { LogoTegel } from "../LogoTegel";
 import { HerstelKnop } from "../multiviewer/vakken";
@@ -107,7 +107,7 @@ export function Coalitie() {
           tik={tik}
           live={inEther}
           liveSet={inBeeld?.cijfers?.set.label ?? inBeeld?.set}
-          nu={inEther && s ? telling(zetelsVan(s, set), partijen) : undefined}
+          nu={inEther && s ? nuVanLive(s)?.nu : undefined}
           nuRegel={false}
           leeg="Geen Zetels in deze set: kies een andere set of lees eerst cijfers in."
         />
@@ -149,16 +149,20 @@ export function Coalitie() {
             ))}
           </ol>
           {/* De waarschuwing over de cijfers van nu staat bij de knop die er iets aan doet. */}
-          {inEther && s && telling(zetelsVan(s, set), partijen) !== b.totaal && <NuRegel nu={telling(zetelsVan(s, set), partijen)} totaal={b.totaal} />}
+          {inEther && s && (() => {
+            // Altijd de cijfers van nu uit de set die live staat, niet uit de set die je voor een kopie kiest.
+            const n = nuVanLive(s);
+            return n && n.nu !== n.live ? <NuRegel nu={n.nu} totaal={n.live} set={inBeeld?.cijfers?.set.label ?? inBeeld?.set} /> : null;
+          })()}
           <div className="knoppen">
             <button
-              className={inEther ? "knop" : "knop knop-commit"}
+              className="knop knop-commit"
               disabled={!verbonden || !set || partijen.length === 0}
               title={inEther ? "Deze coalitie staat al in Live en werkt bij elke klik bij. Dit zet een kopie klaar." : undefined}
               onClick={zetKlaar}
             >
               {inEther
-                ? `Kopie met cijfers van nu · ${s ? telling(zetelsVan(s, set), partijen) : 0} Zetels`
+                ? `Kopie klaarzetten · ${setNaam} · ${s ? telling(zetelsVan(s, set), partijen) : 0} Zetels`
                 : `Zet klaar · ${setNaam} · ${s ? telling(zetelsVan(s, set), partijen) : 0} Zetels`}
             </button>
             {partijen.length === 0 && <span className="knop-reden">Kies eerst Partijen</span>}
@@ -277,11 +281,11 @@ export function CoalitieBoog({
 /** De teller naar 76. Met `oud` staat er wat Live toont met oudere cijfers: dan in amber en zonder de
  * conclusie over een meerderheid, want die kan met de cijfers van nu anders zijn (zie de regel erboven). */
 /** Wat de cijfers van nu zeggen over een live coalitie met oudere cijfers; vol amber als de meerderheid omslaat. */
-function NuRegel({ nu, totaal }: { nu: number; totaal: number }) {
+function NuRegel({ nu, totaal, set }: { nu: number; totaal: number; set?: string }) {
   const omslag = nu >= MEERDERHEID !== totaal >= MEERDERHEID;
   return (
     <p className={omslag ? "coalitie-nu coalitie-omslag" : "coalitie-nu"} role="status">
-      Met de cijfers van nu: <strong>{nu} Zetels</strong>
+      {set ? `${set} van nu` : "Met de cijfers van nu"}: <strong>{nu} Zetels</strong>
       {omslag && (nu >= MEERDERHEID ? ", wel een meerderheid" : ", geen meerderheid meer")}
     </p>
   );
@@ -290,7 +294,10 @@ function NuRegel({ nu, totaal }: { nu: number; totaal: number }) {
 function Teller({ totaal, oud = false }: { totaal: number; oud?: boolean }) {
   return (
     <div className={oud ? "boog-midden boog-oud" : "boog-midden"}>
-      <span className={totaal >= MEERDERHEID && !oud ? "boog-totaal meerderheid" : "boog-totaal"}>{totaal}</span>
+      <span className={totaal >= MEERDERHEID && !oud ? "boog-totaal meerderheid" : "boog-totaal"}>
+        {totaal}
+        <span className="boog-doel"> / {MEERDERHEID}</span>
+      </span>
       <span className="zacht">{oud ? "in Live, met oudere cijfers" : regel(totaal)}</span>
     </div>
   );

@@ -143,16 +143,21 @@ export function komma(v: number): string {
   return v.toFixed(1).replace(".", ",");
 }
 
-/** De tijdregel in de lijst, zoals "16,0 s · herhaalt". */
+/** Een duur zoals op de knoppen in de multiviewer: hele seconden zonder ",0" ("16 s"), anders "2,5 s". */
+export function duur(v: number): string {
+  return Math.abs(v - Math.round(v)) < 0.05 ? `${Math.round(v)} s` : `${komma(v)} s`;
+}
+
+/** De tijdregel in de lijst, zoals "16 s · herhaalt". */
 export function ritTiming(r: Camerarit): string {
-  const s = `${komma(r.bijschaving.duur_s)} s`;
+  const s = duur(r.bijschaving.duur_s);
   return r.bijschaving.eind === "Herhalen" ? `${s} · herhaalt` : s;
 }
 
-/** De tijdregel van een Standpunt, zoals "2,0 s · schuift" of "knipt". */
+/** De tijdregel van een Standpunt, zoals "2 s · schuift" of "knipt". */
 export function standpuntTiming(p: Standpunt): string {
   if (p.overgang.soort === "Knippen") return "knipt";
-  const s = `${komma(p.overgang.duur_s)} s`;
+  const s = duur(p.overgang.duur_s);
   return p.na_aankomst.soort === "Schuiven" ? `${s} · schuift` : s;
 }
 

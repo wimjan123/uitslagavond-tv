@@ -1,7 +1,7 @@
 // De Coalitiebouwer in het dashboard: `npm test` (node --test). Alle cijfers hier zijn voorbeeldgegevens.
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { HUIDIGE_KAMER, boog, bouwer, coalitieInBeeld, regel, telling, wissel, zetelsVan } from "./coalitie.ts";
+import { HUIDIGE_KAMER, boog, bouwer, coalitieInBeeld, meerderheidSlaatOm, nuVanLive, regel, telling, wissel, zetelsVan } from "./coalitie.ts";
 import type { Graphic } from "../typen/Graphic";
 import type { Stand } from "../typen/Stand";
 import { STANDAARD_STIJL } from "../typen/standaardStijl.ts";
@@ -89,4 +89,21 @@ test("de bouwer toont de coalitie in beeld met haar eigen cijfers, in de volgord
   assert.deepEqual(b.partijen, ["vvd", "d66"]);
   assert.deepEqual(b.volgorde.map((p) => p.sleutel), ["vvd", "d66"]);
   assert.equal(b.totaal, 80);
+});
+
+test("een live coalitie: de cijfers van nu komen uit haar eigen set, en een omslag van de meerderheid telt", () => {
+  const oud = { set: { id: "exit", zetels: { d66: 26, cda: 18, vvd: 22, ja21: 6 } } };
+  const g = { sjabloon: "Coalitie", set: "exit", partijen: ["d66", "cda", "vvd", "ja21"], cijfers: oud } as unknown as Graphic;
+  const s = stand({ ether: { id: 1, versie: 1, graphic: g, sinds_ms: 0 } } as unknown as Partial<Stand>);
+  assert.deepEqual(nuVanLive(s), { live: 72, nu: 75 });
+  assert.equal(meerderheidSlaatOm(s), false, "72 en 75 zijn allebei geen meerderheid");
+  const s2 = stand({ ether: { id: 1, versie: 1, graphic: { ...g, partijen: ["d66", "cda", "vvd", "ja21", "vvd"] }, sinds_ms: 0 } } as unknown as Partial<Stand>);
+  assert.equal(meerderheidSlaatOm(s2), false);
+  const s3 = stand({
+    ether: { id: 1, versie: 1, graphic: { ...g, cijfers: { set: { id: "exit", zetels: { d66: 26, cda: 18, vvd: 22, ja21: 6 } } } }, sinds_ms: 0 },
+    cijfers: { ...stand().cijfers, sets: [{ ...stand().cijfers.sets[0], zetels: { d66: 26, cda: 18, vvd: 22, ja21: 10 } }] },
+  } as unknown as Partial<Stand>);
+  assert.deepEqual(nuVanLive(s3), { live: 72, nu: 76 });
+  assert.equal(meerderheidSlaatOm(s3), true);
+  assert.equal(nuVanLive(stand()), null, "zonder coalitie in Live");
 });

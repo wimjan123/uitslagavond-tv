@@ -88,3 +88,19 @@ export function boog(n: number, straal: number): { x: number; y: number }[] {
     return { x: rond(straal * Math.cos(hoek)), y: rond(-straal * Math.sin(hoek)) };
   });
 }
+
+/** Een coalitie in Live met haar uitgezonden Zetels en die met de cijfers van nu uit haar eigen set
+ * (niet uit de set die de Regie voor een kopie kiest); `null` zonder coalitie in Live of zonder
+ * bewaarde cijfers. */
+export function nuVanLive(s: Stand): { live: number; nu: number } | null {
+  const g = alsCoalitie(s.ether?.graphic);
+  if (!g?.cijfers) return null;
+  return { live: telling(g.cijfers.set.zetels, g.partijen), nu: telling(zetelsVan(s, g.set), g.partijen) };
+}
+
+/** Of de cijfers van nu de live coalitie over of onder de meerderheid zetten. Dan mag Update haar niet
+ * stil in Live bijwerken: zo'n omslag is nieuws en moet eerst in Preview te zien zijn. */
+export function meerderheidSlaatOm(s: Stand): boolean {
+  const n = nuVanLive(s);
+  return !!n && n.live >= MEERDERHEID !== n.nu >= MEERDERHEID;
+}

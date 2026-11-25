@@ -1,7 +1,7 @@
 // Cameraritten in het dashboard: `npm test` (node --test).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cameraKeuzes, kanHerhalen, opnameS, opnameTijd, ritAangepast, ritTiming, routeVan, standaardRit, stukS } from "./camerarit.ts";
+import { cameraKeuzes, duur, kanHerhalen, opnameS, opnameTijd, ritAangepast, ritTiming, routeVan, standaardRit, stukS } from "./camerarit.ts";
 import type { Camerarit } from "../typen/Camerarit";
 import type { Standpunt } from "../typen/Standpunt";
 
@@ -61,8 +61,9 @@ test("de lijst toont de duur en wat de rit aan het eind doet", () => {
   const r = rond();
   r.bijschaving.duur_s = 16;
   r.bijschaving.eind = "Herhalen";
-  assert.equal(ritTiming(r), "16,0 s · herhaalt");
-  assert.equal(ritTiming(rechtdoor()), "10,0 s");
+  assert.equal(ritTiming(r), "16 s · herhaalt", "hele seconden zonder ,0, zoals in de multiviewer");
+  assert.equal(ritTiming(rechtdoor()), "10 s");
+  assert.equal(duur(2.5), "2,5 s");
   assert.equal(opnameTijd(1234), "12,3 s");
 });
 

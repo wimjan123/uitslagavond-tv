@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { graphicTekst, nieuwereCijfers, sjabloonNaam, uurMinuut } from "../graphic";
 import { useRegie } from "../regie/regie";
+import { meerderheidSlaatOm } from "../coalitie/coalitie";
 import { HERSTEL_DUUR, geldigHerstel, herstel, useHerstel } from "../regie/herstel";
 import { TAKE, kan, kanBijwerken, klaarStaatInBeeld, voerUit } from "../regie/take";
 import { doelVan } from "../regie/toetsen";
@@ -101,11 +102,24 @@ function Ether() {
   const ether = s?.ether ?? null;
   // Valt de Renderer van de Ether weg, dan moet dat hier staan: overschakelen naar Reserve begint met zien.
   const geenEther = staat === "verbonden" && !renderers.includes("Ether");
+  // Na Take out kijkt de Regie naar het lege Live: daar staat het terugzetten ook.
+  const h = geldigHerstel(useHerstel(), s);
   const rechts = geenEther ? (
     <span className="strook-fout" title="De Live-renderer is niet verbonden. Schakel op de mixer over naar Reserve.">
       Live-renderer weg
     </span>
-  ) : !ether ? null : s && kanBijwerken(s) ? (
+  ) : !ether ? (
+    h && h.tekst === "Take out" ? (
+      <button className="strook-knop strook-knop-terug" title={`${h.wat} terug in Live (Ctrl+Z)`} onClick={() => herstel(regie)}>
+        {h.knop}
+      </button>
+    ) : null
+  ) : s && meerderheidSlaatOm(s) ? (
+    // De cijfers van nu zetten de live coalitie over of onder 76: dat gaat niet stil via Update.
+    <span className="strook-chip" title="Met de cijfers van nu slaat de meerderheid om. Zet bij Coalitie een kopie klaar en Take, zodat je het eerst in Preview ziet.">
+      meerderheid slaat om · zet kopie klaar
+    </span>
+  ) : s && kanBijwerken(s) ? (
     // Eén handeling op deze plek: de chip is zelf de knop Update.
     <button
       className="strook-knop"
@@ -116,8 +130,8 @@ function Ether() {
     </button>
   ) : s && nieuwereCijfers(s, ether.graphic) ? (
     s.klaar ? (
-      // Iets anders staat klaar: hier valt niets te doen, dus gewone tekst, geen knopvorm.
-      <span className="let-op" title="Deze Graphic in Live heeft niet de cijfers van nu. Zet haar opnieuw klaar (cijfers van nu) en Take.">oude cijfers</span>
+      // Iets anders staat klaar: hier valt niets te doen, dus rustig grijs (amber is "doe iets").
+      <span className="zacht" title="Deze Graphic in Live heeft niet de cijfers van nu. Zet haar opnieuw klaar (cijfers van nu) en Take.">oude cijfers</span>
     ) : (
       <button
         className="strook-knop"
@@ -157,12 +171,13 @@ function Take() {
   const melding = regie.melding?.bij === TAKE ? regie.melding.tekst : null;
   const kanToon = verbonden && kan("Toon", s);
   const oud = kanToon && kan("Ververs", s);
-  const typen = useTypt();
+  const focus = useFocus();
+  const typen = focus === "tekstveld";
   return (
     <div className={typen ? "take take-typt" : "take"}>
       <span className="take-uitleg" title={kanToon ? (typen ? "Klik zet Preview Live. Zolang je in een veld typt, werken de sneltoetsen niet: klik buiten het veld of druk Tab." : "Take: zet wat in Preview staat Live (Spatie). Enter doet dit nooit.") : waaromGeenToon(s)}>
         <button
-          className={`toon${oud ? " toon-oud" : ""}`}
+          className={`toon${oud ? " toon-oud" : ""}${typen ? " toon-typen-stand" : ""}`}
           disabled={!kanToon}
           // Enter toont nooit iets, ook niet als deze knop de focus heeft (DESIGN.md, Keyboard).
           onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
@@ -170,7 +185,13 @@ function Take() {
         >
           <span className="toon-regel">
             <span>Take</span>
-            {typen ? <span className="toon-typt" title="Je typt in een veld: Spatie typt een spatie. Klik op Take werkt wel.">typen</span> : <kbd>Spatie</kbd>}
+            {typen ? (
+              <span className="toon-typt" title="Je typt in een veld: Spatie typt een spatie. Klikken op Take werkt wel. Esc of Tab haalt je uit het veld.">
+                alleen klik
+              </span>
+            ) : focus === "knop" ? null : (
+              <kbd>Spatie</kbd>
+            )}
           </span>
           {oud && <span className="toon-let-op" title="Wat klaarstaat heeft niet de cijfers van nu. N zet de cijfers van nu erin.">{typen ? "oude cijfers" : "oude cijfers (N)"}</span>}
           {!kanToon && verbonden && <span className="toon-reden">{s?.klaar ? "staat al live" : "niets klaar"}</span>}
@@ -181,7 +202,9 @@ function Take() {
         title={
           kan("Bijwerken", s)
             ? "Zet de nieuwere versie of de nieuwere cijfers in Live, zonder opnieuw op te bouwen"
-            : "Kan als wat klaarstaat een nieuwere versie is van de Graphic in Live"
+            : s && meerderheidSlaatOm(s)
+              ? "Met de cijfers van nu slaat de meerderheid van de live coalitie om: zet een kopie klaar en Take"
+              : "Kan als wat klaarstaat een nieuwere versie is van de Graphic in Live"
         }
       >
         <button className="knop knop-take" disabled={!verbonden || !kan("Bijwerken", s)} onClick={() => voerUit(regie, "Bijwerken")}>
@@ -231,15 +254,19 @@ function Take() {
   );
 }
 
-/** Of de focus in een tekstveld staat: dan typen toetsen en werken de sneltoetsen niet. */
-function useTypt(): boolean {
-  const [typt, setTypt] = useState(false);
-  // Tijdens typen gaan letters naar het veld: dan verdwijnen alle toetskappen in de multiviewer (CSS).
+/** Waar de toetsenbordfocus staat: in een tekstveld typen toetsen, op een andere knop drukt Spatie
+ * die knop (niet Take). Een muisklik geeft knoppen geen focus (App.tsx), dus "knop" komt alleen na Tab. */
+function useFocus(): "tekstveld" | "knop" | null {
+  const [focus, setFocus] = useState<"tekstveld" | "knop" | null>(null);
+  // Tijdens typen gaan letters naar het veld: dan verbergt CSS alle toetskappen in de multiviewer.
   useEffect(() => {
-    document.documentElement.toggleAttribute("data-typt", typt);
-  }, [typt]);
+    document.documentElement.toggleAttribute("data-typt", focus === "tekstveld");
+  }, [focus]);
   useEffect(() => {
-    const kijk = () => setTypt(doelVan(document.activeElement) === "tekstveld");
+    const kijk = () => {
+      const d = doelVan(document.activeElement);
+      setFocus(d === "tekstveld" ? "tekstveld" : d === "knop" && !(document.activeElement as HTMLElement | null)?.classList.contains("toon") ? "knop" : null);
+    };
     // Na focusout staat de focus nog even op het oude veld; daarna kijken.
     const later = () => window.setTimeout(kijk);
     window.addEventListener("focusin", kijk);
@@ -249,7 +276,7 @@ function useTypt(): boolean {
       window.removeEventListener("focusout", later);
     };
   }, []);
-  return typt;
+  return focus;
 }
 
 /** Na Uit beeld of een wisactie: wat er gebeurde, wat terugkomt, en een knop (Ctrl+Z) om het terug te
