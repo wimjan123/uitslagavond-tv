@@ -257,6 +257,35 @@ impl Standpunt {
     }
 }
 
+/// Vroegere standaarden van de vaste Standpunten, als letter en stand in graden zoals in
+/// [`Standpunt::vaste`]. Een Stand van een oudere versie bewaart zijn vaste Standpunten zelf;
+/// staat er een nog op een vroegere standaard, dan krijgt hij die van nu
+/// ([`ververs_vaste_standpunten`]).
+const VORIGE_STANDAARDEN: [(&str, [f32; 3], f32, f32, f32); 2] = [
+    ("A", [0.0, 4.5, 4.45], 0.0, -23.0, 99.0),
+    ("A", [0.0, 4.56, 4.48], 0.0, -25.0, 96.5),
+];
+
+/// Zet elk vast Standpunt dat nog op een vroegere standaard staat op de standaard van nu. Een vast
+/// Standpunt dat de Regie zelf opnieuw opsloeg, blijft zoals het is.
+pub fn ververs_vaste_standpunten(standpunten: &mut [Standpunt]) {
+    let nu = Standpunt::vaste();
+    let gelijk = |a: &Camerastand, b: &Camerastand| {
+        (0..3).all(|i| (a.positie[i] - b.positie[i]).abs() < 1e-3)
+            && (a.draai - b.draai).abs() < 1e-4
+            && (a.helling - b.helling).abs() < 1e-4
+            && (a.beeldhoek - b.beeldhoek).abs() < 1e-4
+    };
+    for s in standpunten.iter_mut().filter(|s| s.vast) {
+        let oud = VORIGE_STANDAARDEN
+            .iter()
+            .any(|(l, p, d, h, b)| *l == s.letter && gelijk(&s.stand, &Camerastand::uit_graden(*p, *d, *h, *b)));
+        if let Some(n) = nu.iter().find(|n| n.letter == s.letter).filter(|_| oud) {
+            s.stand = n.stand;
+        }
+    }
+}
+
 /// Hoe ver de camera van een Stoel staat bij het shot van de Persoonskaart, in meter langs de
 /// vloer, en hoeveel graden opzij van recht voor de Stoel.
 const SHOT_AFSTAND: f32 = 3.2;

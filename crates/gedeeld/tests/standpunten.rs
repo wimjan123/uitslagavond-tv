@@ -190,3 +190,23 @@ fn wissen_kan_niet_zolang_een_preset_het_standpunt_gebruikt() {
     doe(&mut stand, &mut v, Opdracht::WisPreset { nummer: 1 }).unwrap();
     doe(&mut stand, &mut v, Opdracht::WisStandpunt { letter: j }).unwrap();
 }
+
+#[test]
+fn een_vast_standpunt_op_een_vroegere_standaard_krijgt_de_standaard_van_nu() {
+    use gedeeld::camera::{Camerastand, Standpunt, ververs_vaste_standpunten};
+    let nu = Standpunt::vaste();
+    let mut oud = nu.clone();
+    // A zoals een Stand van een oudere versie hem bewaarde; S door de Regie opnieuw opgeslagen
+    oud[0].stand = Camerastand::uit_graden([0.0, 4.56, 4.48], 0.0, -25.0, 96.5);
+    let eigen = Camerastand::uit_graden([-3.0, 1.9, -1.2], -20.0, -5.0, 40.0);
+    oud[1].stand = eigen;
+    ververs_vaste_standpunten(&mut oud);
+    assert_eq!(oud[0].stand, nu[0].stand);
+    assert_eq!(oud[1].stand, eigen);
+    // een A die de Regie zelf opnieuw opsloeg, blijft ook
+    let mut eigen_a = nu.clone();
+    eigen_a[0].stand = Camerastand::uit_graden([0.0, 4.5, 4.4], 0.0, -24.0, 97.0);
+    let voor = eigen_a.clone();
+    ververs_vaste_standpunten(&mut eigen_a);
+    assert_eq!(eigen_a, voor);
+}
