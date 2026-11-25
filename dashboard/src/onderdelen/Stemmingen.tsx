@@ -409,7 +409,7 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
         </p>
 
         <div className="kant">
-          <span className="zacht">Kant</span>
+          <span className="zacht">Een klik zet</span>
           <div className="segment" role="group" aria-label="Kant">
             {(["Voor", "Tegen"] as const).map((k) => (
               <button key={k} className={`segment-${k.toLowerCase()}`} aria-pressed={kant === k} onClick={() => setKant(k)}>

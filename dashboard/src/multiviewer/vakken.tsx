@@ -106,16 +106,16 @@ function Ether() {
       Live-Renderer weg
     </span>
   ) : !ether ? null : s && kanBijwerken(s) ? (
-    <span className="let-op" title="Wat klaarstaat is een nieuwere versie van deze Graphic, of heeft nieuwere cijfers">
+    <span className="strook-chip" title="Wat klaarstaat is een nieuwere versie van deze Graphic, of heeft nieuwere cijfers">
       {nieuwereCijfers(s, ether.graphic) ? "oude cijfers" : "nieuwere versie klaar"} · <kbd>B</kbd> werkt bij
     </span>
   ) : s && nieuwereCijfers(s, ether.graphic) ? (
     s.klaar ? (
-      <span title="Deze Graphic heeft niet de cijfers van nu. Zet haar opnieuw klaar (cijfers van nu) en toon.">oude cijfers</span>
+      <span className="strook-chip" title="Deze Graphic in Live heeft niet de cijfers van nu. Zet haar opnieuw klaar (cijfers van nu) en Take.">oude cijfers</span>
     ) : (
       <button
-        className="strook-knop strook-knop-rustig"
-        title="Zet deze Graphic opnieuw klaar met de cijfers van nu. Daarna Toon zet ze in beeld."
+        className="strook-knop"
+        title="Zet deze Graphic opnieuw klaar met de cijfers van nu. Daarna zet Take ze Live."
         onClick={() => void regie.stuur({ soort: "ZetKlaar", graphic: ether.graphic, standpunt: ether.standpunt }, TAKE)}
       >
         oude cijfers · zet opnieuw klaar
@@ -255,6 +255,7 @@ export function HerstelKnop({ toets = true }: { toets?: boolean }) {
       <span className="herstel-wat" title={`${h.tekst}: ${h.wat}`}>
         <span className="herstel-tekst">{h.tekst}:</span> {h.wat}
       </span>
+      <span className="herstel-sec" aria-hidden>{over} s</span>
       <button className="knop herstel-knop" onClick={() => herstel(regie)}>
         {h.knop} {toets && <kbd>Ctrl+Z</kbd>}
       </button>

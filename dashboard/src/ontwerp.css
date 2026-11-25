@@ -266,7 +266,7 @@ input::placeholder { color: var(--tekst-3); }
 .toets-kap { width: 22px; height: 22px; font-size: 11.5px; font-weight: 500; font-family: inherit; color: var(--slate-mute); background: var(--vlak); border: 1px solid var(--rand); border-radius: 5px; }
 .schets { border-radius: 4px; outline-color: var(--rand); }
 .tablet-knop { height: 26px; width: 30px; padding: 0; justify-content: center; color: var(--tekst-3); background: none; border: 1px solid transparent; }
-.tablet-knop span { display: none; }
+.tablet-knop { width: auto; padding: 0 8px; gap: 5px; font-size: 12px; }
 .tablet-knop:hover:not(:disabled) { color: var(--paper-ink); background: var(--vlak); }
 .tablet-knop[aria-pressed="true"] { color: var(--steel-blue); background: rgb(141 149 242 / 0.12); border-color: rgb(141 149 242 / 0.3); }
 
@@ -344,3 +344,40 @@ details > summary { cursor: pointer; }
 .partij-cel .logo-tegel-tekst, .kol-logo .logo-tegel-tekst, .coalitie-lijst .logo-tegel-tekst {
   width: 8px; min-width: 8px; height: 8px; padding: 0; font-size: 0; border-radius: 50%; box-shadow: none;
 }
+
+/* Broadcastlaag rond Preview, Live en Take (ronde 5): Studio blijft rustig, maar de tally moet je vanuit
+   je ooghoek zien. Een dikke rand in de tallykleur (zonder dat de indeling verschuift) en een vol label. */
+.monitor-klaar { border-color: var(--klaar-green); box-shadow: 0 0 0 2px var(--klaar-green); }
+.monitor-ether { border-color: var(--ether-red); box-shadow: 0 0 0 2px var(--ether-red); }
+.monitor-klaar .monitor-label, .monitor-ether .monitor-label {
+  padding: 2px 7px; font-size: 12px; font-weight: 600; color: #fff; border-radius: 4px;
+}
+.monitor-klaar .monitor-label { background: var(--klaar-green); }
+.monitor-ether .monitor-label { background: var(--ether-red); }
+.monitor-klaar .monitor-label::before, .monitor-ether .monitor-label::before { display: none; }
+.monitor-label { font-size: 12.5px; }
+/* Oude cijfers: overal hetzelfde amber vlak, op de monitor die het betreft. */
+.strook-chip { display: inline-flex; align-items: center; gap: 4px; height: 20px; padding: 0 7px; font-size: 11.5px; font-weight: 500; color: var(--warn-amber); background: rgb(227 162 59 / 0.12); border: 1px solid rgb(227 162 59 / 0.45); border-radius: 5px; }
+.strook-chip kbd { color: inherit; background: none; border-color: rgb(227 162 59 / 0.45); }
+.strook-knop { border-color: rgb(227 162 59 / 0.45); background: rgb(227 162 59 / 0.12); }
+/* In Take: leesbaar op rood, een donker vakje met amber tekst. */
+.toon-let-op { align-self: flex-start; padding: 1px 6px; font-size: 12px; font-weight: 600; color: #ffd27a; background: rgb(0 0 0 / 0.38); border-radius: 4px; }
+.toon-let-op::before { display: none; }
+/* Herstel: de seconden als getal en Terug in beeld als witte hoofdknop. */
+.herstel { position: relative; }
+.herstel-sec { position: absolute; top: 8px; right: 9px; font-size: 12px; font-weight: 600; color: var(--warn-amber); font-variant-numeric: tabular-nums; }
+.herstel-wat { padding-right: 34px; }
+.herstel-knop { color: var(--graphite-field); background: var(--paper-ink); border-color: var(--paper-ink); font-weight: 600; }
+.herstel-knop:hover:not(:disabled) { background: #fff; }
+.herstel-knop kbd { color: inherit; border-color: rgb(0 0 0 / 0.25); background: none; }
+/* Vormgeving: de balk met Opslaan blijft onderin staan terwijl het formulier eronder scrolt. */
+.stijl-actiebalk { position: sticky; bottom: 0; z-index: 2; background: var(--graphite-ground); border-top: 1px solid var(--rand); }
+
+/* Stemmingen: Voor en Tegen in één blik, ook bij een gedicteerde stemming. */
+.fractie-voor { background: rgb(47 157 104 / 0.2); border-color: rgb(47 157 104 / 0.7); }
+.fractie-tegen { background: rgb(229 72 77 / 0.16); border-color: rgb(229 72 77 / 0.65); }
+.fractie-voor .toets-stem { color: var(--klaar-green-text); }
+.fractie-tegen .toets-stem { color: var(--ether-red-text); }
+.toets-stem { font-size: 12.5px; font-weight: 600; }
+.fractie-toets .toets-naam { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; line-height: 1.2; }
+.fractie-toets .toets-naam::before { display: inline-block; margin-right: 6px; vertical-align: 1px; }
