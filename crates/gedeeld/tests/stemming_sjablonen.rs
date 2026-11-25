@@ -258,7 +258,7 @@ fn de_namenlijst_toont_elke_fractie_met_haar_aantal_en_alleen_de_namen_van_afwij
         })
         .expect("een Namenlijst");
     let groepen = |g: &[gedeeld::sjabloon::Naamgroep]| {
-        g.iter().map(|n| (n.fractie.kort.clone(), n.fractie.aantal, n.namen.clone())).collect::<Vec<_>>()
+        g.iter().map(|n| (n.fractie.kort.clone(), Some(n.fractie.stemmen), n.namen.clone())).collect::<Vec<_>>()
     };
     let heel = |k: &str, n: u16| (k.to_string(), Some(n), Vec::<String>::new());
     // SP stemt tegen, maar Eerste (SP) stemt voor: alleen die naam staat erbij

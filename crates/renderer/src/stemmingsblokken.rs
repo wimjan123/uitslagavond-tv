@@ -15,43 +15,28 @@ const LABEL_RAND: f32 = 4.0;
 /// Ruimte tussen de labels onder de balk: naast elkaar en tussen de rijen.
 const LABEL_TUSSEN: (f32, f32) = (10.0, 12.0);
 
-/// De geschatte breedte van elk label bij letter `g`: de tekens op 0,6 keer de letter (de
-/// cijferletter van Nunito Sans, gemeten op kapitalen) plus de marge.
-fn geschatte_breedtes(labels: &[Fractielabel], g: f32) -> Vec<f32> {
-    labels.iter().map(|f| naam_met_aantal(f).chars().count() as f32 * 0.6 * g + 28.0).collect()
-}
-
-/// Hoeveel rijen labels van deze breedtes nodig hebben in `ruimte`, van links naar rechts.
-fn rijen(breedtes: &[f32], ruimte: f32) -> usize {
-    let mut n = 0;
-    let mut x = f32::INFINITY;
-    for &b in breedtes {
-        if x + b > ruimte {
-            n += 1;
-            x = b + LABEL_TUSSEN.0;
-        } else {
-            x += b + LABEL_TUSSEN.0;
-        }
-    }
-    n
-}
-
 /// Waar de labels voor tegen beginnen, in pixels: bij de wissel van de balk (`wissel`, deel van
-/// de breedte) zoals in de mockup, maar past een kant daar niet in de rijen van hoogte `h`, dan
-/// naar verhouding van de breedte die de labels nodig hebben.
-fn verdeel_onder_balk(b: f32, h: f32, wissel: f32, voor: &[f32], tegen: &[f32], g: f32) -> f32 {
-    let rij = g * 1.36 + 2.0 * LABEL_RAND;
-    let max_rijen = (((h + LABEL_TUSSEN.1) / (rij + LABEL_TUSSEN.1)).floor() as usize).max(1);
-    let w = b * wissel;
-    if voor.is_empty() || tegen.is_empty() {
-        return w;
-    }
-    if rijen(voor, w - 30.0) <= max_rijen && rijen(tegen, b - w - 20.0) <= max_rijen {
-        return w;
-    }
-    let (v, t): (f32, f32) = (voor.iter().sum(), tegen.iter().sum());
-    (30.0 + (b - 50.0) * v / (v + t)).clamp(300.0, b - 300.0)
+/// de breedte), zodat een label nooit onder de andere kant staat; alleen als een kant smaller
+/// wordt dan [`MINSTE_KANT`] schuift de grens op. Past een kant niet, dan krimpen zijn labels.
+fn grens_onder_balk(b: f32, wissel: f32) -> f32 {
+    (b * wissel).clamp(MINSTE_KANT, (b - MINSTE_KANT).max(MINSTE_KANT))
 }
+
+/// De hoogte van een tegel in de Fractielijst met twee kolommen, en hoeveel er naast elkaar staan.
+const TEGEL_HOOG: f32 = 112.0;
+const TEGELS_PER_RIJ: f32 = 3.0;
+/// De grootste letter van een naam over twee regels in een tegel, zodat het aantal eronder past.
+const TWEE_REGELS: f32 = 30.0;
+
+/// De breedte van de kop "101 voor" in een kolom van `kolom` breed: naar rato van zijn deel van
+/// de grootste kant, zodat twee keer zoveel stemmen ook twee keer zo breed is, maar nooit smaller
+/// dan het getal en het woord nodig hebben.
+fn kop_breedte(kolom: f32, deel: f32) -> f32 {
+    (kolom * deel.clamp(0.0, 1.0)).max(240.0).min(kolom).round()
+}
+
+/// De smalste ruimte voor de labels van één kant onder de balk.
+const MINSTE_KANT: f32 = 260.0;
 
 /// Een vlak in een kleur dat meedoet met de animatie.
 fn gekleurd(kl: Color, dekking: f32) -> (BackgroundColor, Deel) {
@@ -205,23 +190,19 @@ pub fn bouw(
             if *onder_balk {
                 // Onder de balk: voor links tot vlak voor de wissel, tegen erna. Passen de labels
                 // daar niet in de rijen, dan krijgt elke kant ruimte naar zijn labels.
-                let w = verdeel_onder_balk(
-                    b,
-                    h,
-                    wissel(*aantal_voor, *aantal_tegen),
-                    &geschatte_breedtes(voor, g),
-                    &geschatte_breedtes(tegen, g),
-                    g,
-                );
+                let w = grens_onder_balk(b, wissel(*aantal_voor, *aantal_tegen));
                 let kanten = [(voor, 0.0, w - 30.0), (tegen, w + 20.0, b - w - 20.0)];
                 let kanten = if tegen.is_empty() { &kanten[..1] } else if voor.is_empty() { &[(tegen, 0.0, b)][..] } else { &kanten[..] };
-                for (labels, links, breed) in kanten.iter().copied() {
+                for (n, (labels, links, breed)) in kanten.iter().copied().enumerate() {
+                    // tegen rechts uitgelijnd, tegen de rand van zijn kant van de balk
+                    let rechts = n == 1 || voor.is_empty();
                     let kolom = commands
                         .spawn((
                             ChildOf(binnen),
                             Node {
                                 flex_direction: FlexDirection::Row,
                                 flex_wrap: FlexWrap::Wrap,
+                                justify_content: if rechts { JustifyContent::FlexEnd } else { JustifyContent::FlexStart },
                                 column_gap: Val::Px(LABEL_TUSSEN.0),
                                 row_gap: Val::Px(LABEL_TUSSEN.1),
                                 align_content: AlignContent::FlexStart,
@@ -236,8 +217,10 @@ pub fn bouw(
                 }
                 return;
             }
-            // Twee kolommen: een kop in de stemkleur met "101 voor", daaronder de partijlogo's.
+            // Twee kolommen: een kop in de stemkleur met "101 voor", zo breed als zijn aandeel,
+            // daaronder per Fractie een tegel met haar logo of naam en haar aantal stemmen.
             let kolombreed = (b - 48.0) / 2.0;
+            let meeste = f32::from((*aantal_voor).max(*aantal_tegen).max(1));
             let tk = kleur(*tekstkleur);
             for (n, (labels, aantal, woord, achter)) in
                 [(voor, aantal_voor, "voor", STEM_VOOR), (tegen, aantal_tegen, "tegen", STEM_TEGEN)].into_iter().enumerate()
@@ -256,6 +239,7 @@ pub fn bouw(
                     .spawn((
                         ChildOf(kolom),
                         Node {
+                            width: Val::Px(kop_breedte(kolombreed, f32::from(*aantal) / meeste)),
                             height: Val::Px(72.0),
                             padding: UiRect::horizontal(Val::Px(22.0)),
                             align_items: AlignItems::Center,
@@ -274,19 +258,20 @@ pub fn bouw(
                             flex_direction: FlexDirection::Row,
                             flex_wrap: FlexWrap::Wrap,
                             column_gap: Val::Px(24.0),
-                            row_gap: Val::Px(20.0),
+                            row_gap: Val::Px(12.0),
                             ..default()
                         },
                     ))
                     .id();
-                let tegel = ((kolombreed - 48.0) / 3.0).floor();
+                let tegel = ((kolombreed - 24.0 * (TEGELS_PER_RIJ - 1.0)) / TEGELS_PER_RIJ).floor();
                 for f in labels.iter() {
                     let vak = commands
                         .spawn((
                             ChildOf(raster),
                             Node {
                                 width: Val::Px(tegel),
-                                height: Val::Px(96.0),
+                                height: Val::Px(TEGEL_HOOG),
+                                flex_direction: FlexDirection::Column,
                                 justify_content: JustifyContent::Center,
                                 align_items: AlignItems::Center,
                                 overflow: Overflow::clip(),
@@ -294,17 +279,39 @@ pub fn bouw(
                             },
                         ))
                         .id();
-                    match f.logo.as_deref().and_then(|l| beeld_of_wacht(commands, bestanden, knoop, l)) {
-                        Some(beeld) => beeld_deel(commands, vak, beeld, beelden, tegel - 16.0, 80.0, false, dekking, 1.0),
+                    let tekstkleur = match f.logo.as_deref().and_then(|l| beeld_of_wacht(commands, bestanden, knoop, l)) {
+                        Some(beeld) => {
+                            beeld_deel(commands, vak, beeld, beelden, tegel - 16.0, 64.0, false, dekking, 1.0);
+                            tk
+                        }
                         None => {
                             commands.entity(vak).insert(gekleurd(kleur(f.kleur), dekking));
-                            let t = tekst_deel(commands, bestanden, vak, &naam_met_aantal(f), letter, g, kleur(f.tekstkleur), Uitlijning::Midden, dekking);
-                            commands.entity(t).insert((
-                                TextLayout::no_wrap(),
-                                Node { flex_shrink: 0.0, ..default() },
-                                Krimp { grootte: g, breedte: tegel - 24.0 },
-                            ));
+                            // een lange naam met een spatie loopt over twee regels in dezelfde
+                            // letter; een lang woord krimpt
+                            let twee_regels = f.kort.contains(' ');
+                            let grootte = if twee_regels {
+                                // het langste woord moet op een regel passen
+                                let woord = f.kort.split(' ').map(|w| w.chars().count()).max().unwrap_or(1) as f32;
+                                g.min(TWEE_REGELS).min(((tegel - 24.0) / (woord * 0.62)).floor())
+                            } else {
+                                g
+                            };
+                            let t = tekst_deel(commands, bestanden, vak, &f.kort, letter, grootte, kleur(f.tekstkleur), Uitlijning::Midden, dekking);
+                            if twee_regels {
+                                commands.entity(t).insert(Node { max_width: Val::Px(tegel - 24.0), ..default() });
+                            } else {
+                                commands.entity(t).insert((
+                                    TextLayout::no_wrap(),
+                                    Node { flex_shrink: 0.0, ..default() },
+                                    Krimp { grootte: g, breedte: tegel - 24.0 },
+                                ));
+                            }
+                            kleur(f.tekstkleur)
                         }
+                    };
+                    if f.stemmen > 0 {
+                        let t = tekst_deel(commands, bestanden, vak, &f.stemmen.to_string(), letter, (g * 0.75).round().max(30.0), tekstkleur, Uitlijning::Midden, dekking);
+                        commands.entity(t).insert(TextLayout::no_wrap());
                     }
                 }
             }
@@ -357,9 +364,9 @@ pub fn bouw(
                     .spawn((
                         ChildOf(kolom),
                         Node {
+                            width: Val::Px(kop_breedte(kolombreed, f32::from(*aantal) / f32::from((*aantal_voor).max(*aantal_tegen).max(1)))),
                             padding: UiRect::new(Val::Px(18.0), Val::Px(22.0), Val::Px(4.0), Val::Px(4.0)),
                             margin: UiRect::bottom(Val::Px(8.0)),
-                            align_self: AlignSelf::Stretch,
                             ..default()
                         },
                         gekleurd(kleur(achter), dekking),
@@ -399,7 +406,7 @@ pub fn bouw(
                             gekleurd(kleur(fractie.kleur), dekking),
                         ))
                         .id();
-                    let aantal = fractie.aantal.map(|a| a.to_string()).unwrap_or_default();
+                    let aantal = fractie.stemmen.to_string();
                     for t in [fractie.kort.as_str(), aantal.as_str()] {
                         let e = tekst_deel(commands, bestanden, vak, t, letter, g, kleur(fractie.tekstkleur), Uitlijning::Links, dekking);
                         commands.entity(e).insert((TextLayout::no_wrap(), Passend::basis(g)));
@@ -505,18 +512,13 @@ mod tests {
     use super::*;
 
     #[test]
-    fn de_labels_staan_onder_hun_kant_van_de_balk_tenzij_een_kant_dan_niet_past() {
-        let (b, h, g) = (1632.0, 112.0, 30.0);
-        // de mockup: tien labels voor, vijf tegen; past bij de wissel van 101 tegen 49
-        let voor = [82.0, 100.0, 156.0, 100.0, 118.0, 100.0, 64.0, 64.0, 136.0, 82.0];
-        let tegen = [82.0, 100.0, 82.0, 82.0, 82.0];
-        let w = b * 101.0 / 150.0;
-        assert_eq!(verdeel_onder_balk(b, h, 101.0 / 150.0, &voor, &tegen, g), w);
-        // zeven tegen met twee lange namen passen niet in twee rijen van 513 breed: tegen krijgt
-        // meer ruimte, zodat elke kant in twee rijen past
-        let tegen = [82.0, 100.0, 82.0, 332.0, 82.0, 82.0, 212.0];
-        let w = verdeel_onder_balk(b, h, 101.0 / 150.0, &voor, &tegen, g);
-        assert!(rijen(&voor, w - 30.0) <= 2 && rijen(&tegen, b - w - 20.0) <= 2, "{w}");
+    fn de_labels_staan_altijd_onder_hun_eigen_kant_van_de_balk() {
+        let b = 1632.0;
+        assert_eq!(grens_onder_balk(b, 101.0 / 150.0), b * 101.0 / 150.0);
+        assert_eq!(grens_onder_balk(b, 81.0 / 150.0), b * 81.0 / 150.0);
+        // een heel kleine kant houdt ruimte voor zijn labels
+        assert_eq!(grens_onder_balk(b, 2.0 / 150.0), MINSTE_KANT);
+        assert_eq!(grens_onder_balk(b, 1.0), b - MINSTE_KANT);
     }
 
     #[test]
