@@ -371,8 +371,9 @@ fn voer_overgang(
 }
 
 /// De grootste onscherpte van de Zaal achter een Sjabloon met de achtergrond Zaal donker, in
-/// pixels van het 1080p-beeld.
-const ONSCHERP_PX: f32 = 22.0;
+/// pixels van het 1080p-beeld. Met 22 bleven de Stoelen achter een stemmingstabel te scherp
+/// (council-ronde 4).
+const ONSCHERP_PX: f32 = 40.0;
 /// Hoe lang de Zaal erover doet om onscherp of weer scherp te worden, in seconden.
 const ONSCHERP_S: f32 = 0.5;
 
