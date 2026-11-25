@@ -46,8 +46,8 @@
   border-radius: 3px;
 }
 .tablet .tablet-rij .schets { width: 200px; }
-.tablet .tablet-rij.rij-klaar { background: color-mix(in srgb, var(--klaar-green) 12%, var(--graphite-panel)); box-shadow: inset 4px 0 0 var(--klaar-green); }
-.tablet .tablet-rij.rij-live { background: color-mix(in srgb, var(--ether-red) 12%, var(--graphite-panel)); box-shadow: inset 4px 0 0 var(--ether-red); }
+.tablet .tablet-rij.rij-klaar { background: color-mix(in srgb, var(--klaar-green) 16%, var(--graphite-panel)); border-color: color-mix(in srgb, var(--klaar-green) 60%, transparent); }
+.tablet .tablet-rij.rij-live { background: color-mix(in srgb, var(--ether-red) 16%, var(--graphite-panel)); border-color: color-mix(in srgb, var(--ether-red) 60%, transparent); }
 .tablet .tablet-rij-tekst { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
 .tablet .tablet-rij-naam { display: flex; align-items: center; gap: 10px; font-size: 19px; font-weight: 650; }
 .tablet .tablet-rij-naam .stempel { margin-left: 0; font-size: 12px; padding: 3px 7px; }
@@ -90,7 +90,7 @@
   cursor: pointer;
 }
 .tablet .tablet-tab + .tablet-tab { border-left: 1px solid var(--graphite-line); }
-.tablet .tablet-tab[aria-selected="true"] { color: var(--paper-ink); background: var(--selection-fill); border-top-color: var(--steel-blue); }
+.tablet .tablet-tab[aria-selected="true"] { color: var(--paper-ink); background: var(--graphite-raised); border-top-color: var(--paper-ink); }
 
 /* Bovenin: wat in beeld is en wat klaarstaat. */
 .tablet .tablet-nu {
@@ -105,9 +105,10 @@
 }
 .tablet .tablet-nu-deel { display: flex; align-items: center; gap: 10px; min-width: 0; }
 .tablet .tablet-nu .stempel { flex: none; margin-left: 0; font-size: 11.5px; padding: 3px 7px; }
-.tablet .tablet-opnieuw { color: var(--paper-ink); background: var(--graphite-raised); border-color: var(--graphite-line); font-size: 16px; white-space: normal; line-height: 1.15; }
+/* Opnieuw klaarzetten werkt gewoon: dezelfde groene taal, maar omlijnd, omdat hij al live is. */
+.tablet .tablet-opnieuw { color: var(--klaar-green-text); background: transparent; border: 2px solid var(--klaar-green); font-size: 17px; white-space: normal; line-height: 1.15; }
 .tablet .tablet-wis { color: var(--ether-red-text); border-color: color-mix(in srgb, var(--ether-red) 55%, var(--graphite-line)); }
-.tablet .tablet-oud { font-size: 14px; color: var(--warn-amber); }
+.tablet .tablet-oud { font-size: 14px; color: var(--slate-mute); }
 .tablet .knop-stil.knop-vraag { color: var(--ether-red-ink); }
 
 /* Staand: het klein beeld en de knop smaller. */

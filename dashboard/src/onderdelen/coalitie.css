@@ -20,7 +20,14 @@
 }
 .boog-partij .logo-tegel { width: 40px; height: 25px; opacity: 0.85; }
 .boog-partij:hover:not(:disabled) { border-color: var(--slate-mute); }
-.boog-partij[aria-pressed="true"] { background: var(--selection-fill); border-color: var(--steel-blue); }
+/* Aangetikt: de tegel licht op, met een balk in de partijkleur onderaan; niet aangetikt blijft rustig. */
+.boog-partij { box-shadow: inset 0 -3px 0 transparent; }
+.boog-partij[aria-pressed="true"] { color: var(--steel-ink); background: var(--steel-blue); border-color: var(--steel-blue); box-shadow: inset 0 -5px 0 var(--partij, var(--steel-ink)); }
+.boog-partij[aria-pressed="true"] .boog-zetels { color: var(--steel-ink); }
+/* Smal: een raster met een eigen tikvlak per Partij. */
+.boog-raster { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 8px; width: 100%; }
+.boog-raster .boog-midden { grid-column: 1 / -1; position: static; transform: none; }
+.boog-raster .boog-partij { position: relative; left: auto; top: auto; transform: none; width: auto; }
 .boog-partij[aria-pressed="true"] .logo-tegel { opacity: 1; }
 .boog-partij:disabled { cursor: default; opacity: 0.6; }
 .boog-zetels { font-size: 14px; font-weight: 650; font-variant-numeric: tabular-nums; }
@@ -32,11 +39,9 @@
   place-items: center;
   width: 16px;
   height: 16px;
-  color: var(--steel-ink);
-  font-size: 11px;
-  font-weight: 800;
-  background: var(--steel-blue);
-  border-radius: 2px;
+  color: var(--paper-ink);
+  background: var(--graphite-field);
+  border-radius: 1px;
 }
 .boog-midden {
   position: absolute;
@@ -71,3 +76,5 @@
 .coalitie-live { border-color: color-mix(in srgb, var(--ether-red) 70%, transparent); }
 .coalitie-live-regel { display: flex; align-items: center; gap: 8px; align-self: flex-start; font-weight: 600; color: var(--ether-red-text); }
 .coalitie-live-regel .stempel { margin-left: 0; }
+.coalitie-kop { flex-direction: row !important; align-items: center; justify-content: space-between; }
+.coalitie-kop .stempel { margin-left: 0; }

@@ -206,8 +206,8 @@ export function Camerawerk() {
           ) : (
             <Uitleg />
           )}
-          <section className="blok">
-            <h3 className="label">Gamepad</h3>
+          <details className="blok gamepad-uitleg">
+            <summary className="label">Gamepad</summary>
             <table className="tabel">
               <tbody>
                 {GAMEPAD.map(([knop, wat]) => (
@@ -222,7 +222,7 @@ export function Camerawerk() {
               De gamepad zit aan de server. Met Vrij stuurt hij de Ether, met Oefenen alleen het Voorbeeld. Na loslaten glijdt de
               camera in een halve seconde tot stilstand.
             </p>
-          </section>
+          </details>
         </div>
       </div>
     </>

@@ -345,6 +345,11 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
             <span className={`uitkomst-woord ${woordKlasse}`}>
               {u.besluit ?? "Open"}
             </span>
+            {u.besluit && !stemming.vastgelegd && (
+              <span className="stempel" title="Nog niet vastgelegd: zo staat het nu">
+                tussenstand
+              </span>
+            )}
             <span className="uitkomst-getal">
               {u.voor} voor · {u.tegen} tegen{u.open > 0 && ` · ${u.open} open`}
             </span>
@@ -412,7 +417,6 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
               </button>
             ))}
           </div>
-          <span className="zacht">Noemt de Voorzitter beide kanten? Tik de ene kant, wissel, tik de andere.</span>
         </div>
 
         {kamer.fracties.length === 0 ? (

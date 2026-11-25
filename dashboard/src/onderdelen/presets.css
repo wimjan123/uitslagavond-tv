@@ -20,8 +20,8 @@
 .presets-tabel .stempel { margin-left: 0; font-size: 11.5px; padding: 3px 8px; }
 .presets-tabel tbody tr { cursor: pointer; }
 .presets-tabel td { vertical-align: middle; }
-.presets-tabel tr.rij-klaar { background: color-mix(in srgb, var(--klaar-green) 12%, transparent); box-shadow: inset 3px 0 0 var(--klaar-green); }
-.presets-tabel tr.rij-live { background: color-mix(in srgb, var(--ether-red) 12%, transparent); box-shadow: inset 3px 0 0 var(--ether-red); }
+.presets-tabel tr.rij-klaar { background: color-mix(in srgb, var(--klaar-green) 14%, transparent); }
+.presets-tabel tr.rij-live { background: color-mix(in srgb, var(--ether-red) 14%, transparent); }
 
 .toets-kap {
   display: inline-grid;
@@ -58,7 +58,7 @@
   cursor: pointer;
 }
 .tablet-knop:hover:not(:disabled) { color: var(--paper-ink); border-color: var(--slate-mute); }
-.tablet-knop[aria-pressed="true"] { color: var(--steel-blue); border-color: var(--steel-blue); background: var(--selection-fill); }
+.tablet-knop[aria-pressed="true"] { color: var(--steel-ink); border-color: var(--steel-blue); background: var(--steel-blue); }
 .tablet-knop:disabled { opacity: 0.4; cursor: default; }
 
 .presets-leeg td { height: 48px; cursor: default; }

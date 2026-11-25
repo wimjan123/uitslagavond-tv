@@ -4,18 +4,11 @@ import type { ReactNode } from "react";
 export function Werkbalk({ naam, children, hint }: { naam: string; children?: ReactNode; hint?: ReactNode }) {
   return (
     <div className="werkbalk">
-      <h2 className="label">{naam}</h2>
+      {/* De naam staat al op het tabblad; hier alleen voor schermlezers. */}
+      <h2 className="alleen-voorlezen">{naam}</h2>
       {children}
       {hint && <span className="werkbalk-hint">{hint}</span>}
     </div>
   );
 }
 
-/** De sneltoets om te tonen, voor rechts in de werkbalk; de andere staan op de knoppen naast Toon. */
-export function TakeHint() {
-  return (
-    <>
-      <kbd>Spatie</kbd> toont wat klaarstaat
-    </>
-  );
-}

@@ -2,14 +2,16 @@
 // 76 in het midden, en rechts de keuze van Sjabloon en set. Staat er een Coalitie klaar of in de
 // Ether, dan werkt elke aangetikte Partij die direct bij, ook in de Ether (besluit #6).
 import { useState } from "react";
-import { HUIDIGE_KAMER, MEERDERHEID, boog, bouwer, coalitieInBeeld, regel, wissel } from "../coalitie/coalitie";
+import type { CSSProperties } from "react";
+import { HUIDIGE_KAMER, MEERDERHEID, boog, bouwer, coalitieInBeeld, regel, telling, wissel, zetelsVan } from "../coalitie/coalitie";
 import type { Bouwer } from "../coalitie/coalitie";
 import { LogoTegel } from "../LogoTegel";
+import { Vink } from "../iconen";
 import { biedHerstel } from "../regie/herstel";
 import { useRegie } from "../regie/regie";
 import type { Graphic } from "../typen/Graphic";
 import { TweeKeerKnop } from "./TweeKeerKnop";
-import { TakeHint, Werkbalk } from "./Werkbalk";
+import { Werkbalk } from "./Werkbalk";
 import "./coalitie.css";
 
 const COALITIE = "coalitie";
@@ -25,6 +27,8 @@ const SJABLONEN: { id: Sjabloon; naam: string; uitleg: string }[] = [
   { id: "Coalitie", naam: "Coalitie in de Zaal", uitleg: "De coalitie als één blok links in de Zaal, de rest donker, met de lijn bij 76 en de teller." },
   { id: "Coalitiebalk", naam: "Coalitiebalk", uitleg: "Een gestapelde balk onderin met de coalitie vooraan, de streep bij 76 en de teller." },
 ];
+
+const zelfde = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
 export function Coalitie() {
   const regie = useRegie();
@@ -51,15 +55,17 @@ export function Coalitie() {
   const zetInBeeld = (nieuw: string[], tekst: string) => {
     const voor = partijen;
     void regie.stuur({ soort: "ZetCoalitie", partijen: nieuw }, COALITIE);
-    if (!inEther) return;
-    const zelfde = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+    const etherId = s?.ether?.id;
+    if (!inEther || etherId === undefined) return;
+    // Alleen terug zolang dezelfde Graphic (zelfde id) nog in de Ether staat met precies deze Partijen:
+    // toont een andere Werkplek intussen iets anders, ook een coalitie met dezelfde Partijen, dan vervalt het.
     biedHerstel({
       tekst,
       wat: "Coalitie in de Ether",
       knop: "Zet terug",
       geldig: (nu) => {
-        const c = coalitieInBeeld(nu);
-        return !!c && zelfde(c.partijen, nieuw);
+        const g = nu.ether?.id === etherId ? nu.ether.graphic : undefined;
+        return !!g && (g.sjabloon === "Coalitie" || g.sjabloon === "Coalitiebalk") && zelfde(g.partijen, nieuw);
       },
       doe: (r) => void r.stuur({ soort: "ZetCoalitie", partijen: voor }, COALITIE),
     });
@@ -71,8 +77,13 @@ export function Coalitie() {
     else setEigen(nieuw);
   };
   const wis = () => {
-    if (inBeeld) zetInBeeld([], "Coalitie gewist");
-    else setEigen([]);
+    if (inBeeld) {
+      zetInBeeld([], "Coalitie gewist");
+      return;
+    }
+    const voor = partijen;
+    setEigen([]);
+    biedHerstel({ tekst: "Coalitie gewist", wat: "Coalitiebouwer", knop: "Zet coalitie terug", geldig: (nu) => !coalitieInBeeld(nu), doe: () => setEigen(voor) });
   };
   const zetKlaar = () => {
     const graphic: Graphic = { sjabloon, set, partijen };
@@ -82,27 +93,21 @@ export function Coalitie() {
   const gekozenDelen = b.volgorde.filter((p) => partijen.includes(p.sleutel));
   return (
     <>
-      <Werkbalk naam="Coalitie" hint={<TakeHint />} />
+      <Werkbalk naam="Coalitie" />
       <div className="werkvlak-inhoud coalitie">
         <CoalitieBoog
           bouwer={b}
           uit={!verbonden && !!inBeeld}
           tik={tik}
           live={inEther}
+          liveSet={inBeeld?.cijfers?.set.label ?? inBeeld?.set}
           leeg="Geen Zetels in deze set: kies een andere set of lees eerst cijfers in."
         />
         <aside className="paneel-detail coalitie-zijkant">
-          <header>
+          <header className="coalitie-kop">
             <h3 className="kop-regel">Coalitiebouwer</h3>
-            <p className="zacht">
-              {inBeeld
-                ? inEther
-                  ? "Elke Partij die je aantikt, werkt direct bij in de Ether."
-                  : "Elke Partij die je aantikt, werkt direct bij in de klaargezette Graphic."
-                : "Tik Partijen aan en zet de Coalitie klaar. Daarna werkt elke Partij direct bij, ook in de Ether."}
-            </p>
+            {inBeeld && <span className={inEther ? "stempel stempel-live" : "stempel stempel-klaar"}>{inEther ? "Live" : "Klaar"}</span>}
           </header>
-          {inBeeld && <span className={inEther ? "stempel stempel-live" : "stempel stempel-klaar"}>{inEther ? "LIVE" : "KLAAR"}</span>}
           <div className="veld">
             <span className="label">Sjabloon</span>
             <div className="filters" role="group" aria-label="Sjabloon">
@@ -136,8 +141,14 @@ export function Coalitie() {
             ))}
           </ol>
           <div className="knoppen">
-            <button className="knop knop-commit" disabled={!verbonden || !set || partijen.length === 0} onClick={zetKlaar}>
-              Zet klaar als {SJABLONEN.find((x) => x.id === sjabloon)?.naam} · {setNaam}
+            <button
+              className={inEther ? "knop" : "knop knop-commit"}
+              disabled={!verbonden || !set || partijen.length === 0}
+              title={inEther ? "Deze coalitie staat al in de Ether en werkt bij elke tik bij. Dit zet een kopie klaar." : undefined}
+              onClick={zetKlaar}
+            >
+              {inEther ? "Zet een kopie klaar" : `Zet klaar als ${SJABLONEN.find((x) => x.id === sjabloon)?.naam}`} · {setNaam} ·{" "}
+              {s ? telling(zetelsVan(s, set), partijen) : 0} Zetels
             </button>
             {partijen.length === 0 && <span className="knop-reden">Tik eerst Partijen aan</span>}
             <TweeKeerKnop
@@ -170,6 +181,7 @@ export function CoalitieBoog({
   tik,
   leeg,
   live = false,
+  liveSet,
   maat = BOOG,
 }: {
   bouwer: Bouwer;
@@ -178,22 +190,28 @@ export function CoalitieBoog({
   leeg: string;
   /** De coalitie staat in de Ether: elke tik is meteen live. */
   live?: boolean;
+  /** De set waarvan de cijfers in de live coalitie staan. */
+  liveSet?: string;
   maat?: Boogmaat;
 }) {
   const { volgorde, partijen, zetels, totaal } = b;
   const plekken = boog(volgorde.length, maat.straal);
+  const raster = maat.breedte < 560;
   const gekozenDelen = volgorde.filter((p) => partijen.includes(p.sleutel));
   return (
     <section className={`coalitie-boog${live ? " coalitie-live" : ""}`} aria-label="Coalitiebouwer">
       {live && (
         <p className="coalitie-live-regel">
-          <span className="stempel stempel-live">Live</span> Elke tik werkt meteen bij in de Ether
+          <span className="stempel stempel-live">Live</span> Elke tik werkt meteen bij in de Ether{liveSet && <span className="zacht"> · cijfers van {liveSet}</span>}
         </p>
       )}
       {volgorde.length === 0 ? (
         <p className="melding">{leeg}</p>
       ) : (
-        <div className="boog" style={{ width: maat.breedte, height: maat.hoogte }}>
+        // Smal (een telefoon): een raster met een eigen tikvlak per Partij, want op een boog zo klein
+        // overlappen de tegels en raakt een tik de buurpartij.
+        <div className={raster ? "boog boog-raster" : "boog"} style={raster ? undefined : { width: maat.breedte, height: maat.hoogte }}>
+          {raster && <Teller totaal={totaal} />}
           {volgorde.map((p, i) => {
             const gekozen = partijen.includes(p.sleutel);
             return (
@@ -203,19 +221,20 @@ export function CoalitieBoog({
                 aria-pressed={gekozen}
                 disabled={uit}
                 title={`${p.naam}: ${zetels[p.sleutel]} Zetels`}
-                style={{ left: maat.breedte / 2 + plekken[i].x, top: maat.hoogte - 34 + plekken[i].y * maat.plat }}
+                style={raster ? { "--partij": p.kleur } as CSSProperties : { left: maat.breedte / 2 + plekken[i].x, top: maat.hoogte - 34 + plekken[i].y * maat.plat, "--partij": p.kleur } as CSSProperties}
                 onClick={() => tik(p.sleutel)}
               >
-                {gekozen && <span className="boog-vink" aria-hidden="true">✓</span>}
+                {gekozen && (
+                  <span className="boog-vink">
+                    <Vink />
+                  </span>
+                )}
                 <LogoTegel partij={p} />
                 <span className="boog-zetels">{zetels[p.sleutel]}</span>
               </button>
             );
           })}
-          <div className="boog-midden">
-            <span className={totaal >= MEERDERHEID ? "boog-totaal meerderheid" : "boog-totaal"}>{totaal}</span>
-            <span className="zacht">{regel(totaal)}</span>
-          </div>
+          {!raster && <Teller totaal={totaal} />}
         </div>
       )}
       <div className="coalitie-zetelbalk" style={{ width: `min(${maat.breedte}px, 100%)` }} role="img" aria-label={`Zetelbalk: ${totaal} van ${ZETELS} Zetels in de coalitie`}>
@@ -225,5 +244,14 @@ export function CoalitieBoog({
         <span className="zetelbalk-meerderheid" style={{ left: `${(75.5 / ZETELS) * 100}%` }} />
       </div>
     </section>
+  );
+}
+
+function Teller({ totaal }: { totaal: number }) {
+  return (
+    <div className="boog-midden">
+      <span className={totaal >= MEERDERHEID ? "boog-totaal meerderheid" : "boog-totaal"}>{totaal}</span>
+      <span className="zacht">{regel(totaal)}</span>
+    </div>
   );
 }

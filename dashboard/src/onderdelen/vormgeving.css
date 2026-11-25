@@ -102,8 +102,7 @@
   gap: 8px;
   padding: 8px 10px;
   border: 1px solid var(--warn-amber);
-  border-radius: 3px;
-  box-shadow: inset 3px 0 0 var(--warn-amber);
+  border-radius: 2px;
 }
 .sjablonen-melding span { flex: 1; min-width: 240px; }
 .sjablonen-blokbalk { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }

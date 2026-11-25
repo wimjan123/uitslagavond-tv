@@ -93,3 +93,11 @@ export function Tablet() {
     </Icoon>
   );
 }
+
+export function Vink() {
+  return (
+    <Icoon maat={12}>
+      <path d="M20 6 9 17l-5-5" />
+    </Icoon>
+  );
+}

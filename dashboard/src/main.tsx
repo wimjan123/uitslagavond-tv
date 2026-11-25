@@ -1,6 +1,9 @@
 // De algemene stijl eerst, zodat de stijl van elk onderdeel erna komt en hem kan aanvullen
 // (zoals de groene knop "Vastleggen en klaarzetten" boven de gewone knop).
-import "@fontsource-variable/inter/wght.css";
+import "@fontsource/barlow-semi-condensed/400.css";
+import "@fontsource/barlow-semi-condensed/500.css";
+import "@fontsource/barlow-semi-condensed/600.css";
+import "@fontsource/barlow-semi-condensed/700.css";
 import "./stijl.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";

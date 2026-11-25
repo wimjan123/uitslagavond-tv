@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { graphicTekst, nieuwereCijfers, sjabloonNaam, uurMinuut } from "../graphic";
 import { useRegie } from "../regie/regie";
-import { geldigHerstel, herstel, useHerstel } from "../regie/herstel";
+import { HERSTEL_DUUR, geldigHerstel, herstel, useHerstel } from "../regie/herstel";
 import { TAKE, kan, kanBijwerken, klaarStaatInBeeld, voerUit } from "../regie/take";
 import { doelVan } from "../regie/toetsen";
 import type { BewerktSjabloon } from "../typen/BewerktSjabloon";
@@ -50,6 +50,9 @@ function Voorbeeld() {
   if (proef) {
     const rit = s?.cameraritten.some((r) => r.letter === proef.letter);
     rechts = `${rit ? "speelt Camerarit" : "probeert"} ${naamVan(s, proef.letter)}${rit ? " af" : ""}`;
+  } else if (klaar && inBeeld) {
+    // Wat klaarstaat, staat al in beeld: de Ether zegt wat er te doen is (B werkt bij).
+    rechts = "staat in beeld";
   } else if (klaar && s && nieuwereCijfers(s, klaar.graphic)) {
     // Een Preset houdt de cijfers van het moment van bewaren; Ververs zet de cijfers van nu erin.
     rechts = (
@@ -62,7 +65,6 @@ function Voorbeeld() {
       </button>
     );
   }
-  else if (klaar && inBeeld) rechts = "staat in beeld";
   else if (klaar && klaar.gewijzigd_door !== klaar.klaargezet_door) rechts = `gewijzigd door ${klaar.gewijzigd_door}`;
   else if (klaar) rechts = `klaargezet door ${klaar.klaargezet_door}`;
   // Tijdens Oefenen staat er wat de gamepad doet; tijdens een opname een rode stip met de tijd.
@@ -108,12 +110,10 @@ function Ether() {
     </span>
   ) : s && nieuwereCijfers(s, ether.graphic) ? (
     s.klaar ? (
-      <span className="let-op" title="Deze Graphic heeft niet de cijfers van nu. Zet haar opnieuw klaar (cijfers van nu) en toon.">
-        oude cijfers
-      </span>
+      <span title="Deze Graphic heeft niet de cijfers van nu. Zet haar opnieuw klaar (cijfers van nu) en toon.">oude cijfers</span>
     ) : (
       <button
-        className="strook-knop"
+        className="strook-knop strook-knop-rustig"
         title="Zet deze Graphic opnieuw klaar met de cijfers van nu. Daarna Toon zet ze in beeld."
         onClick={() => void regie.stuur({ soort: "ZetKlaar", graphic: ether.graphic, standpunt: ether.standpunt }, TAKE)}
       >
@@ -164,13 +164,9 @@ function Take() {
             <kbd>Spatie</kbd>
           </span>
           {oud && <span className="toon-let-op">oude cijfers (N)</span>}
+          {!kanToon && verbonden && <span className="toon-reden">{s?.klaar ? "staat al in beeld" : "niets klaar"}</span>}
         </button>
       </span>
-      {typen && (
-        <p className="take-typen" role="status">
-          Je typt in een veld: sneltoetsen staan uit. <kbd>Esc</kbd>
-        </p>
-      )}
       <span
         className="take-uitleg"
         title={
@@ -207,6 +203,11 @@ function Take() {
       {melding && (
         <p className="take-melding" role="alert">
           {melding}
+        </p>
+      )}
+      {typen && (
+        <p className="take-typen" role="status">
+          Je typt in een veld: sneltoetsen staan uit. <kbd>Esc</kbd>
         </p>
       )}
       <HerstelKnop />
@@ -252,7 +253,7 @@ function HerstelKnop() {
       <button className="knop herstel-knop" onClick={() => herstel(regie)}>
         {h.knop} <kbd>Ctrl+Z</kbd>
       </button>
-      <span className="herstel-tijd" style={{ width: `${(over / 20) * 100}%` }} aria-label={`nog ${over} seconden`} />
+      <span className="herstel-tijd" style={{ width: `${(over / (HERSTEL_DUUR / 1000)) * 100}%` }} aria-label={`nog ${over} seconden`} />
     </div>
   );
 }

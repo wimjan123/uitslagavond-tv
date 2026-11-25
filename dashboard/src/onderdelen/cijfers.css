@@ -14,17 +14,16 @@
 
 .werkbalk-keuze { display: inline-flex; align-items: center; gap: 8px; }
 .werkbalk-keuze select { padding: 3px 7px; }
+/* Tijdelijke kleuren: geen actie tijdens de uitzending, dus geen alarmkleur. */
 .telling-let-op {
-  display: inline-grid;
-  place-items: center;
   min-width: 16px;
-  height: 16px;
-  padding: 0 4px;
-  font-size: 10.5px;
+  padding: 1px 4px;
+  font-size: 12px;
   font-weight: 700;
-  color: var(--warn-amber-ink);
-  background: var(--warn-amber);
-  border-radius: 2px;
+  text-align: center;
+  color: var(--paper-ink);
+  background: var(--graphite-raised);
+  border-radius: 1px;
 }
 .anderen { display: inline-flex; gap: 14px; }
 .anderen strong { color: var(--paper-ink); font-weight: 600; }
@@ -141,3 +140,6 @@
 .voorgangers td { height: 32px; }
 .voorgangers .kol-actie { width: 100px; text-align: right; }
 .stapper-dicht { justify-content: center; min-width: 96px; font-weight: 650; color: var(--paper-ink); }
+/* Een lange naam loopt over twee regels in plaats van afgekapt te worden. */
+.partijtabel .partij-cel .een-regel { white-space: normal; overflow: visible; line-height: 1.1; }
+.partijtabel th.kol-nu { text-align: center; }

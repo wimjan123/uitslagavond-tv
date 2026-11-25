@@ -16,7 +16,6 @@ export function Systeem({ kiesOnderdeel }: WerkvlakProps) {
         <section className="blok">
           <h3 className="label">Werkplek</h3>
           <p className="kop-regel">{werkplek}</p>
-          <p className="zacht">Deze naam staat bij alles wat je klaarzet of wijzigt.</p>
           <div>
             <button className="knop" onClick={afmelden}>
               Andere naam of sleutel

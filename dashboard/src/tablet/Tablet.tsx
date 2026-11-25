@@ -110,7 +110,7 @@ function NuInBeeld({ stand: s }: { stand: Stand }) {
   return (
     <div className="tablet-nu">
       <span className="tablet-nu-deel">
-        <span className="stempel stempel-live">In beeld</span>
+        <span className="stempel stempel-live">Live</span>
         <span className="een-regel">{s.ether ? tekst(s.ether.graphic) : <span className="zacht">niets</span>}</span>
       </span>
       <span className="tablet-nu-deel">
@@ -126,7 +126,6 @@ function Presets({ stand: s }: { stand: Stand }) {
   const lijst = filterPresets(s.presets, null, true);
   return (
     <section className="tablet-presets" aria-label="Presets">
-      <p className="zacht tablet-uitleg">Tik op Klaarzetten. De Regie zet hem in beeld.</p>
       {lijst.length === 0 && <p className="tablet-leeg">De Regie heeft nog geen Presets op de tablet gezet.</p>}
       {lijst.map((p) => (
         <Rij key={p.nummer} preset={p} stand={s} />
@@ -150,7 +149,9 @@ function Rij({ preset: p, stand: s }: { preset: Preset; stand: Stand }) {
         </div>
         <div className="zacht een-regel">{graphicTekst(p.graphic)}</div>
         {nieuwereCijfers(s, p.graphic) && (
-          <div className="tablet-oud">Cijfers van {uurMinuut(p.bewaard_ms)}: er zijn nieuwere. Vraag de Regie om te verversen.</div>
+          <div className="tablet-oud" title="Er zijn nieuwere cijfers; de Regie ververst ze voor Toon">
+            cijfers van {uurMinuut(p.bewaard_ms)}, er zijn nieuwere
+          </div>
         )}
       </div>
       <button
@@ -205,12 +206,12 @@ function Coalitiebouwer({ stand: s }: { stand: Stand }) {
   const stuur = (partijen: string[]) => void regie.stuur({ soort: "ZetCoalitie", partijen }, TABLET);
   return (
     <section className="tablet-coalitie">
-      <p className="tablet-uitleg">
-        <span className={inEther ? "stempel stempel-live" : "stempel stempel-klaar"}>{inEther ? "Live" : "Klaar"}</span>
-        <span className="zacht">
-          {inEther ? "Elke Partij die je aantikt, werkt direct bij in de Ether." : "Elke Partij die je aantikt, werkt direct bij in de klaargezette Coalitie."}
-        </span>
-      </p>
+      {!inEther && (
+        <p className="tablet-uitleg">
+          <span className="stempel stempel-klaar">Klaar</span>
+          <span className="zacht">Elke tik werkt bij in de klaargezette Coalitie</span>
+        </p>
+      )}
       <CoalitieBoog
         bouwer={b}
         uit={regie.staat !== "verbonden"}

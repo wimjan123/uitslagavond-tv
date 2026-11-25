@@ -116,8 +116,10 @@ export function kiesStandpunt(regie: Regie, letter: string, knip = false): void 
 }
 
 /** Haalt de Graphic uit de Ether en biedt "Terug in beeld" aan. Dat geldt alleen zolang de Ether leeg
- * is en wat klaarstaat niet veranderde: dan zet het dezelfde Graphic opnieuw klaar, toont haar, en
- * zet daarna terug wat klaarstond (ook als Toon mislukt). */
+ * is en wat klaarstaat niet veranderde. Het zet dezelfde Graphic opnieuw klaar en toont haar met de
+ * versie die het net klaarzette (zo kan het nooit de keuze van een andere Werkplek tonen), en zet
+ * pas daarna terug wat klaarstond: uit dezelfde Preset als het daaruit kwam, anders opnieuw.
+ * ZetKlaar vult de cijfers van nu in; had de Graphic oudere cijfers, dan zegt de knop dat. */
 async function uitBeeld(regie: Regie): Promise<void> {
   const s = regie.stand?.stand;
   const ether = s?.ether;
@@ -126,18 +128,22 @@ async function uitBeeld(regie: Regie): Promise<void> {
   if (!a.uitgevoerd || !ether || !s) return;
   const sleutel = (k: Stand["klaar"]) => (k ? `${k.id}:${k.versie}` : "");
   const voor = sleutel(klaar);
+  const uitPreset = klaar ? s.presets.find((p) => p.klaargezet_als === klaar.id && klaar.versie === klaar.id) : undefined;
+  const ververst = nieuwereCijfers(s, ether.graphic);
   biedHerstel({
     tekst: "Uit beeld",
     wat: `${sjabloonNaam(ether.graphic, s.sjablonen)} · ${graphicTekst(ether.graphic)}`,
-    knop: "Terug in beeld",
+    knop: ververst ? "Terug, cijfers van nu" : "Terug in beeld",
     geldig: (nu) => !nu.ether && sleutel(nu.klaar) === voor,
     doe: (r) =>
       void (async () => {
         const k = await r.stuur({ soort: "ZetKlaar", graphic: ether.graphic, standpunt: ether.standpunt }, TAKE);
-        if (k.uitgevoerd) await r.stuur({ soort: "Toon", versie: k.volgnummer }, TAKE);
-        if (klaar && klaar.id !== ether.id) {
-          void r.stuur({ soort: "ZetKlaar", graphic: klaar.graphic, standpunt: klaar.standpunt }, TAKE);
-        }
+        if (!k.uitgevoerd) return;
+        const t = await r.stuur({ soort: "Toon", versie: k.volgnummer }, TAKE);
+        // Mislukt Toon, dan heeft een andere Werkplek intussen iets klaargezet: dat blijft staan.
+        if (!t.uitgevoerd || !klaar || klaar.id === ether.id) return;
+        if (uitPreset) void r.stuur({ soort: "ZetPresetKlaar", nummer: uitPreset.nummer }, TAKE);
+        else void r.stuur({ soort: "ZetKlaar", graphic: klaar.graphic, standpunt: klaar.standpunt }, TAKE);
       })(),
   });
 }

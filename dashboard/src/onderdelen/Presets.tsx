@@ -15,7 +15,7 @@ import { PRESETS } from "../regie/take";
 import type { Graphic } from "../typen/Graphic";
 import type { Preset } from "../typen/Preset";
 import type { Stand } from "../typen/Stand";
-import { TakeHint, Werkbalk } from "./Werkbalk";
+import { Werkbalk } from "./Werkbalk";
 import type { WerkvlakProps } from "./index";
 import "./presets.css";
 
@@ -36,14 +36,7 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
 
   return (
     <>
-      <Werkbalk
-        naam="Presets"
-        hint={
-          <>
-            <kbd>1</kbd> tot <kbd>9</kbd> zet klaar · <TakeHint />
-          </>
-        }
-      >
+      <Werkbalk naam="Presets">
         <div className="filters" role="group" aria-label="Welke groep">
           <button className="filter" aria-pressed={groep === null} onClick={() => setGroep(null)}>
             Alle {lijst.length}

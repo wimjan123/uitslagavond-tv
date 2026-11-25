@@ -12,7 +12,7 @@ import type { Sjabloon } from "../typen/Sjabloon";
 import { benodigd, geldendSjabloon, standaardVan } from "../vormgeving/sjablonen";
 import { Schets } from "../presets/Schets";
 import { Persoonskaart } from "./Persoonskaart";
-import { TakeHint, Werkbalk } from "./Werkbalk";
+import { Werkbalk } from "./Werkbalk";
 
 // Gelijk aan MAX_KOP en MAX_REGEL in crates/gedeeld.
 const MAX_KOP = 80;
@@ -71,7 +71,7 @@ export function Maken() {
   const gekozen = typeof keuze === "number" ? keuze : eigenGekozen ? -1 : 0;
   return (
     <>
-      <Werkbalk naam="Maken" hint={<TakeHint />} />
+      <Werkbalk naam="Maken" />
       <div className="werkvlak-inhoud twee-delen">
         <div className="lijst">
           <table className="tabel">
@@ -205,7 +205,7 @@ function Titelkaart() {
           className="knop"
           type="button"
           disabled={!verbonden || !klaarIsTitelkaart || !graphic.kop || zelfde}
-          title={klaarIsTitelkaart ? "Past de Titelkaart in het Voorbeeld aan" : "Kan als er een Titelkaart klaarstaat"}
+          title={klaarIsTitelkaart ? "Past de Titelkaart in het Voorbeeld aan; staat die al in de Ether, dan pas na Bijwerken" : "Kan als er een Titelkaart klaarstaat"}
           onClick={wijzig}
         >
           Wijzig klaargezette
@@ -221,10 +221,6 @@ function Titelkaart() {
         </button>
         {!graphic.kop && <span className="knop-reden">Vul eerst een kop in</span>}
       </div>
-      <p className="zacht">
-        Zet klaar maakt een nieuwe Graphic. Wijzig klaargezette past de Graphic in het Voorbeeld aan; staat die al in de Ether,
-        dan verandert de Ether pas na Bijwerken.
-      </p>
       {melding && (
         <p className="melding" role="alert">
           {melding}
@@ -236,7 +232,6 @@ function Titelkaart() {
       {regie.stand && (
         <Schets graphic={{ sjabloon: "Titelkaart", kop: kop.trim() || "Kop", regel: regel.trim() }} kleuren={regie.stand.stand.stijl.kleuren} />
       )}
-      <p className="zacht">Ongeveer zo; het Voorbeeld toont na Zet klaar het echte beeld.</p>
     </figure>
     </div>
   );
