@@ -1,232 +1,382 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-22T13:06:43+00:00",
+  "generatedAt": "2026-11-25T12:00:00+00:00",
   "title": "Design System: uitslagavond-tv Regie dashboard",
   "extensions": {
     "colorMeta": {
       "graphite-field": {
         "role": "neutral",
         "displayName": "Graphite Field",
-        "canonical": "#0c0e10",
+        "canonical": "#08090a",
         "tonalRamp": [
-          "#131416",
-          "#272e34",
-          "#424c57",
-          "#5c6b7a",
-          "#7c8c9d",
-          "#a2adb9",
-          "#c5ccd3",
-          "#ecedef"
+          "#101214",
+          "#272b30",
+          "#3f474f",
+          "#5b6671",
+          "#778592",
+          "#9fa8b2",
+          "#c6ccd2",
+          "#ebedef"
         ]
       },
       "graphite-ground": {
         "role": "neutral",
         "displayName": "Graphite Ground",
-        "canonical": "#121417",
+        "canonical": "#0b0c0e",
         "tonalRamp": [
-          "#131416",
-          "#282d33",
-          "#434b56",
-          "#5e6878",
-          "#7e899a",
-          "#a3abb7",
-          "#c6cbd2",
-          "#ecedee"
+          "#101114",
+          "#262a31",
+          "#3f4550",
+          "#5a6272",
+          "#768093",
+          "#9ea5b3",
+          "#c6cad2",
+          "#ebecef"
         ]
       },
       "graphite-panel": {
         "role": "neutral",
         "displayName": "Graphite Panel",
-        "canonical": "#181b1f",
+        "canonical": "#0f1012",
         "tonalRamp": [
-          "#131416",
-          "#282d34",
-          "#434b56",
-          "#5d6979",
-          "#7e8a9b",
-          "#a3acb8",
-          "#c6cbd2",
-          "#ecedee"
+          "#101113",
+          "#272a2f",
+          "#41454e",
+          "#5d636f",
+          "#798190",
+          "#a0a6b0",
+          "#c7cad1",
+          "#ecedef"
         ]
       },
       "graphite-raised": {
         "role": "neutral",
         "displayName": "Graphite Raised",
-        "canonical": "#1f2328",
+        "canonical": "#17181b",
         "tonalRamp": [
-          "#131416",
-          "#282d34",
-          "#434b56",
-          "#5e6a79",
-          "#7e8b9b",
-          "#a3acb8",
-          "#c6cbd2",
-          "#ecedee"
+          "#101113",
+          "#282a2f",
+          "#42454d",
+          "#5e626e",
+          "#7b808e",
+          "#a1a5af",
+          "#c8cad0",
+          "#ececef"
         ]
       },
       "graphite-divider": {
         "role": "neutral",
         "displayName": "Graphite Divider",
-        "canonical": "#20242a",
+        "canonical": "#18191c",
         "tonalRamp": [
-          "#131416",
-          "#282d34",
-          "#424a57",
-          "#5d687a",
-          "#7d899c",
-          "#a2abb8",
-          "#c5cbd3",
-          "#ecedee"
-        ]
-      },
-      "selection-fill": {
-        "role": "neutral",
-        "displayName": "Selection Fill",
-        "canonical": "#26303d",
-        "tonalRamp": [
-          "#121417",
-          "#232d39",
-          "#3b4a5e",
-          "#526884",
-          "#7289a7",
-          "#9aabc0",
-          "#c0cad8",
-          "#ebedef"
+          "#101113",
+          "#282a2f",
+          "#42454d",
+          "#5e626e",
+          "#7b808e",
+          "#a2a5af",
+          "#c8cad0",
+          "#ececef"
         ]
       },
       "graphite-line": {
         "role": "neutral",
         "displayName": "Graphite Line",
-        "canonical": "#2a2f36",
+        "canonical": "#232428",
         "tonalRamp": [
-          "#131416",
-          "#282d34",
-          "#434b56",
-          "#5e6978",
-          "#7e8a9b",
-          "#a3acb8",
-          "#c6cbd2",
-          "#ecedee"
+          "#111113",
+          "#282a2e",
+          "#43454c",
+          "#5f626d",
+          "#7c808d",
+          "#a3a5ae",
+          "#c9cacf",
+          "#ececee"
+        ]
+      },
+      "selection-fill": {
+        "role": "neutral",
+        "displayName": "Selection Fill",
+        "canonical": "#1b1c20",
+        "tonalRamp": [
+          "#101113",
+          "#28292f",
+          "#41444d",
+          "#5d616f",
+          "#7a7e8f",
+          "#a1a4b0",
+          "#c8c9d0",
+          "#ececef"
+        ]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Surface",
+        "canonical": "#ffffff09",
+        "tonalRamp": [
+          "#121212",
+          "#2b2b2b",
+          "#474747",
+          "#666666",
+          "#858585",
+          "#a8a8a8",
+          "#cccccc",
+          "#ededed"
+        ]
+      },
+      "surface-hover": {
+        "role": "neutral",
+        "displayName": "Surface Hover",
+        "canonical": "#ffffff11",
+        "tonalRamp": [
+          "#121212",
+          "#2b2b2b",
+          "#474747",
+          "#666666",
+          "#858585",
+          "#a8a8a8",
+          "#cccccc",
+          "#ededed"
+        ]
+      },
+      "surface-on": {
+        "role": "neutral",
+        "displayName": "Surface On",
+        "canonical": "#ffffff1a",
+        "tonalRamp": [
+          "#121212",
+          "#2b2b2b",
+          "#474747",
+          "#666666",
+          "#858585",
+          "#a8a8a8",
+          "#cccccc",
+          "#ededed"
+        ]
+      },
+      "edge": {
+        "role": "neutral",
+        "displayName": "Edge",
+        "canonical": "#ffffff13",
+        "tonalRamp": [
+          "#121212",
+          "#2b2b2b",
+          "#474747",
+          "#666666",
+          "#858585",
+          "#a8a8a8",
+          "#cccccc",
+          "#ededed"
+        ]
+      },
+      "edge-strong": {
+        "role": "neutral",
+        "displayName": "Edge Strong",
+        "canonical": "#ffffff21",
+        "tonalRamp": [
+          "#121212",
+          "#2b2b2b",
+          "#474747",
+          "#666666",
+          "#858585",
+          "#a8a8a8",
+          "#cccccc",
+          "#ededed"
         ]
       },
       "paper-ink": {
         "role": "neutral",
         "displayName": "Paper Ink",
-        "canonical": "#e4e7eb",
+        "canonical": "#eeeff1",
         "tonalRamp": [
-          "#131416",
-          "#272d35",
-          "#414b58",
-          "#5b697b",
-          "#7b8a9d",
-          "#a1acba",
-          "#c4cbd4",
-          "#ecedef"
+          "#101114",
+          "#272a30",
+          "#40454e",
+          "#5c6370",
+          "#798190",
+          "#a0a6b1",
+          "#c7cad1",
+          "#ebedef"
         ]
       },
       "slate-mute": {
         "role": "neutral",
-        "displayName": "Slate Mute",
-        "canonical": "#9aa1ab",
+        "displayName": "Slate",
+        "canonical": "#9fa2ab",
         "tonalRamp": [
-          "#141415",
-          "#2a2d32",
-          "#464b53",
-          "#636a74",
-          "#838b95",
-          "#a7acb4",
-          "#c8cbd0",
+          "#111113",
+          "#282a2e",
+          "#43454c",
+          "#5f636d",
+          "#7c818d",
+          "#a3a5ae",
+          "#c9cacf",
+          "#ecedee"
+        ]
+      },
+      "tekst-3": {
+        "role": "neutral",
+        "displayName": "Tekst 3",
+        "canonical": "#8e919a",
+        "tonalRamp": [
+          "#111113",
+          "#292a2e",
+          "#43454b",
+          "#60636c",
+          "#7e818b",
+          "#a3a6ad",
+          "#c9cbcf",
           "#ecedee"
         ]
       },
       "steel-blue": {
         "role": "primary",
-        "displayName": "Steel Blue",
-        "canonical": "#6f9fe0",
+        "displayName": "Accent",
+        "canonical": "#8d95f2",
         "tonalRamp": [
-          "#0d131c",
-          "#10294c",
-          "#1b457e",
-          "#2661b0",
-          "#4281d6",
-          "#79a5e2",
-          "#abc7ed",
-          "#e7ecf3"
+          "#07091d",
+          "#111545",
+          "#1d2372",
+          "#2932a3",
+          "#3b47ce",
+          "#747ddc",
+          "#adb2eb",
+          "#e2e4f8"
         ]
       },
       "steel-ink": {
         "role": "primary",
-        "displayName": "Steel Ink",
-        "canonical": "#08111e",
+        "displayName": "Accent Ink",
+        "canonical": "#0b0c0e",
         "tonalRamp": [
-          "#0e131b",
-          "#132948",
-          "#204479",
-          "#2d60a9",
-          "#4a80cf",
-          "#7ea5dd",
-          "#aec7ea",
-          "#e7ecf3"
+          "#101114",
+          "#262a31",
+          "#3f4550",
+          "#5a6272",
+          "#768093",
+          "#9ea5b3",
+          "#c6cad2",
+          "#ebecef"
         ]
       },
       "ether-red": {
         "role": "secondary",
-        "displayName": "Ether Red",
-        "canonical": "#d3302f",
+        "displayName": "Live Red",
+        "canonical": "#e5484d",
         "tonalRamp": [
-          "#1c0d0d",
-          "#4c1010",
-          "#7e1b1b",
-          "#b12625",
-          "#d74242",
-          "#e37978",
-          "#edabab",
-          "#f4e7e7"
+          "#1d0708",
+          "#451113",
+          "#721d1f",
+          "#a3292d",
+          "#ce3b40",
+          "#dc7478",
+          "#ebadaf",
+          "#f8e2e3"
+        ]
+      },
+      "ether-vul": {
+        "role": "secondary",
+        "displayName": "Live Fill",
+        "canonical": "#c93a40",
+        "tonalRamp": [
+          "#1c0809",
+          "#441315",
+          "#701f22",
+          "#a02c31",
+          "#ca3f45",
+          "#da777b",
+          "#e9afb1",
+          "#f7e3e4"
+        ]
+      },
+      "ether-vul-hover": {
+        "role": "secondary",
+        "displayName": "Live Fill Hover",
+        "canonical": "#d6444a",
+        "tonalRamp": [
+          "#1d0708",
+          "#451113",
+          "#721d20",
+          "#a3292e",
+          "#ce3b41",
+          "#dc7479",
+          "#ebadb0",
+          "#f8e2e3"
         ]
       },
       "ether-red-ink": {
         "role": "secondary",
-        "displayName": "Ether Red Ink",
+        "displayName": "Live Red Ink",
         "canonical": "#ffffff",
         "tonalRamp": [
-          "#141414",
-          "#2e2e2e",
-          "#4c4c4c",
-          "#6b6b6b",
-          "#8c8c8c",
-          "#adadad",
+          "#121212",
+          "#2b2b2b",
+          "#474747",
+          "#666666",
+          "#858585",
+          "#a8a8a8",
           "#cccccc",
           "#ededed"
         ]
       },
       "ether-red-text": {
         "role": "secondary",
-        "displayName": "Ether Red Text",
-        "canonical": "#ff7a78",
+        "displayName": "Live Red Text",
+        "canonical": "#ff6b6f",
         "tonalRamp": [
-          "#200a09",
-          "#5c0100",
-          "#990200",
-          "#d60300",
-          "#ff1d1a",
-          "#ff5e5c",
-          "#ff9b99",
-          "#f7e4e3"
+          "#1d0708",
+          "#451113",
+          "#721d1f",
+          "#a3292c",
+          "#ce3b3f",
+          "#dc7477",
+          "#ebadaf",
+          "#f8e2e3"
         ]
       },
       "klaar-green": {
         "role": "secondary",
         "displayName": "Klaar Green",
-        "canonical": "#22844f",
+        "canonical": "#2f9d68",
         "tonalRamp": [
-          "#0e1b14",
-          "#13492c",
-          "#1f7a49",
-          "#2caa66",
-          "#49d087",
-          "#7ddea9",
-          "#aeeaca",
-          "#e7f3ed"
+          "#081b12",
+          "#14432c",
+          "#216e49",
+          "#2f9d68",
+          "#43c787",
+          "#7ad7aa",
+          "#b0e8cd",
+          "#e4f7ee"
+        ]
+      },
+      "klaar-vul": {
+        "role": "secondary",
+        "displayName": "Klaar Fill",
+        "canonical": "#1f7a4f",
+        "tonalRamp": [
+          "#071c12",
+          "#12452d",
+          "#1d724a",
+          "#29a369",
+          "#3ccd89",
+          "#75dcab",
+          "#aeeace",
+          "#e3f8ee"
+        ]
+      },
+      "klaar-vul-hover": {
+        "role": "secondary",
+        "displayName": "Klaar Fill Hover",
+        "canonical": "#258a5a",
+        "tonalRamp": [
+          "#081c12",
+          "#12442d",
+          "#1e7149",
+          "#2ba169",
+          "#3ecb88",
+          "#76daab",
+          "#afe9cd",
+          "#e3f7ee"
         ]
       },
       "klaar-green-ink": {
@@ -234,12 +384,12 @@
         "displayName": "Klaar Green Ink",
         "canonical": "#ffffff",
         "tonalRamp": [
-          "#141414",
-          "#2e2e2e",
-          "#4c4c4c",
-          "#6b6b6b",
-          "#8c8c8c",
-          "#adadad",
+          "#121212",
+          "#2b2b2b",
+          "#474747",
+          "#666666",
+          "#858585",
+          "#a8a8a8",
           "#cccccc",
           "#ededed"
         ]
@@ -247,61 +397,61 @@
       "klaar-green-text": {
         "role": "secondary",
         "displayName": "Klaar Green Text",
-        "canonical": "#5fd093",
+        "canonical": "#4ccf8e",
         "tonalRamp": [
-          "#0e1b14",
-          "#15472c",
-          "#237649",
-          "#31a666",
-          "#4ecb87",
-          "#81daaa",
-          "#b0e8ca",
-          "#e8f3ed"
+          "#081c12",
+          "#12442c",
+          "#1e7148",
+          "#2ba166",
+          "#3ecb85",
+          "#76daa9",
+          "#afe9cc",
+          "#e3f7ed"
         ]
       },
       "warn-amber": {
         "role": "secondary",
-        "displayName": "Warn Amber",
-        "canonical": "#d89b2b",
+        "displayName": "Attention Amber",
+        "canonical": "#e3a23b",
         "tonalRamp": [
-          "#1c170d",
-          "#4e370e",
-          "#815c18",
-          "#b58121",
-          "#dba43d",
-          "#e6be75",
-          "#efd6a9",
-          "#f4efe6"
+          "#1d1407",
+          "#453111",
+          "#72511d",
+          "#a37429",
+          "#ce953b",
+          "#dcb474",
+          "#ebd3ad",
+          "#f8f0e2"
         ]
       },
       "warn-amber-ink": {
         "role": "secondary",
-        "displayName": "Warn Amber Ink",
-        "canonical": "#1b1200",
+        "displayName": "Attention Amber Ink",
+        "canonical": "#1a1203",
         "tonalRamp": [
-          "#201809",
-          "#5c3d00",
-          "#996600",
-          "#d68f00",
-          "#ffb31a",
-          "#ffc95c",
-          "#ffdd99",
-          "#f7f0e3"
+          "#1d1507",
+          "#453311",
+          "#72541d",
+          "#a37929",
+          "#ce9b3b",
+          "#dcb874",
+          "#ebd5ad",
+          "#f8f0e2"
         ]
       },
-      "logo-tile": {
-        "role": "neutral",
-        "displayName": "Logo Tile",
-        "canonical": "#ffffff",
+      "take-warn-text": {
+        "role": "secondary",
+        "displayName": "Take Warning Text",
+        "canonical": "#ffd27a",
         "tonalRamp": [
-          "#141414",
-          "#2e2e2e",
-          "#4c4c4c",
-          "#6b6b6b",
-          "#8c8c8c",
-          "#adadad",
-          "#cccccc",
-          "#ededed"
+          "#1d1507",
+          "#453411",
+          "#72551d",
+          "#a37a29",
+          "#ce9c3b",
+          "#dcb974",
+          "#ebd6ad",
+          "#f8f1e2"
         ]
       },
       "monitor-black": {
@@ -309,12 +459,27 @@
         "displayName": "Monitor Black",
         "canonical": "#000000",
         "tonalRamp": [
-          "#141414",
-          "#2e2e2e",
-          "#4c4c4c",
-          "#6b6b6b",
-          "#8c8c8c",
-          "#adadad",
+          "#121212",
+          "#2b2b2b",
+          "#474747",
+          "#666666",
+          "#858585",
+          "#a8a8a8",
+          "#cccccc",
+          "#ededed"
+        ]
+      },
+      "logo-tile": {
+        "role": "neutral",
+        "displayName": "Logo White",
+        "canonical": "#ffffff",
+        "tonalRamp": [
+          "#121212",
+          "#2b2b2b",
+          "#474747",
+          "#666666",
+          "#858585",
+          "#a8a8a8",
           "#cccccc",
           "#ededed"
         ]
@@ -324,43 +489,28 @@
         "displayName": "Preview Canvas",
         "canonical": "#0d1220",
         "tonalRamp": [
-          "#101219",
-          "#1b2541",
-          "#2c3d6d",
-          "#3e5698",
-          "#5c75bd",
-          "#8b9dd0",
+          "#0a0e19",
+          "#19233e",
+          "#293966",
+          "#3b5291",
+          "#516cb8",
+          "#8497cd",
           "#b6c2e2",
-          "#e9ebf1"
+          "#e6eaf5"
         ]
       },
       "seat-empty": {
         "role": "neutral",
-        "displayName": "Seat Empty",
+        "displayName": "Empty Seat",
         "canonical": "#3a404c",
         "tonalRamp": [
-          "#131416",
-          "#282c34",
-          "#424957",
-          "#5d6679",
-          "#7d879c",
-          "#a2aab8",
+          "#0f1114",
+          "#262931",
+          "#3e4451",
+          "#586174",
+          "#747f95",
+          "#9da4b4",
           "#c5cad3",
-          "#ecedee"
-        ]
-      },
-      "seat-dim": {
-        "role": "neutral",
-        "displayName": "Seat Dim",
-        "canonical": "#1d2130",
-        "tonalRamp": [
-          "#121317",
-          "#232739",
-          "#3a425f",
-          "#515c86",
-          "#707ca9",
-          "#99a2c2",
-          "#bfc5d9",
           "#ebecf0"
         ]
       }
@@ -372,15 +522,15 @@
       },
       "headline": {
         "displayName": "Headline",
-        "purpose": "Title of the open Stemming or set."
+        "purpose": "Title of the open Stemming, set or form."
       },
       "action": {
         "displayName": "Action",
-        "purpose": "The word TOON only."
+        "purpose": "The word Take."
       },
       "outcome": {
         "displayName": "Outcome",
-        "purpose": "Aangenomen or Verworpen in the state text colour."
+        "purpose": "Aangenomen, Verworpen, Open or Nu aangenomen, sentence case."
       },
       "body": {
         "displayName": "Body",
@@ -388,7 +538,7 @@
       },
       "title": {
         "displayName": "Title",
-        "purpose": "Main line of a table row, Fractie names."
+        "purpose": "Main line of a row (Graphic name, motie title)."
       },
       "control": {
         "displayName": "Control",
@@ -396,15 +546,15 @@
       },
       "small": {
         "displayName": "Small",
-        "purpose": "Second line of a row, hints, monitor label text."
+        "purpose": "Second lines, hints, monitor detail text."
       },
       "label": {
         "displayName": "Label",
-        "purpose": "Column heads, toolbar titles, VOORBEELD, ETHER, CAMERA."
+        "purpose": "Field labels, monitor label words, table heads (in Tekst 3)."
       },
       "stamp": {
         "displayName": "Stamp",
-        "purpose": "State stamps."
+        "purpose": "Live, Klaar and was live, each after a 7px dot."
       },
       "keycap": {
         "displayName": "Keycap",
@@ -413,21 +563,41 @@
     },
     "shadows": [
       {
-        "name": "row-marker",
-        "value": "inset 3px 0 0 <state colour>",
-        "purpose": "Left line of a selected, ready or on-air table row."
+        "name": "button",
+        "value": "0 1px 1px rgb(0 0 0 / 0.35)",
+        "purpose": "Default buttons; none when disabled."
       },
       {
-        "name": "logo-hairline",
-        "value": "inset 0 0 0 1px #0000001a",
-        "purpose": "Edge of every white logo tile."
+        "name": "take",
+        "value": "0 1px 2px rgb(0 0 0 / 0.4), inset 0 1px 0 rgb(255 255 255 / 0.12)",
+        "purpose": "The Take button."
+      },
+      {
+        "name": "tally",
+        "value": "0 0 0 2px <tally colour>",
+        "purpose": "With the 1px border: the 3px ring round a ready Preview or Live monitor."
+      },
+      {
+        "name": "float",
+        "value": "0 6px 18px rgb(0 0 0 / 0.45)",
+        "purpose": "The undo box; the Zetel hint uses 0 4px 12px."
       }
     ],
     "motion": [
       {
-        "name": "none",
-        "value": "0ms",
-        "purpose": "No decorative motion; state changes are instant. Respect reduced motion everywhere."
+        "name": "state",
+        "value": "120ms ease-out",
+        "purpose": "Background, border and colour of buttons, tabs, filters and keys."
+      },
+      {
+        "name": "undo-bar",
+        "value": "1s linear",
+        "purpose": "The bar in the undo box runs down."
+      },
+      {
+        "name": "tablet-tap",
+        "value": "scale(0.97), brightness(1.2) on :active",
+        "purpose": "Tap feedback on the tablet before the server answers."
       }
     ],
     "breakpoints": [
@@ -436,73 +606,111 @@
         "value": "1440px"
       },
       {
-        "name": "small-laptop",
-        "value": "1280px"
+        "name": "too-narrow",
+        "value": "899px",
+        "purpose": "Below 900px: a message with a link to the tablet; shortcuts off."
+      },
+      {
+        "name": "arc-grid",
+        "value": "560px",
+        "purpose": "The coalition arc becomes a grid."
       }
     ],
     "layout": {
-      "tabStripHeight": "34px",
-      "multiviewerColumns": "1fr 170px 1fr 330px",
+      "tabStripHeight": "40px",
+      "multiviewerColumns": "1fr 156px 1fr minmax(340px, 25%)",
+      "takeHeight": "58px",
       "stemmingenPanes": "minmax(300px, 36%) 1fr",
-      "presetTableColumns": "44px 108px auto auto auto 60px 120px"
+      "presetTableColumns": "48px 96px 86px auto auto 250px 84px",
+      "coalitieColumns": "1fr 340px"
     },
     "keyboard": [
       {
-        "key": "1-9",
-        "action": "Put the Preset with that number ready (Klaar); never shows."
+        "key": "1 to 9",
+        "action": "Put the Preset with that number ready in Preview. It does not go Live."
       },
       {
         "key": "Space",
-        "action": "TOON: show the ready Graphic in the Ether."
+        "action": "Take: put what is in Preview Live."
       },
       {
         "key": "Enter",
-        "action": "Never shows; only presses the focused button."
+        "action": "Never takes, also not with focus on Take. It only presses another focused button."
       },
       {
-        "key": "A S D F G H",
-        "action": "Fixed Standpunten: Totaal vanaf voorzitter, Laag over de banken, Linkerflank, Rechterflank, Bovenaf, Katheder."
+        "key": "Ctrl+Enter",
+        "action": "In Stemmingen: Vastleggen en klaarzetten, also from the search field of Afwijkende stem."
       },
       {
-        "key": "J K L",
-        "action": "Own Standpunten and Cameraritten."
-      },
-      {
-        "key": "Shift + letter",
-        "action": "Pick with a cut, without movement."
-      },
-      {
-        "key": "V",
-        "action": "Vrije camera on or off."
-      },
-      {
-        "key": "O",
-        "action": "Oefenen on or off: the gamepad drives only the Voorbeeld."
-      },
-      {
-        "key": "R",
-        "action": "Start or stop recording a Camerarit, only during Oefenen."
+        "key": "N",
+        "action": "Ververs: put the current figures in the ready Graphic."
       },
       {
         "key": "B",
-        "action": "Bijwerken: refresh figures on air."
+        "action": "Update: put a newer version or newer figures in Live without building up again."
       },
       {
         "key": "X",
-        "action": "Uit beeld."
+        "action": "Take out: take the Graphic out of Live."
+      },
+      {
+        "key": "Z",
+        "action": "Kleur uit: the Stoelen in Live get their own leather back; the Graphic stays."
+      },
+      {
+        "key": "C",
+        "action": "Opbouw over: during an Opbouw, the Partijen not yet lit colour at once."
+      },
+      {
+        "key": "Ctrl+Z",
+        "action": "Undo the last Take out or wipe, while the undo box shows."
+      },
+      {
+        "key": "A, S, D, F, G, H",
+        "action": "Fixed Standpunten: Totaal vanaf voorzitter, Laag over de banken, Linkerflank, Rechterflank, Bovenaf, Katheder."
+      },
+      {
+        "key": "Q, W, E, T, Y, U",
+        "action": "Fixed Cameraritten. They start live at once."
+      },
+      {
+        "key": "J, K, L",
+        "action": "Own Standpunten and Cameraritten."
+      },
+      {
+        "key": "Shift with a letter",
+        "action": "Pick that Standpunt or Camerarit with a cut, without movement."
+      },
+      {
+        "key": "V",
+        "action": "Vrije camera on or off (gamepad drives the Live camera)."
+      },
+      {
+        "key": "O",
+        "action": "Oefenen on or off: the gamepad drives only the Preview camera."
+      },
+      {
+        "key": "R",
+        "action": "Start or stop recording a Camerarit, only during Oefenen. B on the gamepad does the same; B on the keyboard stays Update."
       }
     ],
     "icons": {
       "library": "Lucide",
       "version": "0.460.0",
       "stroke": 2,
-      "sizes": "14 to 16px",
+      "sizes": "14px",
       "usedFor": [
+        "update",
+        "take-out",
+        "kleur-uit",
+        "opbouw-over",
         "search",
         "lock",
         "mic",
         "tablet",
-        "star"
+        "star",
+        "plus",
+        "check"
       ]
     }
   },
@@ -511,144 +719,155 @@
       "name": "Tab Strip",
       "kind": "nav",
       "refersTo": "tab-strip",
-      "description": "Text tabs along the top with a count box, status dots and the clock at the right.",
-      "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab ds-on\">Presets</button><button class=\"ds-tab\">Cijfers <span class=\"ds-n\">1</span></button><button class=\"ds-tab\">Stemmingen <span class=\"ds-n\">3</span></button><span class=\"ds-st\"><i></i>Server <i></i>Ether <i></i>Reserve <b>20.58</b></span></nav>",
-      "css": ":host{--ground:#121417;--panel:#181b1f;--raised:#1f2328;--field:#0c0e10;--line:#2a2f36;--ink:#e4e7eb;--mute:#9aa1ab;--sel:#26303d;--steel:#6f9fe0;--red:#d3302f;--green:#22844f;--amber:#d89b2b}.ds-tabs{display:flex;height:34px;background:#0c0e10;border-bottom:1px solid #2a2f36;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px}.ds-tab{background:none;border:0;border-bottom:2px solid transparent;color:#9aa1ab;padding:0 12px;font:inherit;font-weight:550;cursor:pointer}.ds-tab:hover{color:#e4e7eb}.ds-tab:focus-visible{outline:2px solid #6f9fe0;outline-offset:-2px}.ds-tab.ds-on{background:#181b1f;color:#e4e7eb;border-bottom-color:#6f9fe0}.ds-n{display:inline-grid;place-items:center;min-width:16px;height:16px;border:1px solid #2a2f36;border-radius:2px;background:#1f2328;color:#e4e7eb;font-size:10px;margin-left:4px}.ds-st{margin-left:auto;display:flex;align-items:center;gap:6px;padding:0 14px;color:#9aa1ab;font-size:12px}.ds-st i{width:8px;height:8px;border-radius:50%;background:#22844f;margin-left:8px}.ds-st b{color:#e4e7eb;margin-left:10px}"
+      "description": "Text tabs with 6px corners, the active one a lighter surface; a count box on Stemmingen; status dots and the clock at the right.",
+      "html": "<nav class=\"ds-tabs\"><button class=\"ds-tab ds-on\">Presets</button><button class=\"ds-tab\">Cijfers</button><button class=\"ds-tab\">Stemmingen <span class=\"ds-n\">2 open</span></button><span class=\"ds-st\"><i></i>Server <i></i>Live-renderer <i></i>Reserve-renderer <b>20.58.14</b></span></nav>",
+      "css": ":host{--ground:#0b0c0e;--panel:#0f1012;--ink:#eeeff1;--mute:#9fa2ab;--t3:#8e919a;--vlak:rgb(255 255 255/.035);--aan:rgb(255 255 255/.1);--rand:rgb(255 255 255/.075);--sterk:rgb(255 255 255/.13);--red:#e5484d;--redvul:#c93a40;--green:#2f9d68;--greenvul:#1f7a4f;--amber:#e3a23b;--accent:#8d95f2}.ds-tabs{display:flex;align-items:center;gap:2px;height:40px;padding:0 8px;background:#0b0c0e;border-bottom:1px solid rgb(255 255 255/.075);font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em}.ds-tab{height:28px;padding:0 10px;border:0;border-radius:6px;background:none;color:#9fa2ab;font:inherit;font-weight:500;cursor:pointer}.ds-tab:hover{color:#eeeff1;background:rgb(255 255 255/.035)}.ds-tab.ds-on{color:#eeeff1;background:rgb(255 255 255/.1)}.ds-tab:focus-visible{outline:2px solid #8d95f2;outline-offset:1px}.ds-n{display:inline-flex;align-items:center;height:17px;padding:0 5px;margin-left:4px;font-size:11px;color:#9fa2ab;background:rgb(255 255 255/.035);border:1px solid rgb(255 255 255/.075);border-radius:4px}.ds-st{margin-left:auto;display:flex;align-items:center;gap:6px;color:#9fa2ab;font-size:12px}.ds-st i{width:6px;height:6px;border-radius:50%;background:#4ccf8e;margin-left:8px}.ds-st b{color:#eeeff1;font-weight:500;margin-left:10px}"
     },
     {
       "name": "Monitor",
       "kind": "custom",
       "refersTo": "monitor",
-      "description": "Voorbeeld or Ether as on a multiviewer: square picture, label strip with a state line.",
-      "html": "<div class=\"ds-mon ds-live\"><div class=\"ds-pic\">De Uitslagavond</div><div class=\"ds-lb\"><b>Ether</b><span>Titelkaart · De Uitslagavond</span><i>sinds 20.58</i></div></div>",
-      "css": ".ds-mon{width:320px;background:#000;border:1px solid #2a2f36;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";}.ds-pic{aspect-ratio:16/9;background:#0d1220;color:#fff;display:grid;place-items:center;font-weight:700;font-size:20px}.ds-lb{display:flex;align-items:center;gap:8px;height:26px;padding:0 8px;background:#0c0e10;border-top:3px solid #2a2f36;font-size:12px;white-space:nowrap}.ds-lb b{font-size:11px;letter-spacing:.08em;text-transform:uppercase}.ds-lb span{color:#9aa1ab;overflow:hidden;text-overflow:ellipsis}.ds-lb i{margin-left:auto;font-style:normal;color:#9aa1ab}.ds-live .ds-lb{border-top-color:#d3302f}.ds-live .ds-lb b{color:#ff7a78}"
+      "description": "Preview or Live as on a multiviewer: 8px corners, a 3px tally ring and a filled label when ready or live.",
+      "html": "<figure class=\"ds-mon ds-live\"><div class=\"ds-pic\">De Uitslagavond</div><figcaption><span class=\"ds-r\"><b>Live</b><span>Titelkaart</span><i>sinds 20.58</i></span><span class=\"ds-d\">De Uitslagavond · live vanuit Den Haag</span></figcaption></figure>",
+      "css": ":host{--ground:#0b0c0e;--panel:#0f1012;--ink:#eeeff1;--mute:#9fa2ab;--t3:#8e919a;--vlak:rgb(255 255 255/.035);--aan:rgb(255 255 255/.1);--rand:rgb(255 255 255/.075);--sterk:rgb(255 255 255/.13);--red:#e5484d;--redvul:#c93a40;--green:#2f9d68;--greenvul:#1f7a4f;--amber:#e3a23b;--accent:#8d95f2}.ds-mon{width:320px;margin:4px;border:1px solid rgb(255 255 255/.075);border-radius:8px;overflow:hidden;background:#0f1012;font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em}.ds-live{border-color:#e5484d;box-shadow:0 0 0 2px #e5484d}.ds-pic{aspect-ratio:16/9;background:#0d1220;color:#fff;display:grid;place-items:center;font-weight:600;font-size:20px}figcaption{display:flex;flex-direction:column;gap:1px;padding:7px 10px 8px;border-top:1px solid rgb(255 255 255/.075);font-size:12px;white-space:nowrap}.ds-r{display:flex;align-items:center;gap:8px}.ds-r b{padding:2px 7px;border-radius:4px;background:#c93a40;color:#fff;font-weight:600}.ds-r span{flex:1;color:#eeeff1;font-weight:500;font-size:13px}.ds-r i{font-style:normal;color:#9fa2ab}.ds-d{color:#9fa2ab;overflow:hidden;text-overflow:ellipsis}"
     },
     {
-      "name": "TOON",
+      "name": "Take",
       "kind": "button",
-      "refersTo": "toon-button",
-      "description": "The one large red control. Space shows the ready Graphic.",
-      "html": "<button class=\"ds-toon\">Toon <kbd>Spatie</kbd></button>",
-      "css": ".ds-toon{display:flex;align-items:center;justify-content:space-between;width:170px;height:62px;padding:0 12px;border:1px solid #d3302f;border-radius:3px;background:#d3302f;color:#fff;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:16px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}.ds-toon:hover{border-color:#ffffff88}.ds-toon:focus-visible{outline:2px solid #6f9fe0;outline-offset:2px}.ds-toon:disabled{opacity:.4}.ds-toon kbd{font:600 10px ui-monospace,monospace;letter-spacing:0;border:1px solid currentColor;border-radius:2px;padding:3px 5px;opacity:.7}"
+      "refersTo": "take-button",
+      "description": "The one solid red control: fixed 58px, Live Fill, Take at the left and a Spatie key cap at the right; old figures as a dark chip inside.",
+      "html": "<button class=\"ds-take\"><span class=\"ds-tr\"><span>Take</span><kbd>Spatie</kbd></span><span class=\"ds-old\">oude cijfers (N)</span></button>",
+      "css": ":host{--ground:#0b0c0e;--panel:#0f1012;--ink:#eeeff1;--mute:#9fa2ab;--t3:#8e919a;--vlak:rgb(255 255 255/.035);--aan:rgb(255 255 255/.1);--rand:rgb(255 255 255/.075);--sterk:rgb(255 255 255/.13);--red:#e5484d;--redvul:#c93a40;--green:#2f9d68;--greenvul:#1f7a4f;--amber:#e3a23b;--accent:#8d95f2}.ds-take{display:flex;flex-direction:column;justify-content:center;gap:4px;width:156px;height:58px;padding:0 12px;color:#fff;background:#c93a40;border:1px solid rgb(255 255 255/.14);border-radius:8px;box-shadow:0 1px 2px rgb(0 0 0/.4),inset 0 1px 0 rgb(255 255 255/.12);font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em;font-size:15px;font-weight:600;cursor:pointer}.ds-take:hover{background:#d6444a}.ds-tr{display:flex;align-items:center;justify-content:space-between}.ds-tr kbd{font:500 11px/15px inherit;padding:1px 5px;color:rgb(255 255 255/.85);background:rgb(0 0 0/.15);border:1px solid rgb(255 255 255/.2);border-radius:4px}.ds-old{align-self:flex-start;padding:1px 6px;font-size:12px;font-weight:600;color:#ffd27a;background:rgb(0 0 0/.38);border-radius:4px}"
     },
     {
-      "name": "Button",
+      "name": "Take Column Button",
       "kind": "button",
-      "refersTo": "button",
-      "description": "Default compact button in toolbars and action bars.",
-      "html": "<button class=\"ds-btn\">Met algemene stemmen</button>",
-      "css": ".ds-btn{height:32px;padding:0 10px;border:1px solid #2a2f36;border-radius:3px;background:#1f2328;color:#e4e7eb;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px;font-weight:550;white-space:nowrap;cursor:pointer}.ds-btn:hover{border-color:#9aa1ab}.ds-btn:focus-visible{outline:2px solid #6f9fe0;outline-offset:2px}.ds-btn:disabled{opacity:.4}"
+      "refersTo": "take-column-button",
+      "description": "Update, Take out, Kleur uit and Opbouw over: 28px, a Lucide icon, one word and the key cap at the right.",
+      "html": "<button class=\"ds-b\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" stroke-linejoin=\"round\"><path d=\"M3 12a9 9 0 0 1 15-6.7L21 8\"/><path d=\"M21 3v5h-5\"/><path d=\"M21 12a9 9 0 0 1-15 6.7L3 16\"/><path d=\"M8 16H3v5\"/></svg><span>Update</span><kbd class=\"ds-k\">B</kbd></button>",
+      "css": ":host{--ground:#0b0c0e;--panel:#0f1012;--ink:#eeeff1;--mute:#9fa2ab;--t3:#8e919a;--vlak:rgb(255 255 255/.035);--aan:rgb(255 255 255/.1);--rand:rgb(255 255 255/.075);--sterk:rgb(255 255 255/.13);--red:#e5484d;--redvul:#c93a40;--green:#2f9d68;--greenvul:#1f7a4f;--amber:#e3a23b;--accent:#8d95f2}.ds-k{display:inline-block;min-width:18px;padding:1px 5px;font-size:11px;font-weight:500;line-height:15px;color:#9fa2ab;background:rgb(255 255 255/.035);border:1px solid rgb(255 255 255/.075);border-radius:4px;text-align:center}.ds-b{display:flex;align-items:center;gap:8px;width:156px;height:28px;padding:0 10px;color:#eeeff1;background:rgb(255 255 255/.035);border:1px solid rgb(255 255 255/.075);border-radius:6px;box-shadow:0 1px 1px rgb(0 0 0/.35);font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em;font-weight:500;cursor:pointer}.ds-b svg{color:#9fa2ab}.ds-b span{flex:1;text-align:left}.ds-b:hover{background:rgb(255 255 255/.065);border-color:rgb(255 255 255/.13)}"
     },
     {
       "name": "Commit Button",
       "kind": "button",
       "refersTo": "button-commit",
-      "description": "Vastleggen en klaarzetten, fixed in the Stemmingen action bar.",
-      "html": "<button class=\"ds-go\">Vastleggen en klaarzetten</button>",
-      "css": ".ds-go{height:36px;padding:0 16px;border:1px solid #22844f;border-radius:3px;background:#22844f;color:#fff;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px;font-weight:650;cursor:pointer}.ds-go:hover{border-color:#5fd093}.ds-go:focus-visible{outline:2px solid #6f9fe0;outline-offset:2px}.ds-go:disabled{background:#1f2328;border-color:#2a2f36;color:#9aa1ab}"
+      "description": "Every action that puts something ready: Klaar Fill with white ink. Disabled stays visible with the reason next to it.",
+      "html": "<button class=\"ds-c\">Vastleggen en klaarzetten <kbd class=\"ds-k\">Ctrl+Enter</kbd></button> <button class=\"ds-c\" disabled>Zet klaar</button> <span class=\"ds-why\">Kies eerst Partijen</span>",
+      "css": ":host{--ground:#0b0c0e;--panel:#0f1012;--ink:#eeeff1;--mute:#9fa2ab;--t3:#8e919a;--vlak:rgb(255 255 255/.035);--aan:rgb(255 255 255/.1);--rand:rgb(255 255 255/.075);--sterk:rgb(255 255 255/.13);--red:#e5484d;--redvul:#c93a40;--green:#2f9d68;--greenvul:#1f7a4f;--amber:#e3a23b;--accent:#8d95f2}.ds-k{display:inline-block;min-width:18px;padding:1px 5px;font-size:11px;font-weight:500;line-height:15px;color:#9fa2ab;background:rgb(255 255 255/.035);border:1px solid rgb(255 255 255/.075);border-radius:4px;text-align:center}.ds-c{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 12px;color:#fff;background:#1f7a4f;border:1px solid rgb(255 255 255/.12);border-radius:6px;font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em;font-weight:500;cursor:pointer}.ds-c:hover:not(:disabled){background:#258a5a}.ds-c .ds-k{color:rgb(255 255 255/.8);background:rgb(0 0 0/.15);border-color:rgb(255 255 255/.15)}.ds-c:disabled{color:#8e919a;background:transparent;border-color:rgb(255 255 255/.075);cursor:default}.ds-why{font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em;font-size:12px;color:#9fa2ab}.ds-why::before{content:'';display:inline-block;width:6px;height:6px;margin-right:6px;border-radius:50%;background:#e3a23b}"
     },
     {
-      "name": "Search Field",
-      "kind": "input",
-      "refersTo": "input-field",
-      "description": "Search box in a toolbar.",
-      "html": "<label class=\"ds-zk\"><svg viewBox=\"0 0 24 24\" width=\"14\" height=\"14\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg><input placeholder=\"Zoek\"></label>",
-      "css": ".ds-zk{display:flex;align-items:center;gap:6px;width:200px;height:28px;padding:0 8px;border:1px solid #2a2f36;border-radius:3px;background:#0c0e10;color:#9aa1ab}.ds-zk:focus-within{outline:2px solid #6f9fe0;outline-offset:2px}.ds-zk input{flex:1;border:0;background:transparent;color:#e4e7eb;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px;outline:none}"
+      "name": "Undo Box",
+      "kind": "custom",
+      "refersTo": "undo-box",
+      "description": "Up to 20 seconds after Take out or a wipe: what happened in amber, what comes back, the seconds, a white button with Ctrl+Z and a bar that runs down.",
+      "html": "<div class=\"ds-u\"><span class=\"ds-w\"><b>Take out:</b> Zetelverdeling</span><span class=\"ds-s\">14 s</span><button>Terug in beeld <kbd>Ctrl+Z</kbd></button><i style=\"width:70%\"></i></div>",
+      "css": ":host{--ground:#0b0c0e;--panel:#0f1012;--ink:#eeeff1;--mute:#9fa2ab;--t3:#8e919a;--vlak:rgb(255 255 255/.035);--aan:rgb(255 255 255/.1);--rand:rgb(255 255 255/.075);--sterk:rgb(255 255 255/.13);--red:#e5484d;--redvul:#c93a40;--green:#2f9d68;--greenvul:#1f7a4f;--amber:#e3a23b;--accent:#8d95f2}.ds-u{position:relative;display:flex;flex-direction:column;gap:5px;width:156px;padding:7px 8px 9px;background:#17181b;border:1px solid rgb(255 255 255/.13);border-radius:8px;box-shadow:0 6px 18px rgb(0 0 0/.45);font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em;font-size:12px;color:#eeeff1}.ds-w{padding-right:34px}.ds-w b{color:#e3a23b;font-weight:500}.ds-s{position:absolute;top:8px;right:9px;font-weight:600;color:#e3a23b}.ds-u button{display:flex;justify-content:space-between;align-items:center;height:26px;padding:0 6px;color:#08090a;background:#eeeff1;border:1px solid #eeeff1;border-radius:6px;font:inherit;font-size:12.5px;font-weight:600}.ds-u kbd{padding:0 3px;font-size:10px;border:1px solid rgb(0 0 0/.25);border-radius:4px}.ds-u i{height:2px;background:#e3a23b;border-radius:2px}"
     },
     {
       "name": "Filter Toggle",
       "kind": "chip",
       "refersTo": "filter-toggle",
-      "description": "Text-only filter in a toolbar; the active one gets Selection Fill.",
-      "html": "<span><button class=\"ds-f ds-on\">Alle</button><button class=\"ds-f\">Uitslagavond</button><button class=\"ds-f\">Op de tablet</button></span>",
-      "css": ".ds-f{padding:4px 9px;border:0;border-radius:3px;background:none;color:#9aa1ab;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px;font-weight:550;cursor:pointer}.ds-f:hover{color:#e4e7eb}.ds-f:focus-visible{outline:2px solid #6f9fe0}.ds-f.ds-on{background:#26303d;color:#e4e7eb}"
+      "description": "Text toggles in toolbars; on is one surface step lighter, never coloured.",
+      "html": "<span class=\"ds-f\"><button class=\"ds-on\">Alle 9</button><button>Uitslag 4</button><button>Coalitie 2</button></span>",
+      "css": ":host{--ground:#0b0c0e;--panel:#0f1012;--ink:#eeeff1;--mute:#9fa2ab;--t3:#8e919a;--vlak:rgb(255 255 255/.035);--aan:rgb(255 255 255/.1);--rand:rgb(255 255 255/.075);--sterk:rgb(255 255 255/.13);--red:#e5484d;--redvul:#c93a40;--green:#2f9d68;--greenvul:#1f7a4f;--amber:#e3a23b;--accent:#8d95f2}.ds-f{display:flex;gap:2px;font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em}.ds-f button{height:26px;padding:0 9px;border:0;border-radius:6px;background:none;color:#9fa2ab;font:inherit;font-weight:500;cursor:pointer}.ds-f button:hover{color:#eeeff1;background:rgb(255 255 255/.035)}.ds-f .ds-on{color:#eeeff1;background:rgb(255 255 255/.1)}"
     },
     {
       "name": "Preset Row",
       "kind": "card",
       "refersTo": "table-row",
-      "description": "One Preset as a table row: key, thumbnail, Graphic, data, camera, status. Ready rows tint green, on-air rows tint red.",
-      "html": "<table class=\"ds-t\"><tr class=\"ds-klaar\"><td><span class=\"ds-k\">1</span></td><td><b>Zetelbalk</b><div>Uitslagavond</div></td><td class=\"ds-m\">A · Totaal vanaf voorzitter</td><td><span class=\"ds-s ds-g\">Klaar</span></td></tr><tr class=\"ds-live\"><td><span class=\"ds-k\">2</span></td><td><b>Titelkaart</b><div>De Uitslagavond</div></td><td class=\"ds-m\">S · Laag over de banken</td><td><span class=\"ds-s ds-r\">Live</span></td></tr><tr><td><span class=\"ds-k\">3</span></td><td><b>Winst en verlies</b><div>Uitslagavond</div></td><td class=\"ds-m\">G · Bovenaf</td><td></td></tr></table>",
-      "css": ".ds-t{border-collapse:collapse;width:520px;background:#121417;color:#e4e7eb;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";font-size:13px}.ds-t td{padding:5px 10px;border-bottom:1px solid #20242a}.ds-t tr{cursor:pointer}.ds-t tr:hover td{background:#ffffff08}.ds-t td div,.ds-m{color:#9aa1ab}.ds-t b{font-weight:600}.ds-k{display:inline-grid;place-items:center;width:22px;height:22px;border:1px solid #2a2f36;border-radius:2px;background:#1f2328;font-weight:700}.ds-klaar td{background:#22844f22}.ds-klaar td:first-child{box-shadow:inset 3px 0 0 #22844f}.ds-live td{background:#d3302f1f}.ds-live td:first-child{box-shadow:inset 3px 0 0 #d3302f}.ds-s{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:4px 7px;border-radius:2px;color:#fff}.ds-g{background:#22844f}.ds-r{background:#d3302f}"
+      "description": "One row per Preset, 44px: key cap with the number, a dot stamp, the sketch, the Graphic, its data, the camera and the tablet toggle. Live and Klaar rows have a 6% tint.",
+      "html": "<table class=\"ds-t\"><tr class=\"ds-live\"><td><span class=\"ds-kc\">2</span></td><td><span class=\"ds-st\">Live</span></td><td><span class=\"ds-sk\"></span></td><td><b>Zetelverdeling</b></td><td>exitpoll <span>· cijfers 20.41</span></td><td><kbd class=\"ds-k\">A</kbd> <span>Totaal vanaf voorzitter</span></td></tr><tr><td><span class=\"ds-kc\">3</span></td><td></td><td><span class=\"ds-sk\"></span></td><td><b>Coalitie</b></td><td>exitpoll <span>· 78 Zetels samen</span></td><td><kbd class=\"ds-k\">S</kbd> <span>Laag over de banken</span></td></tr></table>",
+      "css": ":host{--ground:#0b0c0e;--panel:#0f1012;--ink:#eeeff1;--mute:#9fa2ab;--t3:#8e919a;--vlak:rgb(255 255 255/.035);--aan:rgb(255 255 255/.1);--rand:rgb(255 255 255/.075);--sterk:rgb(255 255 255/.13);--red:#e5484d;--redvul:#c93a40;--green:#2f9d68;--greenvul:#1f7a4f;--amber:#e3a23b;--accent:#8d95f2}.ds-k{display:inline-block;min-width:18px;padding:1px 5px;font-size:11px;font-weight:500;line-height:15px;color:#9fa2ab;background:rgb(255 255 255/.035);border:1px solid rgb(255 255 255/.075);border-radius:4px;text-align:center}.ds-t{border-collapse:collapse;width:640px;font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em;color:#eeeff1}.ds-t td{height:44px;padding:0 10px;border-bottom:1px solid #18191c;white-space:nowrap}.ds-t td span{color:#9fa2ab}.ds-t b{font-weight:500}.ds-t tr:hover{background:rgb(255 255 255/.035)}.ds-t tr.ds-live{background:rgb(229 72 77/.06)}.ds-kc{display:inline-grid;place-items:center;width:22px;height:22px;font-size:11.5px;font-weight:500;color:#9fa2ab;background:rgb(255 255 255/.035);border:1px solid rgb(255 255 255/.075);border-radius:5px}.ds-t .ds-st{display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:500;color:#ff6b6f}.ds-st::before{content:'';width:7px;height:7px;border-radius:50%;background:#e5484d;box-shadow:0 0 0 3px rgb(229 72 77/.2)}.ds-sk{display:block;width:66px;aspect-ratio:16/9;background:#0d1220;border-radius:4px}"
     },
     {
       "name": "Fractie Key",
       "kind": "custom",
       "refersTo": "fractie-key",
-      "description": "Input key in Stemmingen: party-colour stripe, short name, Zetels, tap order, VOOR or TEGEN.",
-      "html": "<span class=\"ds-fr\"><button class=\"ds-v\" style=\"--pc:#e3001b\"><i></i><b>SP</b><small>3</small><em>1</em><u>voor</u></button><button class=\"ds-x ds-rest\" style=\"--pc:#0a3a7a\"><i></i><b>VVD</b><small>22</small><u>tegen</u></button><button style=\"--pc:#00a651\"><i></i><b>D66</b><small>26</small></button></span>",
-      "css": ".ds-fr{display:inline-grid;grid-template-columns:repeat(3,140px);gap:4px;font-family:Inter,system-ui,sans-serif;font-feature-settings:\"tnum\",\"cv11\";}.ds-fr button{position:relative;display:grid;grid-template-columns:4px 1fr;gap:8px;align-items:center;height:42px;padding:0;border:1px solid #2a2f36;border-radius:3px;background:#1f2328;color:#e4e7eb;text-align:left;overflow:hidden;cursor:pointer;font:inherit}.ds-fr button:hover{border-color:#9aa1ab}.ds-fr button:focus-visible{outline:2px solid #6f9fe0;outline-offset:2px}.ds-fr i{height:100%;background:var(--pc)}.ds-fr b{font-weight:600;font-size:13px;padding-top:10px}.ds-fr small{position:absolute;right:8px;bottom:4px;color:#9aa1ab;font-size:11.5px}.ds-fr em{position:absolute;left:8px;top:2px;font-style:normal;font-size:9.5px;font-weight:700}.ds-fr u{position:absolute;right:6px;top:3px;text-decoration:none;font-size:9.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase}.ds-fr .ds-v{background:#22844f24;border-color:#22844f99}.ds-fr .ds-v u{color:#5fd093}.ds-fr .ds-x{background:#d3302f24;border-color:#d3302f80}.ds-fr .ds-x u{color:#ff7a78}.ds-fr .ds-rest{border-style:dashed}"
+      "description": "Stemming tile: a party dot and the short name, Zetels, tap order; Voor a green tint and border, Tegen a red border only, Overige dashed.",
+      "html": "<div class=\"ds-g\"><button class=\"ds-fk ds-voor\"><small>1</small><em>Voor</em><span>GL-PvdA</span><b>25</b></button><button class=\"ds-fk ds-tegen\"><small>2</small><em>Tegen</em><span>PVV</span><b>37</b></button><button class=\"ds-fk ds-tegen ds-ov\"><small></small><em>Tegen</em><span>SP</span><b>5</b></button></div>",
+      "css": ":host{--ground:#0b0c0e;--panel:#0f1012;--ink:#eeeff1;--mute:#9fa2ab;--t3:#8e919a;--vlak:rgb(255 255 255/.035);--aan:rgb(255 255 255/.1);--rand:rgb(255 255 255/.075);--sterk:rgb(255 255 255/.13);--red:#e5484d;--redvul:#c93a40;--green:#2f9d68;--greenvul:#1f7a4f;--amber:#e3a23b;--accent:#8d95f2}.ds-g{display:grid;grid-template-columns:repeat(3,110px);gap:6px;padding:8px;border:1px solid rgb(47 157 104/.45);border-radius:10px;font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em}.ds-fk{display:grid;grid-template-columns:1fr auto;gap:2px 6px;padding:5px 8px 6px 10px;text-align:left;color:#eeeff1;background:rgb(255 255 255/.035);border:1px solid rgb(255 255 255/.075);border-radius:7px;font:inherit}.ds-fk small{font-size:12px;color:#8e919a}.ds-fk em{font-style:normal;font-size:12.5px;font-weight:600;text-align:right}.ds-fk span{display:inline-flex;align-items:center;gap:6px}.ds-fk span::before{content:'';width:8px;height:8px;border-radius:50%;background:#c33}.ds-fk b{font-size:13px;font-weight:500;text-align:right}.ds-voor{background:rgb(47 157 104/.14);border-color:rgb(47 157 104/.7)}.ds-voor em{color:#4ccf8e}.ds-tegen{border-color:rgb(229 72 77/.65)}.ds-tegen em{color:#ff6b6f}.ds-ov{border-style:dashed}"
+    },
+    {
+      "name": "Arc Party",
+      "kind": "custom",
+      "refersTo": "arc-party",
+      "description": "A tile on the coalition arc: party colour as a 3px line at the top, the short name readable in white, Zetels under it; chosen adds the line at the foot and a check.",
+      "html": "<span class=\"ds-a\"><button style=\"--p:#c33\" aria-pressed=\"true\"><i>&#10003;</i><span>GL-PvdA</span><b>25</b></button><button style=\"--p:#0a5\"><span>CDA</span><b>5</b></button></span>",
+      "css": ":host{--ground:#0b0c0e;--panel:#0f1012;--ink:#eeeff1;--mute:#9fa2ab;--t3:#8e919a;--vlak:rgb(255 255 255/.035);--aan:rgb(255 255 255/.1);--rand:rgb(255 255 255/.075);--sterk:rgb(255 255 255/.13);--red:#e5484d;--redvul:#c93a40;--green:#2f9d68;--greenvul:#1f7a4f;--amber:#e3a23b;--accent:#8d95f2}.ds-a{display:flex;gap:12px;padding:10px;font-family:'Geist Variable',Geist,system-ui,sans-serif;font-size:13px;font-feature-settings:\"tnum\",\"ss01\";letter-spacing:-0.006em}.ds-a button{position:relative;display:flex;flex-direction:column;align-items:center;gap:3px;width:56px;padding:9px 4px 4px;color:#eeeff1;background:rgb(255 255 255/.035);border:1px solid rgb(255 255 255/.075);border-radius:8px;box-shadow:inset 0 3px 0 var(--p);font:inherit}.ds-a button[aria-pressed=true]{background:rgb(255 255 255/.1);border-color:rgb(255 255 255/.4);box-shadow:inset 0 3px 0 var(--p),inset 0 -3px 0 var(--p)}.ds-a span{font-size:12px;font-weight:600}.ds-a b{font-size:14px;font-weight:650}.ds-a i{position:absolute;top:-7px;right:-7px;display:grid;place-items:center;width:16px;height:16px;border-radius:50%;background:#eeeff1;color:#0b0c0e;font-style:normal;font-size:10px}"
     }
   ],
   "narrative": {
-    "northStar": "The multiviewer in the gallery",
-    "overview": "**Creative North Star: \"The multiviewer in the gallery\"**\n\nThe Regie dashboard looks like the broadcast software that already sits in a control room: a dark graphite surface, a row of monitors with labels under them, and plain lists below. Nothing on screen is playful. The only strong colours are the two that every control room already knows: red for what is on air and green for what is ready. Everything else is grey, so those two colours always mean something.\n\nThe shell never moves. A strip of text tabs runs along the top, and under it the multiviewer row holds Voorbeeld, TOON, Ether and the camera in every section. Only the work area below changes and scrolls. The work is set as tables and compact panels, not as cards: one row per Preset, one row per Stemming. Density is high, so the operator sees a whole evening of Presets at once, and every row carries its key.\n\nThe signature is the multiviewer. Voorbeeld and Ether are black-framed 16:9 pictures with a label strip under them, as on a real multiviewer: a coloured top line (green or red), the word VOORBEELD or ETHER, the name of the Graphic and the time on air. Next to them, the camera block holds the floor plan of the Zaal and a row of Standpunt keys.",
+    "northStar": "A quiet studio tool",
+    "overview": "**Creative North Star: \"A quiet studio tool\"**\n\nThe Regie dashboard looks like careful modern product software: a near-black, cool grey surface, thin light edges, 6 to 8px corners, one typeface at 13px, and small, neat text. Nothing is playful and nothing explains itself in a sentence when an icon, a word and a tooltip already say it. Colour is rare and always means something about the broadcast: red is what goes on air, green is what is ready, amber is \"you must do something here\". Everything else is grey.\n\nThe shell never moves. A strip of text tabs runs along the top, and under it the multiviewer row holds Preview, the Take column, Live and the camera block in every section. Only the work area below changes and scrolls. The work is set as quiet lists and compact panels: one row per Preset, one row per Stemming.\n\nThe signature is the tally. Preview and Live are 16:9 pictures with a label strip under them, as on a multiviewer. A ready Preview and Live carry a 3px ring in their tally colour round the whole monitor and a filled label (\"Preview\" on green, \"Live\" on red), so the state reads from the corner of your eye while the rest of the screen stays calm.",
     "keyCharacteristics": [
-      "Graphite ground, paper-white ink, slate grey for everything secondary.",
-      "Two broadcast colours only: Ether red for on air, Klaar green for ready. Amber marks attention.",
-      "Selection is a quiet blue-grey fill with a thin steel-blue line, never a bright colour block.",
+      "Cool near-black ground, light grey ink, two steps of grey for secondary text.",
+      "Surfaces are translucent white over the ground (3.5%, 6.5%, 10%) with 1px edges at 7.5% or 13% white. A control that is on is one step lighter, never a coloured block.",
+      "Solid red only for Live and Take. Solid green only for ready: the Preview label and every \"put ready\" button. Amber marks something to act on.",
       "Text tabs on top, multiviewer row under them, one work area that scrolls.",
-      "Tables and rows, not tiles. Every Preset has a number, every Standpunt a letter, every shortcut a key cap.",
-      "Square monitors with a label strip; small 2 to 3px corners on controls; no shadows.",
-      "Party logos small on white tiles; input controls use a party-colour stripe and the short name."
+      "Lists, not cards. Every Preset 1 to 9 has a key cap with its number, every Standpunt a letter; shortcuts are printed where they are used.",
+      "Sentence case everywhere, including Take, Live and the stamps. No uppercase labels.",
+      "Icons from Lucide with a word and a tooltip in the Take column; the tooltip says why a control is off."
     ],
     "rules": [
       {
-        "name": "The Two Colours Rule",
-        "body": "Only on air and ready get a strong colour, and they always get the same one: red for Ether, green for Klaar. Selection, hover and navigation stay grey with a steel-blue line, so a coloured thing on screen is always a broadcast state.",
+        "name": "The Red Means Air Rule",
+        "body": "Solid red is only for Take and Live: the one action that sends something to air and the state of being on air. A wipe is red text, not a red block; Tegen in the Fractie keys is a red border, Verworpen is white text.",
         "section": "colors"
       },
       {
-        "name": "The Tint Not Fill Rule",
-        "body": "A ready or on-air row is a light tint of its state colour with a 3px line at its left edge, never a solid block. Solid state fills are only for TOON, stamps, the Voor/Tegen segment and the commit button.",
+        "name": "The Tally Rule",
+        "body": "A monitor shows its state with a 3px ring in the tally colour (a 1px border plus a 2px ring, so the layout does not shift) and a filled label. Live always has the red tally, also with no Graphic, because the Zaal is still going to air.",
+        "section": "colors"
+      },
+      {
+        "name": "The Amber Is A Task Rule",
+        "body": "Amber appears only where the operator can and should act. \"Op slot\" is a normal safe state and stays neutral; \"cijfers hh.mm\" in the Preset list is calm grey, because the warning that matters sits on the monitor and in Take where the choice is made.",
         "section": "colors"
       },
       {
         "name": "The Ink Pair Rule",
-        "body": "Every state fill carries its own ink: white on Ether Red and Klaar Green, near-black on amber. State colours used as text on dark ground take their Text variant.",
+        "body": "Every state fill carries its own ink: white on Live Fill and Klaar Fill, near-black on amber. State colours used as text on dark ground take their Text variant.",
         "section": "colors"
       },
       {
         "name": "The One Family Rule",
-        "body": "Inter sets every word in the dashboard. Weight and the uppercase label style make hierarchy; only key caps switch to monospace.",
+        "body": "Geist sets every word in the dashboard, key caps and Preset numbers included. Weight (400, 500, 600) and the two grey steps make hierarchy, not size jumps.",
         "section": "typography"
       },
       {
-        "name": "The Uppercase Is A Label Rule",
-        "body": "Uppercase is only for labels, stamps, the outcome word and TOON. Running text and names stay in sentence case, as the Dutch UI writes them.",
+        "name": "The Twelve Pixel Rule",
+        "body": "Everything you read during the broadcast is at least 12px: stamps, chips on the monitors, the \"Cameraritten\" heading, the tap order on Fractie keys, the 76 at the majority line, the old-figures line inside Take, the party names in the arc. Below it sit only key caps (11px), the count boxes on tabs and filters (11px) and, from the older Preset CSS, the stamps in the Preset list (11.5px).",
         "section": "typography"
       },
       {
-        "name": "The No Lift Rule",
-        "body": "No element casts a shadow. TOON stands out by being the only large red control, not by height.",
-        "section": "elevation"
+        "name": "The Less Text Rule",
+        "body": "A control says what it does with an icon or one word; the tooltip says the rest, including why it is off. A sentence appears only where the picture is not enough: what an undo brings back, the reason next to a disabled commit button, the warning about current figures next to a live coalition.",
+        "section": "typography"
       }
     ],
     "dos": [
-      "**Do** keep the tab strip and the multiviewer row (Voorbeeld, TOON, Ether, camera) on screen in every section; only the work area scrolls.",
-      "**Do** use red only for on air and green only for ready, everywhere.",
-      "**Do** show selection as Selection Fill with a steel-blue line, and keep it quiet.",
-      "**Do** show ready and on-air rows as a light tint with a 3px left line, plus a stamp.",
-      "**Do** set lists as tables with a sticky head, one row per item, and put the key in the first column.",
-      "**Do** give every Preset a fixed number and every Standpunt a fixed letter, and print every shortcut on its control as a key cap.",
-      "**Do** let a digit put a Preset ready and let only Space or the TOON button show it.",
+      "**Do** keep the tab strip and the multiviewer row (Preview, Take, Live, camera) on screen in every section; only the work area scrolls.",
+      "**Do** keep solid red for Take and the Live label, and show tally as a 3px ring plus a filled label.",
+      "**Do** make every \"put ready\" button green and every confirm-without-ready button white.",
+      "**Do** use amber only where the operator should act, and put it where the choice is made (the monitor, Take), not on every row.",
+      "**Do** show a control that is on as one surface step lighter with a stronger edge.",
+      "**Do** give every Preset 1 to 9 a key cap and every Standpunt a letter, and print shortcuts on their controls; hide them while typing.",
+      "**Do** let a digit put a Preset ready and let only Space or the Take button send it Live.",
       "**Do** keep \"Vastleggen en klaarzetten\" in a fixed action bar, always visible.",
-      "**Do** stamp state changes (\"was live 20.58\", \"Vergrendeld\", \"Nieuwere cijfers\") instead of removing them; dim unavailable actions to 40% instead of hiding them.",
-      "**Do** put party logos on white tiles, and use a party-colour stripe with the short name on input keys.",
-      "**Do** order parties by the Uitslagindeling (SP on the left to FvD on the right) in seat bars, Cijfers rows, Fractie keys and the Coalitiebouwer arc.",
-      "**Do** set all text in Inter with tabular figures, and all icons in Lucide 0.460.0 at stroke 2.",
-      "**Do** use the GLOSSARY words in the Dutch UI: Regie, Ether, Voorbeeld, Preset, Standpunt, Fractie, Zetel, Stoel, Zaal."
+      "**Do** offer undo after an action that takes something away, instead of asking first; only a wipe straight in Live asks a second click.",
+      "**Do** keep disabled actions visible and give the reason next to them or in the tooltip.",
+      "**Do** keep everything read during the broadcast at 12px or more.",
+      "**Do** use the UI words Take, Live, Preview, Update, Take out, Live-renderer, Reserve-renderer and Preview-renderer, and the GLOSSARY words for everything else (Preset, Standpunt, Fractie, Zetel, Stoel, Zaal)."
     ],
     "donts": [
-      "**Don't** let Enter show a Graphic.",
+      "**Don't** let Enter take a Graphic.",
       "**Don't** fill large areas with colour: no coloured navigation, no red or green cards, no coloured section headers.",
-      "**Don't** use red or green for selection, hover or decoration.",
-      "**Don't** bring back tiles or cards for lists that are tables: Presets, Stemmingen, sets, Standpunten.",
-      "**Don't** use pills, fully round chips or large corner radii.",
-      "**Don't** add shadows or lift animations.",
-      "**Don't** put large logos on input controls; Fractie keys use the stripe and the short name.",
-      "**Don't** add icons to tabs, TOON or table rows.",
-      "**Don't** carry devices from the earlier designs: no pictogram rail, no Kamerblauw, no maple, no page numbers, fastext keys or split-flap text."
+      "**Don't** use red or green for selection, hover, toggles or decoration; the tablet toggle and \"Op slot\" stay neutral.",
+      "**Don't** use uppercase labels, coloured stripes at the left of rows, or a sentence of explanation under every form.",
+      "**Don't** let Take change height: its content changes, its size does not.",
+      "**Don't** add icons to tabs, Take or table rows, and never a unicode glyph or emoji as an icon.",
+      "**Don't** put party logos or tiny text on colour in lists; use the party dot.",
+      "**Don't** bring back devices of the earlier designs: no warm black, no Barlow, no lit warm-white keys, no UMD strips in tally colour, no pictogram rail."
     ]
   }
 }

@@ -1,97 +1,114 @@
 ---
 name: uitslagavond-tv Regie dashboard
-description: The Regie's live control surface for the Tweede Kamer graphics, laid out like broadcast software, with a multiviewer on top and lists below.
+description: The Regie's live control surface for the Tweede Kamer graphics, in the calm, precise style of modern product software, with a multiviewer on top and lists below.
 colors:
-  graphite-field: "#0e0e0d"
-  graphite-ground: "#141413"
-  graphite-panel: "#1a1a18"
-  graphite-raised: "#272623"
-  graphite-divider: "#232320"
-  selection-fill: "#3a382f"
-  graphite-line: "#302f2b"
-  paper-ink: "#f1eee5"
-  slate-mute: "#a6a296"
-  steel-blue: "#e9e3cf"
-  steel-ink: "#141413"
-  ether-red: "#e2312a"
+  graphite-field: "#08090a"
+  graphite-ground: "#0b0c0e"
+  graphite-panel: "#0f1012"
+  graphite-raised: "#17181b"
+  graphite-divider: "#18191c"
+  graphite-line: "#232428"
+  selection-fill: "#1b1c20"
+  surface: "#ffffff09"
+  surface-hover: "#ffffff11"
+  surface-on: "#ffffff1a"
+  edge: "#ffffff13"
+  edge-strong: "#ffffff21"
+  paper-ink: "#eeeff1"
+  slate-mute: "#9fa2ab"
+  tekst-3: "#8e919a"
+  steel-blue: "#8d95f2"
+  steel-ink: "#0b0c0e"
+  ether-red: "#e5484d"
+  ether-vul: "#c93a40"
+  ether-vul-hover: "#d6444a"
   ether-red-ink: "#ffffff"
-  ether-red-text: "#ff7d72"
-  klaar-green: "#1c9a55"
+  ether-red-text: "#ff6b6f"
+  klaar-green: "#2f9d68"
+  klaar-vul: "#1f7a4f"
+  klaar-vul-hover: "#258a5a"
   klaar-green-ink: "#ffffff"
-  klaar-green-text: "#62d895"
-  warn-amber: "#d89b2b"
-  warn-amber-ink: "#1b1200"
-  logo-tile: "#ffffff"
+  klaar-green-text: "#4ccf8e"
+  warn-amber: "#e3a23b"
+  warn-amber-ink: "#1a1203"
+  take-warn-text: "#ffd27a"
   monitor-black: "#000000"
+  logo-tile: "#ffffff"
   preview-canvas: "#0d1220"
   seat-empty: "#3a404c"
-  seat-dim: "#1d2130"
 typography:
   display:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
     fontSize: "56px"
     fontWeight: 800
     lineHeight: 1
-    fontFeature: "\"tnum\", \"cv11\""
+    fontFeature: "\"tnum\", \"ss01\""
   headline:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "17px"
-    fontWeight: 650
-    lineHeight: 1.35
-  action:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "16px"
-    fontWeight: 700
-    lineHeight: 1
-    letterSpacing: "0.08em"
-  outcome:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
     fontSize: "15px"
-    fontWeight: 700
-    lineHeight: 1.35
-    letterSpacing: "0.06em"
+    fontWeight: 600
+    lineHeight: 1.3
+    letterSpacing: "-0.012em"
+  action:
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+    lineHeight: 1
+    letterSpacing: "-0.01em"
+  outcome:
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
+    fontSize: "15px"
+    fontWeight: 600
+    lineHeight: 1.3
+    letterSpacing: "-0.01em"
   body:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
     fontSize: "13px"
     fontWeight: 400
-    lineHeight: 1.35
-    fontFeature: "\"tnum\", \"cv11\""
+    lineHeight: 1.45
+    letterSpacing: "-0.006em"
+    fontFeature: "\"tnum\", \"ss01\""
   title:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
     fontSize: "13px"
-    fontWeight: 600
-    lineHeight: 1.35
+    fontWeight: 500
+    lineHeight: 1.45
   control:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
     fontSize: "13px"
-    fontWeight: 550
-    lineHeight: 1.35
+    fontWeight: 500
+    lineHeight: 1.45
   small:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
     fontSize: "12px"
     fontWeight: 400
-    lineHeight: 1.35
+    lineHeight: 1.45
   label:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "10.5px"
-    fontWeight: 600
-    lineHeight: 1.35
-    letterSpacing: "0.08em"
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: 1.45
+    letterSpacing: "0"
   stamp:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "10.5px"
-    fontWeight: 700
-    lineHeight: 1
-    letterSpacing: "0.08em"
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
+    fontSize: "12px"
+    fontWeight: 500
+    lineHeight: 1.45
+    letterSpacing: "0"
   keycap:
-    fontFamily: "Barlow Semi Condensed, Arial Narrow, sans-serif"
-    fontSize: "10px"
-    fontWeight: 600
-    lineHeight: 1
+    fontFamily: "Geist Variable, Geist, system-ui, sans-serif"
+    fontSize: "11px"
+    fontWeight: 500
+    lineHeight: "15px"
 rounded:
-  none: "0px"
-  key: "2px"
-  control: "3px"
+  key: "4px"
+  chip: "5px"
+  control: "6px"
+  segment: "7px"
+  monitor: "8px"
+  panel: "10px"
+  arc: "12px"
+  dot: "50%"
 spacing:
   hair: "4px"
   tight: "6px"
@@ -99,401 +116,433 @@ spacing:
   md: "10px"
   gutter: "12px"
   lg: "14px"
+  xl: "16px"
 components:
   tab-strip:
-    backgroundColor: "{colors.graphite-field}"
-    height: "34px"
+    backgroundColor: "{colors.graphite-ground}"
+    height: "40px"
+    padding: "0 8px"
   tab:
     textColor: "{colors.slate-mute}"
     typography: "{typography.control}"
-    padding: "0 12px"
+    rounded: "{rounded.control}"
+    height: "28px"
+    padding: "0 10px"
   tab-on:
-    backgroundColor: "{colors.graphite-panel}"
+    backgroundColor: "{colors.surface-on}"
     textColor: "{colors.paper-ink}"
   tab-count:
-    backgroundColor: "{colors.graphite-raised}"
-    textColor: "{colors.paper-ink}"
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.slate-mute}"
     rounded: "{rounded.key}"
-    height: "16px"
+    height: "17px"
   multiviewer:
-    backgroundColor: "{colors.graphite-panel}"
-    padding: "10px 12px"
+    backgroundColor: "{colors.graphite-ground}"
+    padding: "12px"
   monitor:
-    backgroundColor: "{colors.monitor-black}"
-    rounded: "{rounded.none}"
-  monitor-label:
-    backgroundColor: "{colors.graphite-field}"
+    backgroundColor: "{colors.graphite-panel}"
+    rounded: "{rounded.monitor}"
+  monitor-label-strip:
+    backgroundColor: "{colors.graphite-panel}"
     textColor: "{colors.slate-mute}"
     typography: "{typography.small}"
-    height: "26px"
-    padding: "0 8px"
-  toon-button:
-    backgroundColor: "{colors.ether-red}"
+    padding: "7px 10px 8px"
+  monitor-label-preview:
+    backgroundColor: "{colors.klaar-vul}"
+    textColor: "{colors.klaar-green-ink}"
+    rounded: "{rounded.key}"
+    padding: "2px 7px"
+  monitor-label-live:
+    backgroundColor: "{colors.ether-vul}"
+    textColor: "{colors.ether-red-ink}"
+    rounded: "{rounded.key}"
+    padding: "2px 7px"
+  take-button:
+    backgroundColor: "{colors.ether-vul}"
     textColor: "{colors.ether-red-ink}"
     typography: "{typography.action}"
+    rounded: "{rounded.monitor}"
+    height: "58px"
+    padding: "0 12px"
+  take-column-button:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.paper-ink}"
+    typography: "{typography.control}"
     rounded: "{rounded.control}"
-    height: "62px"
+    height: "28px"
   button:
-    backgroundColor: "{colors.graphite-raised}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.paper-ink}"
     typography: "{typography.control}"
     rounded: "{rounded.control}"
     padding: "0 10px"
-    height: "32px"
+    height: "28px"
   button-primary:
     backgroundColor: "{colors.paper-ink}"
     textColor: "{colors.graphite-ground}"
     rounded: "{rounded.control}"
   button-commit:
-    backgroundColor: "{colors.klaar-green}"
+    backgroundColor: "{colors.klaar-vul}"
     textColor: "{colors.klaar-green-ink}"
     rounded: "{rounded.control}"
-    height: "36px"
-    padding: "0 16px"
+    height: "28px"
+  button-danger:
+    textColor: "{colors.ether-red-text}"
+    rounded: "{rounded.control}"
+  undo-box:
+    backgroundColor: "{colors.graphite-raised}"
+    textColor: "{colors.paper-ink}"
+    rounded: "{rounded.monitor}"
+    padding: "7px 8px 9px"
+  undo-button:
+    backgroundColor: "{colors.paper-ink}"
+    textColor: "{colors.graphite-field}"
+    rounded: "{rounded.control}"
+    height: "26px"
+  amber-chip:
+    textColor: "{colors.warn-amber}"
+    rounded: "{rounded.chip}"
+    height: "20px"
+    padding: "0 7px"
   filter-toggle:
     textColor: "{colors.slate-mute}"
     typography: "{typography.control}"
     rounded: "{rounded.control}"
-    padding: "4px 9px"
+    height: "26px"
+    padding: "0 9px"
   filter-toggle-on:
-    backgroundColor: "{colors.selection-fill}"
+    backgroundColor: "{colors.surface-on}"
     textColor: "{colors.paper-ink}"
   segment:
-    backgroundColor: "{colors.graphite-raised}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.slate-mute}"
-    rounded: "{rounded.control}"
-    padding: "6px 12px"
+    rounded: "{rounded.segment}"
+    padding: "2px"
+  segment-on:
+    backgroundColor: "{colors.surface-on}"
+    textColor: "{colors.paper-ink}"
   segment-voor-on:
-    backgroundColor: "{colors.klaar-green}"
+    backgroundColor: "{colors.klaar-vul}"
     textColor: "{colors.klaar-green-ink}"
   segment-tegen-on:
-    backgroundColor: "{colors.ether-red}"
+    backgroundColor: "{colors.ether-vul}"
     textColor: "{colors.ether-red-ink}"
   input-field:
-    backgroundColor: "{colors.graphite-field}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.paper-ink}"
     rounded: "{rounded.control}"
-    padding: "6px 9px"
+    height: "30px"
+    padding: "0 9px"
   table-head:
-    backgroundColor: "{colors.graphite-panel}"
-    textColor: "{colors.slate-mute}"
+    backgroundColor: "{colors.graphite-ground}"
+    textColor: "{colors.tekst-3}"
     typography: "{typography.label}"
-    padding: "6px 10px"
+    height: "32px"
+    padding: "0 10px"
   table-row:
     textColor: "{colors.paper-ink}"
     typography: "{typography.body}"
-    padding: "5px 10px"
   table-row-selected:
-    backgroundColor: "{colors.selection-fill}"
+    backgroundColor: "{colors.surface-on}"
   stamp-live:
-    backgroundColor: "{colors.ether-red}"
-    textColor: "{colors.ether-red-ink}"
+    textColor: "{colors.ether-red-text}"
     typography: "{typography.stamp}"
-    rounded: "{rounded.key}"
-    padding: "4px 7px"
   stamp-klaar:
-    backgroundColor: "{colors.klaar-green}"
-    textColor: "{colors.klaar-green-ink}"
+    textColor: "{colors.klaar-green-text}"
     typography: "{typography.stamp}"
-    rounded: "{rounded.key}"
-    padding: "4px 7px"
-  stamp-warn:
-    backgroundColor: "{colors.warn-amber}"
-    textColor: "{colors.warn-amber-ink}"
+  stamp-was:
+    textColor: "{colors.slate-mute}"
     typography: "{typography.stamp}"
-    rounded: "{rounded.key}"
-    padding: "4px 7px"
   keycap:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.slate-mute}"
     typography: "{typography.keycap}"
     rounded: "{rounded.key}"
-    padding: "3px 5px"
+    padding: "1px 5px"
+  preset-key:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.slate-mute}"
+    rounded: "{rounded.chip}"
+    width: "22px"
+    height: "22px"
   standpunt-key:
-    backgroundColor: "{colors.graphite-raised}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.paper-ink}"
     typography: "{typography.small}"
     rounded: "{rounded.control}"
     height: "30px"
   standpunt-key-on:
-    backgroundColor: "{colors.selection-fill}"
+    backgroundColor: "{colors.surface-on}"
   fractie-key:
-    backgroundColor: "{colors.graphite-raised}"
+    backgroundColor: "{colors.surface}"
     textColor: "{colors.paper-ink}"
-    typography: "{typography.title}"
-    rounded: "{rounded.control}"
-    height: "42px"
-  logo-tile:
-    backgroundColor: "{colors.logo-tile}"
-    rounded: "{rounded.key}"
-    width: "30px"
-    height: "19px"
+    rounded: "{rounded.segment}"
+    padding: "5px 8px 6px 10px"
+  arc-party:
+    backgroundColor: "{colors.surface}"
+    textColor: "{colors.paper-ink}"
+    rounded: "{rounded.monitor}"
+    width: "56px"
+  arc-party-on:
+    backgroundColor: "{colors.surface-on}"
   floor-plan:
-    backgroundColor: "{colors.graphite-field}"
-    rounded: "{rounded.control}"
-  floor-plan-pin:
-    backgroundColor: "{colors.graphite-raised}"
-    textColor: "{colors.paper-ink}"
-  floor-plan-pin-on:
-    backgroundColor: "{colors.paper-ink}"
-    textColor: "{colors.graphite-ground}"
+    backgroundColor: "{colors.graphite-panel}"
+    rounded: "{rounded.monitor}"
   thumbnail:
     backgroundColor: "{colors.preview-canvas}"
-    rounded: "{rounded.none}"
+    rounded: "{rounded.key}"
 ---
 
 # Design System: uitslagavond-tv Regie dashboard
 
-Chosen by the owner on 2026-11-25: design "Mengpaneel", on the layout of "Omroepsoftware" (layout 1, multiviewer on top, chosen 2026-11-22). Mengpaneel replaces the look of Omroepsoftware, which read as generic AI-made software: the Inter face, spaced uppercase labels everywhere, a border round every control, coloured stripes at the left of rows, and a sentence of explanation under every form. Earlier still, "Plenaire Zaal" was dropped as childish for a control room.
+Chosen by the owner on 2026-11-25: design "Studio", on the layout of "Omroepsoftware" (layout 1, multiviewer on top, chosen 2026-11-22). Studio replaces "Mengpaneel", which the owner still found too AI-made and childish. His brief for Studio: "more like Linear", professional, and less text, with icons and tooltips where the picture is clear enough. Earlier designs that are gone: "Plenaire Zaal" (childish for a control room), the Inter look of Omroepsoftware, and the warm black with Barlow of Mengpaneel.
+
+The design lives in `dashboard/src/ontwerp.css`, which `main.tsx` loads last, so it sits on top of `stijl.css` and the CSS of each part. Token names are older than Studio (steel-blue is no longer blue-grey, graphite-* are cool near-blacks); the names stay so the component CSS keeps working.
 
 ## Overview
 
-**Creative North Star: "The vision mixer's panel"**
+**Creative North Star: "A quiet studio tool"**
 
-The Regie dashboard looks and behaves like the hardware in a control room: the panel of a vision mixer and the multiviewer above it. A warm black surface, a narrow DIN-like face, flat keys without borders that light up warm white when they are on, and under every picture a UMD strip in its tally colour. Nothing on screen is playful, and nothing explains itself in a sentence when the control already says it. The only strong colours are the two that every control room already knows: red for what is on air and green for what is ready. Everything else is grey, so those two colours always mean something.
+The Regie dashboard looks like careful modern product software: a near-black, cool grey surface, thin light edges, 6 to 8px corners, one typeface at 13px, and small, neat text. Nothing is playful and nothing explains itself in a sentence when an icon, a word and a tooltip already say it. Colour is rare and always means something about the broadcast: red is what goes on air, green is what is ready, amber is "you must do something here". Everything else is grey.
 
-The shell never moves. A strip of text tabs runs along the top, and under it the multiviewer row holds Voorbeeld, TOON, Ether and the camera in every section. Only the work area below changes and scrolls. The work is set as tables and compact panels, not as cards: one row per Preset, one row per Stemming. Density is high, so the operator sees a whole evening of Presets at once, and every row carries its key.
+The shell never moves. A strip of text tabs runs along the top, and under it the multiviewer row holds Preview, the Take column, Live and the camera block in every section. Only the work area below changes and scrolls. The work is set as quiet lists and compact panels: one row per Preset, one row per Stemming.
 
-The signature is the multiviewer. Voorbeeld and Ether are black-framed 16:9 pictures with a label strip under them, as on a real multiviewer: a coloured top line (green or red), the word VOORBEELD or ETHER, the name of the Graphic and the time on air. Next to them, the camera block holds the floor plan of the Zaal and a row of Standpunt keys.
+The signature is the tally. Preview and Live are 16:9 pictures with a label strip under them, as on a multiviewer. A ready Preview and Live carry a 3px ring in their tally colour round the whole monitor and a filled label ("Preview" on green, "Live" on red), so the state reads from the corner of your eye while the rest of the screen stays calm.
 
 **Key Characteristics:**
-- Warm black ground (no blue tint), warm paper-white ink, warm grey for everything secondary.
-- Two broadcast colours only: Ether red for on air, Klaar green for ready. Amber means you must act.
-- A key that is on lights up: warm white fill with black ink, like a lit button on a mixer. No blue anywhere.
+- Cool near-black ground, light grey ink, two steps of grey for secondary text.
+- Surfaces are translucent white over the ground (3.5%, 6.5%, 10%) with 1px edges at 7.5% or 13% white. A control that is on is one step lighter, never a coloured block.
+- Solid red only for Live and Take. Solid green only for ready: the Preview label and every "put ready" button. Amber marks something to act on.
 - Text tabs on top, multiviewer row under them, one work area that scrolls.
-- Tables and rows, not tiles. Every Preset has a number, every Standpunt a letter; shortcuts are printed where they are used.
-- Keys are flat, borderless, 2px corners, with a faint lit top edge. No glow, no drop shadows, no coloured stripes at the left of rows.
-- Labels in sentence case. Uppercase only for TOON and the tally stamps LIVE and KLAAR.
+- Lists, not cards. Every Preset 1 to 9 has a key cap with its number, every Standpunt a letter; shortcuts are printed where they are used.
+- Sentence case everywhere, including Take, Live and the stamps. No uppercase labels.
+- Icons from Lucide with a word and a tooltip in the Take column; the tooltip says why a control is off.
 
 ## Colors
 
-A warm black palette of six steps, warm white for a key that is on (the token keeps its old name steel-blue), and the two broadcast state colours with lighter text variants for use on dark ground.
+Six near-black steps, three translucent white surfaces and two edges for everything neutral, one accent for focus, and the three state colours. Red and green each have a lighter tally/text tone and a darker fill tone, so white ink on a fill reaches 4.5:1.
 
 ### Primary
-- **Lit Key** (steel-blue, #e9e3cf, with steel-ink on top): a key that is on. A chosen filter, Standpunt, segment, Coalitie party or tablet toggle fills warm white with black ink, the way a button on a mixer lights up. The active tab gets a paper-white line at its foot; focus is a 2px paper-white outline.
+- **Accent** (steel-blue, #8d95f2): focus and editing only. The 2px focus outline, the focus ring of an input, text selection, range sliders, the chosen sketch in Vormgeving and the chosen pin in the Camera section. It never marks a broadcast state and never fills a control.
 
 ### Secondary (broadcast states)
-- **Ether Red** (ether-red): on air. The TOON button, the top line of the Ether label strip, the Live stamp, the left line and tint of the on-air row, Tegen in Stemmingen. White ink (ether-red-ink) on top (5.0:1). On dark ground, red text uses Ether Red Text (ether-red-text, 7.6:1).
-- **Klaar Green** (klaar-green): ready in the Voorbeeld. The top line of the Voorbeeld label strip, the Klaar stamp, the left line and tint of the ready row, Voor in Stemmingen, and the button "Vastleggen en klaarzetten". White ink (klaar-green-ink) on top (4.7:1). On dark ground, green text uses Klaar Green Text (klaar-green-text, 10.1:1).
-- **Attention Amber** (warn-amber): something needs you to act. Old figures in what is ready (on the Voorbeeld strip and in TOON), the undo box after Uit beeld or a wipe, a difference found by the control after the broadcast, a Renderer with another version, the star on a motie for the broadcast, Oefenen. Not for normal states: a lock that is on is steel blue. Near-black ink (warn-amber-ink) on top (7.6:1).
+- **Live Red** (ether-red, #e5484d): the tally of Live. The 3px ring round the Live monitor, the dot of the Live stamp, the dot after "Camera" in the camera block, the left line of the camera key in use, the dashed frame when the Live-renderer is gone, the frame round a live coalition.
+- **Live Fill** (ether-vul, #c93a40, hover ether-vul-hover): solid red with white ink. Only the Take button and the "Live" label under the Live monitor, and the pressed Tegen segment in Stemmingen. Red text on dark ground uses Live Red Text (ether-red-text, #ff6b6f).
+- **Klaar Green** (klaar-green, #2f9d68): the tally of a ready Preview: the 3px ring round the monitor, the border of a Voor key in Stemmingen. Green text on dark ground uses Klaar Green Text (klaar-green-text, #4ccf8e): the Klaar stamp, Aangenomen, a coalition count from 76.
+- **Klaar Fill** (klaar-vul, #1f7a4f, hover klaar-vul-hover): solid green with white ink. The "Preview" label of a ready monitor, every commit button that puts something ready (Zet klaar, Vastleggen en klaarzetten), the pressed Voor segment, the put-ready button on the tablet.
+- **Attention Amber** (warn-amber, #e3a23b): do something. Old figures (an amber chip on the monitor, and inside Take a dark chip with take-warn-text #ffd27a), the undo box (its title and seconds), "typen" in Take while you type, Oefenen when on, a Stemming that is still Open, the count of differences on the Stemmingen tab, the dot before a reason next to a disabled button, the warning about current figures next to a live coalition. A full amber fill with near-black ink (warn-amber-ink) only for a server refusal under Take or Presets, and for a coalition warning when the majority flips.
 
 ### Neutral
-- **Graphite Field** (graphite-field): the tab strip, inputs, the search box, the monitor label strips, the floor plan and the Voorzitter sentence.
-- **Graphite Ground** (graphite-ground): the page and the work area.
-- **Graphite Panel** (graphite-panel): the multiviewer row, toolbars, sticky table heads, the action bar and the active tab.
-- **Graphite Raised** (graphite-raised): buttons, segments, Standpunt keys and Fractie keys.
-- **Graphite Divider** (graphite-divider): the line between table rows.
-- **Graphite Line** (graphite-line): every other 1px border.
-- **Selection Fill** (selection-fill): the fill of a selected table row and the typing notice (paper ink on it).
-- **Paper Ink** (paper-ink): all primary text and icons (14.9:1 on the ground).
-- **Slate** (slate-mute): secondary text, column heads, labels, idle tabs and filters (6.0:1 on the ground, 5.1:1 on raised).
-- **Logo White** (logo-tile): the tile under every party logo.
-- **Monitor Black** (monitor-black): behind a monitor picture.
-- **Preview Canvas** (preview-canvas), **Empty Seat** (seat-empty), **Dimmed Seat** (seat-dim): only inside thumbnails and the floor plan, which imitate the Renderer. Seats take party colours from the party data and the programme style supplies the accent, so neither is a dashboard token.
+- **Graphite Field** (#08090a): the darkest step, ink on white buttons.
+- **Graphite Ground** (#0b0c0e): the page, the tab strip, the multiviewer row, toolbars, table heads and action bars.
+- **Graphite Panel** (#0f1012): the monitor label strips and the floor plan.
+- **Graphite Raised** (#17181b): the undo box and floating hints.
+- **Graphite Divider** (#18191c): the line between table rows.
+- **Surface / Surface Hover / Surface On** (white at 3.5%, 6.5%, 10%): the fill of buttons, inputs, keys, segments and tiles; hover; and a control that is on (active tab, filter, segment, Standpunt key, tablet toggle, selected row).
+- **Edge / Edge Strong** (white at 7.5% and 13%): every 1px border; the strong one on hover and on a control that is on.
+- **Paper Ink** (#eeeff1): primary text and icons.
+- **Slate** (slate-mute, #9fa2ab): secondary text, labels, idle tabs and filters, key caps.
+- **Tekst 3** (tekst-3, #8e919a): the third step: table heads, disabled text, placeholders, Preset numbers from 10.
+- **Monitor Black**, **Logo White**, **Preview Canvas**, **Empty Seat**: only behind a monitor picture, under a supplied party logo, and inside the Preset sketches, which imitate the Renderer.
 
 ### Named Rules
-**The Two Colours Rule.** Only on air and ready get a strong colour, and they always get the same one: red for Ether, green for Klaar. Selection is warm white, navigation grey, so a coloured thing on screen is always a broadcast state.
+**The Red Means Air Rule.** Solid red is only for Take and Live: the one action that sends something to air and the state of being on air. A wipe is red text, not a red block; Tegen in the Fractie keys is a red border, Verworpen is white text.
 
-**The Tint Not Fill Rule.** A ready or on-air row is a light tint of its state colour, never a solid block and never a stripe at its edge. Solid state fills are only for TOON, stamps, the UMD strips under the monitors, the Voor/Tegen segment and the commit button.
+**The Tally Rule.** A monitor shows its state with a 3px ring in the tally colour (a 1px border plus a 2px ring, so the layout does not shift) and a filled label. Live always has the red tally, also with no Graphic, because the Zaal is still going to air.
 
-**The Ink Pair Rule.** Every state fill carries its own ink: white on Ether Red and Klaar Green, near-black on amber. State colours used as text on dark ground take their Text variant.
+**The Amber Is A Task Rule.** Amber appears only where the operator can and should act. "Op slot" is a normal safe state and stays neutral; "cijfers hh.mm" in the Preset list is calm grey, because the warning that matters sits on the monitor and in Take where the choice is made.
+
+**The Ink Pair Rule.** Every state fill carries its own ink: white on Live Fill and Klaar Fill, near-black on amber. State colours used as text on dark ground take their Text variant.
 
 ## Typography
 
-**Body Font:** Barlow Semi Condensed (self-hosted from @fontsource, weights 400, 500, 600 and 700), with Arial Narrow as fallback. `tnum` is on for the whole page.
+**Body Font:** Geist (variable, self-hosted through `@fontsource-variable/geist`), with system-ui as fallback. Base 13px, line height 1.45, letter spacing -0.006em, `tnum` and `ss01` on for the whole page.
 
-**Character:** A narrow DIN-like grotesque, the kind printed on broadcast hardware and in tv graphics. It fits more on a laptop than a wide face, and reads well at a distance in a dim room. Base size 14.5px, because a semi-condensed face needs a step more than a regular one.
+**Character:** A neutral, precise grotesque, the type of modern product software. It reads small and clean in a dim room, and tabular figures keep counts and clocks still.
 
 ### Hierarchy
-- **Display** (800, 56px, line-height 1): the coalition count in the Coalitiebouwer.
-- **Headline** (600, 20px): the title of the open Stemming, set or form.
-- **Action** (700, 16px, uppercase, 0.08em): the word TOON. Nothing else uses it.
-- **Outcome** (700, 15px, uppercase, 0.06em): Aangenomen or Verworpen, in the state text colour.
-- **Body** (400, 14.5px, line-height 1.3): default text and table cells.
-- **Title** (600, 14.5px): the main line of a table row (Graphic name, motie title), Fractie names.
-- **Control** (600, 14.5 to 15px): tabs, filters, buttons.
-- **Small** (400, 13px, warm grey): the second line of a row, hints, monitor detail text.
-- **Label** (600, 13px, sentence case, warm grey): column heads, field labels, Voorbeeld and Ether in the UMD strip.
-- **Stamp** (700, 12px, uppercase, 0.05em): LIVE, KLAAR and similar.
-- **Keycap** (700, 11.5px, same face): the letter in a light 10% white plate, no border.
+- **Display** (800, 56px, line height 1): the coalition count in the Coalitiebouwer.
+- **Headline** (600, 15px, -0.012em): the title of the open Stemming, set or form.
+- **Action** (600, 15px, -0.01em): the word Take.
+- **Outcome** (600, 15px, -0.01em, sentence case): Aangenomen, Verworpen, Open or "Nu aangenomen".
+- **Body** (400, 13px): default text and table cells.
+- **Title** (500, 13px): the main line of a row (Graphic name, motie title).
+- **Control** (500, 13px): tabs, filters, buttons.
+- **Small** (400, 12px, Slate): second lines, hints, monitor detail text.
+- **Label** (500, 12px, Slate, sentence case): field labels, the monitor label words; table heads in Tekst 3.
+- **Stamp** (500, 12px): Live, Klaar, "was live hh.mm", each after a 7px dot.
+- **Keycap** (500, 11px, Slate): the key in a light surface plate with a 1px edge and 4px corners.
 
 ### Named Rules
-**The One Family Rule.** Barlow Semi Condensed sets every word in the dashboard, key caps included. Weight and size make hierarchy.
+**The One Family Rule.** Geist sets every word in the dashboard, key caps and Preset numbers included. Weight (400, 500, 600) and the two grey steps make hierarchy, not size jumps.
 
-**The Uppercase Is A Tally Rule.** Uppercase is only for TOON, the stamps LIVE and KLAAR and the outcome word. Labels, column heads and names stay in sentence case, as the Dutch UI writes them.
+**The Twelve Pixel Rule.** Everything you read during the broadcast is at least 12px: stamps, chips on the monitors, the "Cameraritten" heading, the tap order on Fractie keys, the 76 at the majority line, the old-figures line inside Take, the party names in the arc. Below it sit only key caps (11px), the count boxes on tabs and filters (11px) and, from the older Preset CSS, the stamps in the Preset list (11.5px).
 
-**The No Explaining Rule.** A control says what it does. A sentence of explanation appears only where the picture is not enough (the reason a key is off, what an undo brings back); everything else lives in a tooltip.
+**The Less Text Rule.** A control says what it does with an icon or one word; the tooltip says the rest, including why it is off. A sentence appears only where the picture is not enough: what an undo brings back, the reason next to a disabled commit button, the warning about current figures next to a live coalition.
 
 ## Layout
 
-The shell is a CSS grid of three rows (tab strip, multiviewer, work area) over the full viewport. The page targets a laptop at 1440x900 and is checked at 1280x800; there are no breakpoints. The shell never scrolls; only the work area does.
+The shell is a CSS grid over the full viewport: tab strip (40px), an optional connection banner, the multiviewer row, and the work area. The page targets a laptop at 1440x900; the laptop is the measure, also on 1920 wide. The shell never scrolls; only the work area does. Below 900px wide the dashboard shows a short message with a link to the Presentator's tablet, and the shortcuts are off.
 
-**Tab strip (34px, Graphite Field).** Text tabs from the left: Presets, Maken, Cijfers, Stemmingen, Coalitie, Camera, Vormgeving, Systeem. The active tab has Graphite Raised fill, paper ink and a 2px paper-white line at its foot. The toolbar under the multiviewer has no title of its own (the tab already names the section). A tab with open work shows a small box with a count and a word after its name, such as "2 open" and, in amber, "2 verschil" on Stemmingen. At the right: a status dot with label for Server, Ether and Reserve (green fine, amber needs a look); when one is not fine, its status follows in words. Then the clock in 600. There is no Wand dot: the Videowand is out of scope for now.
+**Tab strip (40px, Graphite Ground, 1px edge below).** Text tabs from the left: Presets, Maken, Cijfers, Stemmingen, Coalitie, Camera, Vormgeving, Systeem, each 28px with 6px corners. The active tab has a Surface On fill and paper ink; idle tabs are Slate. Stemmingen shows small count boxes after its name: "2 open" in grey, and "1 verschil" in amber when the control after the broadcast found a difference. At the right: a 6px status dot with label for the server, the Live-renderer and the Reserve-renderer (green fine, amber needs a look, red broken), the status in words when one is not fine, and the clock (hh.mm.ss, 500). The Preview-renderer is listed under Systeem, not here.
 
-**Multiviewer row (Graphite Panel, 10px 12px padding, 10px gaps, 1px line below).** Four columns, `1fr 156px 1fr minmax(340px, 25%)`, always visible in every section and never collapsible (what is on air and what is ready must always show). On a 1440x900 laptop all nine Presets fit under it.
-1. **Voorbeeld:** a monitor (see Components) with label "VOORBEELD", the Graphic name, a green top line when something is ready. When the ready Graphic has older figures than the current ones (a Preset keeps the figures from when it was saved), the right side is an amber button "oude cijfers · Ververs (N)" that puts the current figures in. During Oefenen the top line and label turn amber, the label reads OEFENEN (or a red dot with the recording time), and the label text says the gamepad only drives this picture. While the Regie tries a Standpunt or plays a Camerarit here, the top line is dashed.
-2. **Take column (156px):** TOON (62px), then Bijwerken (B), Uit beeld (X, with a red border), Kleur uit (Z) and Opbouw overslaan (C) as 32px buttons with the key cap at the right. Each button sits in a span that carries its tooltip, so a disabled button still says why. While focus is in a text field, a line under TOON says the shortcuts are off (Esc). After Uit beeld or a wipe, an amber undo box sits at the bottom of the column for up to 20 seconds: what happened, what comes back, and a button such as "Terug in beeld" (Ctrl+Z). It disappears as soon as the Stand changed in between (another Graphic shown or put ready, by any Werkplek), so undo never overwrites a later choice.
-3. **Ether:** a monitor with label "ETHER", the Graphic name, "sinds hh.mm" at the right and a red top line. When figures changed after showing, the right side reads "oude cijfers" in amber, with "· B werkt bij" when Bijwerken can fix it, or a button to put it ready again when nothing else is ready. When the Ether Renderer is not connected, the top line is dashed red and the right side reads "Ether-Renderer weg" on red.
-4. **Camera:** a label row "CAMERA ETHER" with the current Standpunt or Camerarit name in paper ink; the floor plan of the Zaal with Vrij (V), Oefenen (O) and Opnemen (R, only during Oefenen, reads Stop while recording) stacked at its right; the Standpunten in three columns (names over two lines); then the Cameraritten in two columns, each with a lighter dashed border and its duration at the right.
+**Connection banner.** When the server is not connected, a full-width red line with white text sits under the tabs ("Geen verbinding met de server..."). It is the one large red area, because without the server nothing goes to air.
 
-**Work area.** A toolbar (Graphite Panel, 7px 12px padding, 1px line below): the section name as a label, then the section's filters as text toggles, a 200px search box where useful, and a key hint in Slate at the right. Under it the section body fills the rest and scrolls.
-- **Presets:** one table (see Preset Table), ending in a row "Nieuwe Graphic maken".
-- **Stemmingen** (behaviour from Proef: Stemmingen live invoeren): two panes, `minmax(300px, 36%) 1fr`, split by a 1px line. Left: the motie list of the day as a table (star, title with number below, status). Toolbar filters: "Voor de uitzending (n)" and "Alle n", plus "Met de hand" and the day and import time at the right. Right: the input pane (see Stemming Input) with a fixed action bar at its foot, so "Vastleggen en klaarzetten" is always visible. A sub-view "Controle" lists each entered Stemming next to the official result as a table, most serious difference first.
-- **Cijfers, Coalitie, Maken, Vormgeving, Systeem** follow the same pattern: a toolbar, then tables or a list plus a detail pane. Cijfers: sets as a list left, party rows as a table right. Coalitie: the arc (see Coalitiebouwer Arc) with a side list. Camera: the Camera Werkbank.
+**Multiviewer row (Graphite Ground, 12px padding, 12px gaps, 1px edge below).** Four columns, `1fr 156px 1fr minmax(340px, 25%)`, always visible in every section and never collapsible.
+1. **Preview:** a monitor with label "Preview". Right side of the strip: "klaargezet door <Werkplek>" or "gewijzigd door <Werkplek>"; when the ready Graphic has older figures than the current ones, the amber chip-button "oude cijfers · Ververs N"; when what is ready is already on air, "staat in beeld". During Oefenen the label reads Oefenen in amber (or a red dot with the recording time), with "De gamepad stuurt alleen dit beeld, Live blijft staan" as detail. While the Regie tries a Standpunt or plays a Camerarit here, the line above the strip is dashed.
+2. **Take column (156px):** see Take.
+3. **Live:** a monitor with label "Live" and always the red tally; with no Graphic the name reads "Geen Graphic". Right side: "sinds hh.mm"; when Update can bring newer figures or a newer version, the amber chip is itself the button ("oude cijfers · Update B" or "nieuwere versie · Update B"); when Live has old figures and something else is ready, plain amber text "oude cijfers"; when nothing is ready, the chip-button "oude cijfers · zet opnieuw klaar". When the Live-renderer is not connected, the frame is dashed red and the right side reads "Live-renderer weg" on red.
+4. **Camera:** see Camera Block.
 
-**Spacing rhythm.** 4, 6, 8, 10, 12, 14px. Table cells pad 5px 10px; controls sit 6 to 8px apart; panes pad 12px 14px.
+**Work area.** A toolbar (Graphite Ground, 40px, 6px 12px padding, 1px edge below) with the section's filters as text toggles, buttons and a hint at the right; the section name lives only on the tab (and for screen readers). A section without filters gets no toolbar. Under it the section body fills the rest and scrolls.
+- **Presets:** one list (see Preset Row), ending in a row "Nieuwe Graphic maken". Toolbar: "Alle n", one filter per group with its count, "Op de tablet n" with the tablet icon, and "Preview bewaren als Preset".
+- **Stemmingen:** two panes, `minmax(300px, 36%) 1fr`. Left the motie list of the day as a table with a sticky head; right the input pane (see Stemming Tiles) with a fixed action bar at its foot, so "Vastleggen en klaarzetten" is always visible. A sub-view Controle compares each entered Stemming with the official result.
+- **Coalitie:** the arc in the middle and a 340px side panel (see Coalition Arc).
+- **Camera:** the Camera workbench in three columns (list, large floor plan, settings panel).
+- **Maken, Cijfers, Vormgeving, Systeem:** a list plus a detail pane in the same quiet style. Vormgeving and Systeem are plain forms (they are not used during the broadcast); Systeem puts its data warnings at the top; the Opslaan bar of Vormgeving sticks to the foot.
+
+**Spacing rhythm.** 4, 6, 8, 10, 12, 14, 16px. Controls sit 6 to 8px apart; detail panes pad 16px 18px with 16px gaps.
 
 ### Keyboard
-The keyboard works anywhere outside a text field. Inside a field keys type, and Escape leaves the field. Combinations with Cmd, Ctrl or Alt are ignored.
+The keyboard works anywhere outside a text field. Inside a field keys type, and Escape leaves the field. Combinations with Cmd, Ctrl or Alt are ignored, except Ctrl+Z (or Cmd+Z) for undo. A held key does not repeat.
 
 | Key | Action |
 | --- | --- |
-| 1 to 9 | Put the Preset with that number ready (Klaar). It does not show. |
-| Space | TOON: put the ready Graphic in the Ether. |
-| Enter | Never shows, also not with focus on TOON. It only presses another focused button. |
-| Ctrl+Enter | In Stemmingen: Vastleggen en klaarzetten. |
-| N | Ververs: put the current figures in the ready Graphic (when it has older ones). |
-| Ctrl+Z | Undo the last Uit beeld or wipe, while the undo box shows. |
-| A, S, D, F, G, H | Pick a fixed Standpunt: Totaal vanaf voorzitter, Laag over de banken, Linkerflank, Rechterflank, Bovenaf, Katheder. |
-| Q, W, E, T, Y, U | Pick a fixed Camerarit: Onthulling, Zwenk linkerflank naar rechterflank, Rondje boven de zaal (repeats), Panorama vanuit het midden, Kraan omhoog naar overzicht, Naar de katheder. |
-| J, K, L | Pick an own Standpunt or Camerarit. A new one gets the first free letter; the Regie can move or clear a letter. |
+| 1 to 9 | Put the Preset with that number ready in Preview. It does not go Live. |
+| Space | Take: put what is in Preview Live. |
+| Enter | Never takes, also not with focus on Take. It only presses another focused button. |
+| Ctrl+Enter | In Stemmingen: Vastleggen en klaarzetten, also from the search field of Afwijkende stem. |
+| N | Ververs: put the current figures in the ready Graphic. |
+| B | Update: put a newer version or newer figures in Live without building up again. |
+| X | Take out: take the Graphic out of Live. |
+| Z | Kleur uit: the Stoelen in Live get their own leather back; the Graphic stays. |
+| C | Opbouw over: during an Opbouw, the Partijen not yet lit colour at once. |
+| Ctrl+Z | Undo the last Take out or wipe, while the undo box shows. |
+| A, S, D, F, G, H | Fixed Standpunten: Totaal vanaf voorzitter, Laag over de banken, Linkerflank, Rechterflank, Bovenaf, Katheder. |
+| Q, W, E, T, Y, U | Fixed Cameraritten. They start live at once. |
+| J, K, L | Own Standpunten and Cameraritten. |
 | Shift with a letter | Pick that Standpunt or Camerarit with a cut, without movement. |
-| V | Vrije camera on or off (gamepad). |
-| O | Oefenen on or off: the gamepad drives only the Voorbeeld camera, the Ether stays. |
-| R | Start or stop recording a Camerarit. Only during Oefenen. B on the gamepad does the same; B on the keyboard stays Bijwerken. |
-| B | Bijwerken: refresh the figures of the Graphic on air. |
-| X | Uit beeld: take the Graphic off air. |
-| Z | Kleur uit: the Stoelen in the Ether go back to their own blue leather; the Graphic stays. |
-| C | Opbouw overslaan: during an Opbouw, the Partijen not yet lit colour at once and the labels go to their end state. |
+| V | Vrije camera on or off (gamepad drives the Live camera). |
+| O | Oefenen on or off: the gamepad drives only the Preview camera. |
+| R | Start or stop recording a Camerarit, only during Oefenen. B on the gamepad does the same; B on the keyboard stays Update. |
 
-A mouse click never gives a button focus, so Space after a click is always TOON; a click on a button also ends typing in a field first, so its last value arrives before the click. When focus sits on a button through Tab, Space and Enter press that button and do not show. Below 900px wide the dashboard shows a short message with a link to the Presentator's tablet, and the shortcuts are off. Every shortcut is printed on its control as a key cap: Spatie on TOON, B, X, Z and C under it, the letter on each Standpunt key and pin, the number in the first column of each Preset row.
+A mouse click never gives a button focus, so Space after a click is always Take; a click on a button also ends typing in a field first, so its last value arrives before the click. When focus sits on a button through Tab, Space and Enter press that button and do not take. **While focus is in a text field, every key cap in the multiviewer disappears** (the letters go to the field), and Take shows an amber "typen" where "Spatie" stands; a click on Take still works. A changed Zetel count in Cijfers shows "Enter bewaart · Esc annuleert" under the field.
 
 ## Elevation & Depth
 
-The system is flat. Depth comes from the graphite steps, darkest at the back of controls: field, ground, panel, raised. Borders are 1px Graphite Line; rows are split by Graphite Divider. Nothing casts a shadow, TOON included.
+Mostly flat. Depth comes from the translucent surfaces and the 1px edges. Small shadows exist but stay low: buttons carry `0 1px 1px` black at 35%, Take `0 1px 2px` plus a faint lit top edge, a pressed segment `0 1px 1px`. Only floating things lift further: the undo box (`0 6px 18px` black at 45%) and the hint under a changed Zetel field (`0 4px 12px`).
 
-### Shadow Vocabulary
-- **Row marker** (`box-shadow: inset 3px 0 0 <colour>`): the left line of a selected (steel blue), ready (green) or on-air (red) table row.
-- **Logo hairline** (`box-shadow: inset 0 0 0 1px #0000001a`): edge of every white logo tile.
-
-### Named Rules
-**The No Lift Rule.** No element casts a shadow. TOON stands out by being the only large red control, not by height.
+### Motion
+Buttons, tabs, filters and keys fade background, border and colour in 120ms ease-out. The bar in the undo box runs down over its seconds. On the tablet a tap gives at once a small press (scale 0.97, a little brighter) before the server answers. Nothing else moves.
 
 ## Shapes
 
-Almost square. Monitors and thumbnails have no rounding, like the pictures on a multiviewer. Controls (buttons, inputs, segments, Standpunt and Fractie keys, the floor plan) have 3px corners; key caps, stamps, logo tiles and count boxes have 2px. There are no pills and no round chips. Circles appear only for status dots and the Standpunt pins on the floor plan. The Zaal is the one organic shape: the floor plan draws the hemicycle, and the Coalitiebouwer lays parties on a semicircle.
+Small, even corners: key caps and count boxes 4px, chips and the Preset number box 5px, buttons, inputs, tabs, filters and Standpunt keys 6px, segments and Fractie keys 7px, monitors, Take, the undo box, the floor plan and the Voorzitter sentence 8px, the Fractie key field 10px, the coalition arc 12px. Circles only for dots: status, stamps, the dot before a monitor label, a party dot, the check on a chosen arc party, and the pins on the floor plan.
 
-A dashed border means "filled in by the rest": a Fractie key set by "Overige tegen" (or voor) instead of tapped.
+A dashed border means "not tapped, but filled in or played on request": a Fractie key set by "Overige", a Camerarit key, the strip line while Preview plays a try-out, and the Live frame when the Live-renderer is gone.
 
 ## Components
 
 ### Buttons
-- **Shape:** 3px corners, 32px tall in toolbars and action bars.
-- **Default:** Graphite Raised fill, 1px line, paper ink 550 text, 0 10px padding, no wrap.
-- **Commit (klaarzetten):** every action that puts something ready (Zet klaar in Maken, Zet klaar als Coalitie, Vastleggen en klaarzetten): Klaar Green with white ink, because green means ready. 36px tall in the Stemmingen action bar. Disabled: flat Graphite Raised with Slate text, with the reason next to it in amber ("Vul eerst een kop in", "Nog 74 Zetels open").
-- **Primary:** paper-ink fill with graphite text, for confirming without putting ready (Opslaan, Verbinden, a new set). Disabled: flat, like Commit.
-- **Danger:** Ether-red text and a red-tinted border, for wipes (Wis alle stemmen, Wis coalitie). A wipe that changes the Ether directly asks a second click ("Klik nog eens"), and offers undo.
-- **Lock:** a stamp with the state ("Op slot" in steel blue, or "Open") and next to it a button with the verb ("Ontgrendel" or "Zet op slot"). On a locked set the Zetel steppers disappear and only the number shows.
-- **Hover / Focus:** border turns Slate; focus shows a 2px steel-blue outline 2px out.
-- **Disabled:** 40% opacity, default cursor. Disabled actions stay visible.
+- **Default:** 28px, 6px corners, Surface fill, 1px Edge, paper ink 500, 0 10px padding, Slate icon. Hover: Surface Hover and Edge Strong. On (aria-pressed): Surface On and Edge Strong.
+- **Commit (put ready):** Klaar Fill with white ink, for every action that puts something ready (Zet klaar in Maken and Coalitie, Vastleggen en klaarzetten). 30px in the Stemmingen action bar.
+- **Primary:** paper-ink fill with near-black ink, for confirming without putting ready (Opslaan, Verbinden).
+- **Danger:** Live Red Text, for wipes (Wis alle stemmen, Wis coalitie); hover adds a faint red tint and border. A wipe that changes Live directly asks a second click: the button turns solid red with "Klik nog eens: wis uit Live", and offers undo afterwards.
+- **Disabled:** stays visible: transparent, Edge border, Tekst 3 text, no shadow. A disabled commit or primary button looks the same. The reason sits next to it as Slate text after an amber dot ("Kies eerst Partijen"), or in the tooltip.
+- **Lock:** a neutral stamp with the state (Op slot or Open) and next to it a button with the verb.
 
-### TOON
-The one large red control. 62px tall, full width of the take column, 3px corners, Ether Red with white ink, the word TOON in the action style at the left and a "Spatie" key cap at the right. When the ready Graphic has old figures, an amber line "oude cijfers (N)" sits inside the button, under the finger. No icon, no shadow, no press animation beyond the browser's own. Without a ready Graphic it dims to 40%.
+### Take
+The Take column holds, top to bottom with 5px gaps:
+- **Take:** a fixed 58px (it never grows, so the buttons under it never shift), full width, 8px corners, Live Fill with white ink, the word Take at the left and a "Spatie" key cap at the right. When the ready Graphic has old figures, a dark chip with light amber text "oude cijfers (N)" sits inside the button, under the finger. Without anything to take it turns grey (Surface, Tekst 3) with the reason "niets klaar" or "staat al live". While typing, "Spatie" becomes an amber "typen" chip.
+- **Update (B), Take out (X), Kleur uit (Z), Opbouw over (C):** 28px buttons with a Lucide icon, one word and the key cap at the right. Each sits in a span that carries the tooltip, so a disabled button still says why.
+- **Server refusal:** a full amber line with near-black text.
+- **Undo box (see Undo).**
 
 ### Monitor (signature)
-Voorbeeld and Ether, as on a multiviewer.
-- **Picture:** the 16:9 thumbnail on Monitor Black, no rounding, 1px Graphite Line frame. The picture keeps its ratio and is centred; black fills the rest.
-- **Label strip (two lines, Graphite Field):** a 3px top line in the state colour (green Voorbeeld with something ready, red Ether with something on air, Graphite Line when empty). Line 1: the label word in 700 11px uppercase in the state text colour, the Sjabloon name in paper ink 600, and at the right the state (time on air, who put it ready, old figures). Line 2: what the Graphic shows, in full, in Slate.
+Preview and Live, as on a multiviewer.
+- **Frame:** 8px corners, 1px Edge, the picture 16:9 on Monitor Black (at most 34% of the viewport height), centred, black fills the rest. Without a picture a short Slate line: "Wacht op beeld", "Geen beeld: de Preview-renderer is niet verbonden" or "Geen verbinding met de server".
+- **Tally:** idle: no colour. Ready Preview: a 3px Klaar Green ring. Live: a 3px Live Red ring, always. Renderer gone: a dashed red frame.
+- **Label strip (Graphite Panel, two lines):** line 1 the label (idle: a grey 7px dot and the word in Slate; ready or live: the word filled, white on Klaar Fill or Live Fill, 600, 4px corners), the Sjabloon name in paper ink 500, and at the right the state in 12px Slate or an amber chip. Line 2: what the Graphic shows, in full, in Slate.
 
-### Filters and Segments
-- **Filter toggle:** text only, Slate, 4px 9px, 3px corners. Hover: paper ink. On: lit, warm white with black ink. Used in toolbars for Preset groups, "Op de tablet", and the Stemming lists.
-- **Segment:** one group of buttons on Graphite Raised without borders. A chosen option lights up warm white with black ink. In Stemmingen the Voor option fills Klaar Green and Tegen fills Ether Red, both with white ink.
+### Undo
+After Take out, Wis alle stemmen, Met algemene stemmen, Wis coalitie or a tap on a live coalition, an undo box shows for up to 20 seconds: Graphite Raised, 1px Edge Strong, 8px corners, a lifted shadow. It reads what happened in amber and what comes back in paper ink ("Take out: Zetelverdeling"), the seconds left in amber at the top right, a white primary button with the action ("Terug in beeld", "Zet stemmen terug", "Zet coalitie terug") and Ctrl+Z, and a 2px amber bar that runs down. The box sits at the foot of the Take column; for a live coalition it also sits in the Coalitie side panel, and on the tablet without the key cap. It disappears as soon as the Stand changed in between (another Graphic taken or put ready, by any Werkplek), so undo never overwrites a later choice. "Terug in beeld" puts exactly the same Graphic with the same figures back in Live and leaves Preview alone.
 
 ### Stamps
-States stamp; nothing silently disappears. 10.5px 700 uppercase, 2px corners, 4px 7px padding.
-- **Live** (Ether Red, white): on the on-air Preset row.
-- **Klaar** (Klaar Green, white): on the ready Preset row.
-- **Was live hh.mm:** plain Slate text, no box.
-- **Warn** (amber, near-black): "Andere versie, geweigerd" and similar.
-- **Op slot**: a lock icon and the words Op slot, no box and no alarm colour; next to it a key with the verb (Ontgrendel).
+A dot and a word, no box: 12px 500, a 7px dot, 6px gap.
+- **Live:** Live Red dot with a faint red halo, Live Red Text.
+- **Klaar:** Klaar Green Text dot and word.
+- **was live hh.mm:** grey dot, Slate, 400.
+- **tussenstand, Op slot, Open:** grey, neutral.
+On the tablet, Live and Klaar are filled (white on Live Fill or Klaar Fill), because the Presentator reads them under studio light.
 
-### Preset Table
-The default work area. Columns: Toets (48px), Status (96px), Beeld (86px), Graphic, Gegevens, Camera (250px), Tablet (84px).
-- **Head:** sticky, Graphite Panel, label style, 1px line below.
-- **Row:** 5px 10px cells, Graphite Divider between rows. Toets is a 22px key cap box with the number. Status holds the stamp right after the number, so the row reads "2 LIVE Zetelverdeling". Beeld is a 66px thumbnail with a 1px line. Graphic is the Sjabloon name in the title style over its group (or the Titelkaart text) in Slate. Gegevens shows up to four 30px logo tiles and the set name in Slate. Under Gegevens, in Slate: when the figures were saved and by whom; when newer figures exist it reads "cijfers van hh.mm, er zijn nieuwere", calm on purpose (after the first update it holds for almost every Preset; the amber warning sits on the Voorbeeld and in TOON, where the choice is made). Camera shows the letter and the Standpunt name over up to two lines in Slate. Tablet is a toggle with the tablet icon and the word Aan or Uit, steel blue when on.
-- **States:** hover tints the row 3% white. Klaar: green tint and green left line plus the Klaar stamp. Live: red tint and red left line plus the Live stamp. Earlier on air: "was live hh.mm" in the status column.
-- **Click:** a click anywhere on the row puts the Preset ready. It never shows. The tablet toggle only toggles the tablet.
+### Preset Row
+The default work area: a list without a head row, rows 44px high, Graphite Divider between rows. Columns: key (48px), status (96px), sketch (86px), Graphic, data, camera (250px), tablet (84px).
+- **Key:** Presets 1 to 9 have a 22px key cap box with the number; from 10 the number is plain Tekst 3 text, because only 1 to 9 are shortcuts.
+- **Status:** the Live, Klaar or "was live hh.mm" stamp.
+- **Sketch:** a 66px 16:9 sketch of the Graphic, brightened so the shape (bar, arc, card) reads at a glance.
+- **Graphic:** the Sjabloon name as a text-like button (so Presets from 10 can be put ready with Tab and Enter), and for a Titelkaart " · " and the heading in Slate.
+- **Data:** one line with what the Graphic shows; when newer figures exist, " · cijfers hh.mm" in Slate, calm on purpose.
+- **Camera:** the key cap and the Standpunt or Camerarit name over up to two lines in Slate, "Shot op de eigen Stoel" for a Persoonskaart, or amber "Standpunt bestaat niet meer".
+- **Tablet:** a toggle with the tablet icon and Aan or Uit; on is neutral (Surface On), not coloured.
+- **States:** hover Surface. Klaar: a 6% green tint plus the Klaar stamp. Live: a 6% red tint plus the Live stamp.
+- **Click:** a click anywhere on the row puts the Preset ready. It never takes. The tablet toggle only toggles the tablet.
 
-### Stemming Input
-The right pane in Stemmingen, top to bottom, 12px 14px padding, 10px gaps:
-- **Header:** the motie number and indiener in Slate small, the title in the headline style, and at the right the lock button.
-- **Outcome:** the outcome word in the outcome style (green Aangenomen, red Verworpen, amber while open), "n voor · n tegen", and "uit de Zetels van 17 Fracties" in Slate.
-- **Seat bar:** 8px tall, 1px corners: green Voor, empty open, red Tegen, with the majority marker.
-- **Voorzitter sentence:** Graphite Field, 3px corners, 14px text, a microphone icon; Fractie names in it sit on a light state tint in the state text colour.
-- **Side switch:** "Ik tik nu" with the Voor/Tegen segment and a one-line hint in Slate.
-- **Fractie keys:** a grid of 6 columns, 4px gaps. Each key is 42px, Graphite Raised, 3px corners: a 4px stripe in the party colour at the left, the short name in the title style, the Zetels in Slate at the bottom right, the tap order as a small number at the top left, and VOOR or TEGEN as a small label at the top right once set. Voor tints green with a green border, Tegen tints red with a red border. A key filled by "Overige" has a dashed border. No logos here: the stripe and the name are faster to read.
-- **Action bar (fixed at the pane foot, Graphite Panel):** Overige tegen (or voor), Met algemene stemmen, Afwijkende stem, Wissen; at the right Volgende and the Commit button "Vastleggen en klaarzetten".
+### Camera Block
+The fourth column of the multiviewer.
+- **Header:** "Camera" with a red dot and "Live" (these keys drive the Live camera), then the name of the current Standpunt or Camerarit, or "Vrije camera".
+- **Floor plan:** the Zaal from above on Graphite Panel, 8px corners: the hemicycle, 150 Stoelen as dots in the colours of Live, round pins for Standpunten and square pins with a route for Cameraritten. A red marker shows the Live camera; during Oefenen or a try-out a green one shows the Preview camera. At its right Vrij (V), Oefenen (O, amber tint when on) and Opnemen (R, only during Oefenen, a red dot and "Stop" with the time while recording).
+- **Standpunt keys:** three columns, 30px, Surface, 6px corners: the key cap, then the name over up to two lines. The key in use has Surface On, Edge Strong and a 2px Live Red line at its left.
+- **Cameraritten:** under the heading "Cameraritten · direct live" (12px Slate), two columns of 29px keys with a dashed Edge Strong border and the duration ("16 s") at the right, so a Camerarit never reads as a Standpunt.
+- With Vrij or Oefenen on, "Bewaar als Standpunt" appears under the keys.
 
-### Logo Tile
-Party logos sit on a white tile, 30px wide by default, height 62% of the width, 2px corners, 1px inset hairline, the logo contained at 84% by 78%. They appear where they identify the content of a Graphic: the Gegevens column of the Preset table, Cijfers rows and the Coalitiebouwer. A party without a supplied logo gets a tile of the same size in its party colour with its short name in white 700.
+### Camera bij Take
+In every form in Maken (and per Sjabloon in Vormgeving), the field "Camera bij Take" is a segment of three options side by side: **Sjabloon** (the Standpunt of the Sjabloon, named under it in Slate, such as "A · Totaal vanaf voorzitter"), **Blijft staan** (Take changes only the Graphic and the Stoelen; the Live camera stays where it is, also free or during a ride) and **Kies**. Only Kies opens a select with the Standpunten and Cameraritten in two groups.
 
-### Seat Bar
-A bar of the 150 Zetels in party colours, in Uitslagindeling order from left to right, 1px corners, with a 2px paper-ink marker at 75.5 of 150 for the majority line. 8px in Stemmingen, up to 14px in Cijfers and the Coalitiebouwer. In the Coalitiebouwer the coalition parties come first and the rest stay empty.
+### Coalition Arc
+- **Arc:** the Partijen on a flattened semicircle, each a 56px tile: Surface, 8px corners, a 3px line in the party colour at the top, the short name in 12px 600 paper ink, and the Zetels in 14px under it. Hover: Surface Hover. A chosen party gets Surface On, a 40% white edge, the party line at the top and the foot, and a small white circle with a check at its corner. No logos on the tiles.
+- **Count:** in the centre the total in the display style, green text from 76, with "meerderheid" or the Zetels still needed below. Under the arc a seat bar with the coalition in party colours and "76" at the majority line.
+- **Live:** when the coalition is in Live, a red frame sits round the arc with a line of a Live stamp and "Elke klik wijzigt de live coalitie". When the live coalition was built on older figures, the count itself turns amber with "in Live, met oudere cijfers".
+- **Side panel (340px):** the heading with a Live or Klaar stamp, the Sjabloon as filters, the set, the chosen parties as a list with party dots, then the buttons. Not live: the green commit "Zet klaar · <set> · N Zetels". Live: a neutral "Kopie met cijfers van nu · N Zetels", with directly above it the amber-outlined line "Met de cijfers van nu: N Zetels", fully amber with ", wel een meerderheid" or ", geen meerderheid meer" when the majority flips. Then "Wis coalitie" (or "Wis coalitie live", two clicks) and the undo box.
+- Below 560px wide (the Presentator's phone) the arc becomes a grid with one tap area per party.
 
-### Coalitiebouwer Arc
-Parties on a semicircle, each a 40px logo tile over its Zetel count. A chosen party lights up warm white with a 5px bar in its party colour at the foot and a small drawn check; the others stay dark with their logo at 85%. The centre shows the total in the display style, green text from 76, with "meerderheid" or "nog N Zetels tot een meerderheid" below. Live in the Ether, a red frame and "Live: elke tik werkt meteen bij in de Ether" sit round the arc. Below 560px (the Presentator's phone) the arc becomes a grid, one tap area per party.
+### Stemming Tiles
+The Fractie keys in the Stemmingen input pane.
+- **Field:** a grid of 6 columns with 6px gaps inside a 10px-cornered frame whose 1px border is green or red after the side a click sets ("Een klik zet" Voor or Tegen).
+- **Key:** Surface, 1px Edge, 7px corners. An 8px dot in the party colour before the short name (two lines at most, long names break with a hyphen), the Zetels in 13px 500, the tap order in 12px Tekst 3, and once set the word Voor or Tegen in 600.
+- **Voor:** a 14% green tint, a green border and the word in Klaar Green Text. **Tegen:** no tint, a red border and the word in Live Red Text, so solid red stays for Live and Take. **Filled by Overige:** a dashed border.
+- **Around it:** the outcome in the outcome style (Aangenomen green, Verworpen white, Open amber; while not committed "Nu aangenomen" or "Nu verworpen" in white with a grey "tussenstand" stamp), "n voor · n tegen · n open", a seat bar (Voor green, open empty, Tegen red, majority marker), the Voorzitter sentence with a microphone icon and the Fractie names tinted by their vote, and the fixed action bar with Wis alle stemmen, Overige, Met algemene stemmen, Afwijkende stem, Volgende and the commit button.
 
-### Floor Plan
-The floor plan of the Zaal is part of the camera block in the multiviewer row and large in the Camera section.
-- **Drawing:** a top-down SVG on Graphite Field with 3px corners. The hemicycle floor in a slightly lighter graphite with a Graphite Line edge, 150 Stoelen as dots in the colours of what is in the Ether now, and the voorzitter desk in Graphite Line.
-- **Pins:** each Standpunt is a round pin with its letter. Idle: Graphite Raised fill, 1px Slate stroke, paper-ink letter. Hover: paper-ink stroke. Active: paper-ink fill, graphite letter and a view cone in white at 13%. Bovenaf shows a round cone. Pins are focusable buttons.
-- **Camerarit:** a square pin at its start with its letter, and a line along its route ending in a small dot. Idle routes are dashed at 35%; the active or selected route is solid.
-- **Camera markers:** a red marker with a short cone shows where the Ether camera is and where it looks. During Oefenen or a try-out a green marker shows the Voorbeeld camera. While recording, a green trail draws the route.
-- **Vrije camera:** the Vrij key lights up. During Vrij or Oefenen a dashed amber line shows the invisible space the camera may fly in. "Bewaar als Standpunt" then adds a pin and a key with the next free letter.
-
-### Standpunt Keys
-Under the floor plan, the Standpunten in three columns and the Cameraritten in two, 3px gaps. Each key is 30 to 32px, Graphite Raised, 3px corners: a key cap with the letter, then the name over up to two lines. A Camerarit has a lighter dashed border and its duration ("16 s") at the right, so it never reads as a Standpunt. The current one has Selection Fill and a steel-blue border. Vrij, Oefenen and Opnemen sit as small keys at the right of the floor plan; Oefenen turns amber when on, Opnemen shows a red dot while recording.
-
-### Camera Werkbank
-The Camera section, chosen as design A in Proef: Camerarit opnemen en bijschaven in het dashboard. Three columns that fill the work area without scrolling the page:
-- **List (250px, scrolls):** a table grouped by Vaste Standpunten, Eigen Standpunten and Cameraritten. Each row: the letter key cap, the name, and a Slate line with its timing (for example "2,0 s · schuift" or "16,0 s · herhaalt"). A red dot marks the one in the Ether. The selected row gets Selection Fill and the steel-blue left line.
-- **Middle (1fr):** a button row (Vrij, Oefenen, Opnemen, Bewaar als Standpunt) above the large floor plan. Here a click on a pin or row selects it for editing; picking for the Ether happens with the Standpunt keys in the multiviewer row or with the letter.
-- **Settings panel (370px, scrolls).** Empty: a short how-to for recording and the gamepad table. While recording: the recording time, a Stop button and the gamepad table.
-  - Standpunt: name (fixed ones show a Vast stamp and cannot be renamed or wiped), Kies nu and Probeer in Voorbeeld, then Overgang hierheen (Bewegen or Knippen; sliders for Duur 0,5 to 6 s, Zacht starten, Zacht stoppen; a small curve of the movement), Na aankomst (Stil or Langzaam schuiven with a direction), Positie (Vervang door huidige camera, only with Vrij or Oefenen), the letter, and Wis.
-  - Camerarit: name, Kies nu and Speel af in Voorbeeld, a bar of the recording with the cut parts hatched and a green play head, sliders for Gladheid, Duur, Begin eraf, Eind eraf, Zacht starten and Zacht stoppen, Begin (Eerst overgang or Knippen), Eind (Stoppen or Herhalen; Herhalen is disabled with a reason when start and end lie apart), Opnieuw opnemen, the letter, and Wis.
-  - Wis is disabled while a Sjabloon or Preset uses the item, with a line that names them.
-- **Live feedback:** every slider change plays the result at once in the Voorbeeld. There is no dragging of points; another route means recording again.
-- **After a recording** the new Camerarit is saved at once with the next free letter, selected, and played in the Voorbeeld.
+### Party Dot and Logo Tile
+In lists (Cijfers rows, the coalition list) a Partij is an 8px dot in its party colour next to its short name, not a chip with tiny text. A supplied logo still sits on a white tile; the prototype has no supplied logos.
 
 ### Thumbnails
-Voorbeeld, Ether and Preset thumbnails are 320x180 SVG sketches of the Renderer output: the Preview Canvas, the Zaal seats, and the Graphic laid on top in the programme style. They show the broadcast, not the dashboard, so dashboard tokens do not apply inside them.
+Preview and Live show real small pictures from the Renderers. The Preset sketches are 320x180 SVG sketches of the Renderer output on the Preview Canvas. Both show the broadcast, not the dashboard, so dashboard tokens do not apply inside them.
 
 ### Icons
-Lucide 0.460.0, stroke 2, round caps and joins, inlined as SVG in currentColor. Used sparingly: in the search box, the lock button, the microphone of the Voorzitter sentence, the tablet toggle and the star of a motie. Tabs, TOON and table rows carry no icons. Sizes 14 to 16px.
+Lucide 0.460.0, stroke 2, round caps and joins, inlined as SVG in currentColor, 14px by default. Used in the Take column (Update, Take out, Kleur uit, Opbouw over), the search box, the lock button, the microphone of the Voorzitter sentence, the tablet toggle and filter, the star of a motie, plus and check. Tabs, Take and table rows carry no icons.
 
 ## Do's and Don'ts
 
 ### Do:
-- **Do** keep the tab strip and the multiviewer row (Voorbeeld, TOON, Ether, camera) on screen in every section; only the work area scrolls.
-- **Do** use red only for on air and green only for ready, everywhere.
-- **Do** show a key that is on as lit: warm white with black ink, like a mixer button.
-- **Do** show ready and on-air rows as a light tint with a 3px left line, plus a stamp.
-- **Do** set lists as tables with a sticky head, one row per item, and put the key in the first column.
-- **Do** give every Preset a fixed number and every Standpunt a fixed letter, and print every shortcut on its control as a key cap.
-- **Do** let a digit put a Preset ready and let only Space or the TOON button show it.
+- **Do** keep the tab strip and the multiviewer row (Preview, Take, Live, camera) on screen in every section; only the work area scrolls.
+- **Do** keep solid red for Take and the Live label, and show tally as a 3px ring plus a filled label.
+- **Do** make every "put ready" button green and every confirm-without-ready button white.
+- **Do** use amber only where the operator should act, and put it where the choice is made (the monitor, Take), not on every row.
+- **Do** show a control that is on as one surface step lighter with a stronger edge.
+- **Do** give every Preset 1 to 9 a key cap and every Standpunt a letter, and print shortcuts on their controls; hide them while typing.
+- **Do** let a digit put a Preset ready and let only Space or the Take button send it Live.
 - **Do** keep "Vastleggen en klaarzetten" in a fixed action bar, always visible.
-- **Do** stamp state changes ("was live 20.58", "Op slot", "oude cijfers") instead of removing them; show disabled actions with their reason instead of hiding them.
-- **Do** offer undo after an action that takes something away, instead of asking first; only a wipe straight in the Ether asks a second click.
-- **Do** put party logos on white tiles, and use a party-colour stripe with the short name on input keys.
-- **Do** order parties by the Uitslagindeling (SP on the left to FvD on the right) in seat bars, Cijfers rows, Fractie keys and the Coalitiebouwer arc.
-- **Do** set all text in Barlow Semi Condensed with tabular figures, and all icons in Lucide 0.460.0 at stroke 2; never a unicode glyph or emoji as an icon.
-- **Do** use the GLOSSARY words in the Dutch UI: Regie, Ether, Voorbeeld, Preset, Standpunt, Fractie, Zetel, Stoel, Zaal.
+- **Do** offer undo after an action that takes something away, instead of asking first; only a wipe straight in Live asks a second click.
+- **Do** keep disabled actions visible and give the reason next to them or in the tooltip.
+- **Do** keep everything read during the broadcast at 12px or more.
+- **Do** use the UI words Take, Live, Preview, Update, Take out, Live-renderer, Reserve-renderer and Preview-renderer, and the GLOSSARY words for everything else (Preset, Standpunt, Fractie, Zetel, Stoel, Zaal).
 
 ### Don't:
-- **Don't** let Enter show a Graphic.
+- **Don't** let Enter take a Graphic.
 - **Don't** fill large areas with colour: no coloured navigation, no red or green cards, no coloured section headers.
-- **Don't** use red or green for selection, hover or decoration.
-- **Don't** bring back tiles or cards for lists that are tables: Presets, Stemmingen, sets, Standpunten.
-- **Don't** use pills, fully round chips or large corner radii.
-- **Don't** add shadows or lift animations.
-- **Don't** put large logos on input controls; Fractie keys use the stripe and the short name.
-- **Don't** add icons to tabs, TOON or table rows.
-- **Don't** carry devices from the earlier designs: no pictogram rail, no Kamerblauw, no maple, no page numbers, fastext keys or split-flap text.
+- **Don't** use red or green for selection, hover, toggles or decoration; the tablet toggle and "Op slot" stay neutral.
+- **Don't** use uppercase labels, coloured stripes at the left of rows, or a sentence of explanation under every form.
+- **Don't** let Take change height: its content changes, its size does not.
+- **Don't** add icons to tabs, Take or table rows, and never a unicode glyph or emoji as an icon.
+- **Don't** put party logos or tiny text on colour in lists; use the party dot.
+- **Don't** bring back devices of the earlier designs: no warm black, no Barlow, no lit warm-white keys, no UMD strips in tally colour, no pictogram rail.

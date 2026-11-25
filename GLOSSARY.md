@@ -88,14 +88,17 @@ _Avoid_: status, state, toestand
 
 **Opdracht**:
 Eén handeling van de Regie, de Presentator, een knop of de Videowand die de Stand verandert, zoals een Graphic klaarzetten of tonen.
+In de UI van het dashboard en de tablet heten de handelingen Toon, Bijwerken en Uit beeld met de vaktermen Take, Update en Take out; in de code en deze woordenlijst blijven Toon, Bijwerken en Uit beeld.
 _Avoid_: commando, actie, event
 
 **Ether**:
 Het beeld dat de uitzending in gaat.
+In de UI van het dashboard en de tablet heet dit Live (de vakterm), en de Renderer ervan Live-renderer; in de code en deze woordenlijst blijft het Ether.
 _Avoid_: program, PGM, uitvoer
 
 **Reserve**:
 Een tweede beeld dat precies de Stand van de Ether volgt, zodat de Regie bij een storing kan overschakelen.
+In de UI heet de Renderer ervan Reserve-renderer.
 _Avoid_: backup, fallback
 
 **Renderer**:
@@ -108,7 +111,8 @@ _Avoid_: touchscreen, touchwall
 
 **Voorbeeld**:
 Het kleine beeld in het regie-dashboard dat laat zien hoe de klaargezette Graphic eruitziet, voordat die live gaat.
-_Avoid_: preview, PVW
+In de UI van het dashboard en de tablet heet dit Preview (de vakterm), en de Renderer ervan Preview-renderer; in de code en deze woordenlijst blijft het Voorbeeld.
+_Avoid_: preview, PVW (buiten de UI)
 
 **Coalitiebouwer**:
 Een onderdeel waarin partijen worden samengevoegd tot een mogelijke coalitie, met een teller naar een meerderheid van 76 Zetels. Twee Sjablonen: Coalitie in de Zaal (de coalitie als één blok links in de Uitslagindeling, de rest donker, met een lijn bij Zetel 76) en de Coalitiebalk (een gestapelde balk met de coalitie vooraan en een streep bij 76). Werkt met elke set, ook met de Zetels van de huidige Kamer. Uitzondering op Bijwerken: elke Partij die erbij komt of eraf gaat, werkt direct bij, ook in de Ether.
