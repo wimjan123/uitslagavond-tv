@@ -499,3 +499,13 @@ kbd, .toets-kap, .standpunt-duur, .tab-telling, .toon-typt, .boog-naam, .herstel
 .ster:not(.ster-aan) { color: var(--tekst-3); }
 .ster-aan { color: var(--paper-ink); }
 .tablet-knop { white-space: nowrap; }
+/* De kolom met de tabletschakelaar past "Op tablet" helemaal; de camerakolom levert in. */
+.presets-tabel .kol-tablet { width: 112px; }
+.presets-tabel .kol-camera { width: 226px; }
+/* Geen verzonnen koppelteken in een eigennaam (ChristenUnie): lange namen lopen over twee regels. */
+.toets-naam-tekst { hyphens: manual; }
+/* Fractietegel: "Tegen" boven bepaalt niet de breedte van de Zetelkolom, zodat de naam de ruimte krijgt. */
+.fractie-toets .toets-volg { grid-row: 1; grid-column: 1 / -1; justify-self: start; }
+.fractie-toets .toets-stem { grid-row: 1; grid-column: 1 / -1; justify-self: end; }
+.fractie-toets .toets-naam { grid-row: 2; grid-column: 1; }
+.fractie-toets .toets-zetels { grid-row: 2; grid-column: 2; }
