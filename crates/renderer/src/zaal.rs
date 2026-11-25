@@ -898,7 +898,7 @@ struct LijnBij76 {
 }
 
 /// Breedte van de lijn bij 76, in meter.
-const LIJN_76_BREEDTE: f32 = 0.12;
+const LIJN_76_BREEDTE: f32 = 0.16;
 /// Zo lang groeit de lijn van voor naar achter, of krimpt hij weer, bij snelheid 100.
 const LIJN_76_GROEIT: f32 = 0.6;
 /// Zo lang staat de camera stil voor de lijn verschijnt, in seconden: tijdens een camerarit
@@ -978,6 +978,22 @@ fn camera_stil(vorig: &Transform, nu: &Transform, dt: f32) -> bool {
     schuift < STIL_M_PER_S && draait < STIL_RAD_PER_S
 }
 
+/// Eén beeld verder voor de lijn bij 76: hoe ver hij zichtbaar is (0 tot 1) en hoe lang de camera
+/// al stilstaat, met `stap` het deel dat hij in dit beeld groeit of krimpt. Stilstaan telt pas
+/// zodra de Coalitie in de Ether staat: stond de camera daarvoor al stil, dan rijdt hij er nu
+/// misschien net mee weg naar zijn Standpunt.
+fn stap_lijn_76(zicht: f32, stil: f32, coalitie: bool, camera_stil: bool, dt: f32, stap: f32) -> (f32, f32) {
+    let stil = if coalitie && camera_stil { stil + dt } else { 0.0 };
+    let zicht = if coalitie && (zicht > 0.0 || stil >= LIJN_76_NA_STIL) {
+        (zicht + stap).min(1.0)
+    } else if coalitie {
+        zicht
+    } else {
+        (zicht - stap).max(0.0)
+    };
+    (zicht, stil)
+}
+
 /// De lijn bij 76 staat er zolang de Graphic in de Ether een Coalitie of Coalitiebalk is, in de
 /// kleur Accent van de Stijl. Hij verschijnt pas als de camera stilstaat, groeit dan van voor naar
 /// achter, en krimpt terug als hij weggaat. Wat er al staat, blijft staan als de camera weer gaat
@@ -1009,17 +1025,9 @@ fn toon_lijn_bij_76(
             (Some(vorig), Some(nu)) => camera_stil(&vorig, &nu, dt),
             _ => true,
         };
-        l.stil = if stil { l.stil + dt } else { 0.0 };
         l.camera = nu;
         let vorig = l.zicht;
-        let stap = dt * snelheid / LIJN_76_GROEIT;
-        l.zicht = if coalitie && (l.zicht > 0.0 || l.stil >= LIJN_76_NA_STIL) {
-            (l.zicht + stap).min(1.0)
-        } else if coalitie {
-            l.zicht
-        } else {
-            (l.zicht - stap).max(0.0)
-        };
+        (l.zicht, l.stil) = stap_lijn_76(l.zicht, l.stil, coalitie, stil, dt, dt * snelheid / LIJN_76_GROEIT);
         if l.zicht != vorig
             && let Some(mut m) = meshes.get_mut(&mesh.0)
         {
@@ -1285,6 +1293,38 @@ fn spots_stralen(
 mod tests {
     use super::*;
     use gedeeld::{GenummerdeStand, Stand};
+
+    #[test]
+    fn de_lijn_bij_76_wacht_tot_de_camera_na_de_rit_stilstaat() {
+        let dt = 0.02;
+        let stap = dt / LIJN_76_GROEIT;
+        // de camera stond al lang stil voor de Coalitie kwam
+        let (mut zicht, mut stil) = (0.0, 0.0);
+        for _ in 0..100 {
+            (zicht, stil) = stap_lijn_76(zicht, stil, false, true, dt, stap);
+        }
+        // de Coalitie komt; na 0,1 s rijdt de camera 2 s naar A: geen lijn tijdens de rit
+        for i in 0..110 {
+            (zicht, stil) = stap_lijn_76(zicht, stil, true, i < 5, dt, stap);
+            assert_eq!(zicht, 0.0, "beeld {i}");
+        }
+        // stil bij A: na een kwart seconde groeit hij, en is na zijn groeitijd helemaal
+        let wacht = (LIJN_76_NA_STIL / dt).ceil() as usize;
+        for _ in 0..wacht {
+            (zicht, stil) = stap_lijn_76(zicht, stil, true, true, dt, stap);
+        }
+        assert!(zicht > 0.0);
+        for _ in 0..((LIJN_76_GROEIT / dt).ceil() as usize) {
+            (zicht, stil) = stap_lijn_76(zicht, stil, true, true, dt, stap);
+        }
+        assert_eq!(zicht, 1.0);
+        // rijdt de camera weer (naar een ander Standpunt), dan blijft hij staan
+        (zicht, stil) = stap_lijn_76(zicht, stil, true, false, dt, stap);
+        assert_eq!(zicht, 1.0);
+        // weg met de Coalitie: hij krimpt
+        (zicht, _) = stap_lijn_76(zicht, stil, false, false, dt, stap);
+        assert!(zicht < 1.0);
+    }
 
     #[test]
     fn namen_uit_het_model_worden_stoelen() {
