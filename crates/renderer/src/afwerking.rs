@@ -88,8 +88,8 @@ pub const PLAFOND: Afwerking = Afwerking {
 /// van de Kamerbanken het lichtste deel is en niet het balkon erboven (council-ronde 3). Daar
 /// staat geen informatie, en bovenin komen de Graphics.
 pub const TRIBUNE: Afwerking = Afwerking {
-    verzadiging: 0.8,
-    kleur: [0.42, 0.43, 0.45],
+    verzadiging: 0.75,
+    kleur: [0.32, 0.33, 0.35],
     ..GEWOON
 };
 

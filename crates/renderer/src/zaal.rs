@@ -59,7 +59,7 @@ impl Plugin for ZaalPlugin {
                 Update,
                 (
                     stel_stof_en_hout_bij,
-                    ((herken_stoelen, kleur_stoelen, licht_stoel_op, verlicht_de_opbouw, zet_sleutellicht).chain(), dim_zaal, geef_stoelen_licht),
+                    ((herken_stoelen, kleur_stoelen, licht_stoel_op, verlicht_de_opbouw, zet_sleutellicht, zet_titellicht).chain(), dim_zaal, geef_stoelen_licht),
                 )
                     .chain()
                     .after(Afgewerkt),
@@ -1040,6 +1040,60 @@ fn zet_sleutellicht(
     }
 }
 
+/// Bij de Titelkaart een gericht zijlicht op de middelste Stoelen, schuin van links voor, zoals
+/// een studiolamp: het midden van de Zaal licht op en de rest valt iets terug (council-ronde 4:
+/// het totaalbeeld onder de Titelkaart was overal even licht).
+#[derive(Component)]
+struct Titellicht;
+
+/// Waar de lamp hangt (onder het plafond, links voor) en waar hij op richt, in meter.
+const TITELLICHT_PLEK: Vec3 = Vec3::new(-5.5, 4.6, 1.2);
+const TITELLICHT_DOEL: Vec3 = Vec3::new(0.0, 0.9, -4.6);
+/// De sterkte in lumen, de halve kegel in radialen en hoe lang hij erover doet om aan of uit te
+/// gaan, in seconden.
+const TITELLICHT_LUMEN: f32 = 2500.0;
+const TITELLICHT_KEGEL: f32 = 0.42;
+const TITELLICHT_S: f32 = 0.8;
+
+fn zet_titellicht(
+    mut commands: Commands,
+    standen: Res<Standen>,
+    tijd: Res<Time>,
+    mut licht: Query<(&mut SpotLight, &mut Visibility), With<Titellicht>>,
+    mut sterkte: Local<f32>,
+) {
+    let Ok((mut l, mut zicht)) = licht.single_mut() else {
+        commands.spawn((
+            Titellicht,
+            SpotLight {
+                intensity: 0.0,
+                color: Color::linear_rgb(1.0, 0.94, 0.85),
+                range: 14.0,
+                outer_angle: TITELLICHT_KEGEL,
+                inner_angle: TITELLICHT_KEGEL * 0.5,
+                shadow_maps_enabled: true,
+                affects_lightmapped_mesh_diffuse: true,
+                ..default()
+            },
+            Transform::from_translation(TITELLICHT_PLEK).looking_at(TITELLICHT_DOEL, Vec3::Y),
+            Visibility::Hidden,
+        ));
+        return;
+    };
+    let titel = standen
+        .huidig
+        .as_ref()
+        .and_then(|s| s.stand.ether.as_ref())
+        .is_some_and(|e| matches!(e.graphic, gedeeld::Graphic::Titelkaart { .. }));
+    let stap = tijd.delta_secs() / TITELLICHT_S;
+    *sterkte = if titel { (*sterkte + stap).min(1.0) } else { (*sterkte - stap).max(0.0) };
+    let lumen = TITELLICHT_LUMEN * kleurgolf::zacht(*sterkte);
+    if l.intensity != lumen {
+        l.intensity = lumen;
+    }
+    zicht.set_if_neq(if *sterkte > 0.0 { Visibility::Inherited } else { Visibility::Hidden });
+}
+
 /// Hoe licht de rest van de Zaal is (alles behalve het leer van de Stoelen): 1 zoals gebakken,
 /// lager zolang er Stoelen gekleurd zijn, naar de Kleurkracht. Het licht verandert mee met de
 /// Kleurovergang.
@@ -1107,7 +1161,7 @@ fn dim_zaal(
     nieuw: Query<(), Added<GltfMaterialName>>,
     mut licht: ParamSet<(
         Query<(Entity, &mut PointLight)>,
-        Query<(Entity, &mut SpotLight), Without<Opbouwlicht>>,
+        Query<(Entity, &mut SpotLight), (Without<Opbouwlicht>, Without<Titellicht>)>,
         Query<(Entity, &mut DirectionalLight), Without<Sleutellicht>>,
         Query<(Entity, &mut EnvironmentMapLight)>,
         Query<(), Or<(Added<PointLight>, Added<SpotLight>, Added<DirectionalLight>, Added<EnvironmentMapLight>)>>,
