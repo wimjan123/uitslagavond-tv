@@ -1004,8 +1004,9 @@ pub enum Inhoud {
         lijn_bij_76: bool,
         naamletter: String,
         labels: bool,
-        /// Een label dat niet naast het vorige past, komt op een tweede rij eronder. Alleen bij
-        /// een losse Zetelbalk; bij Twee sets en de Coalitiebalk is daar geen ruimte.
+        /// Een losse Zetelbalk: een label staat in zijn deel als het past, anders eronder op een
+        /// van twee rijen met een tikje naar zijn deel. Niet bij Twee sets en de Coalitiebalk:
+        /// daar is onder de balk geen ruimte voor twee rijen.
         twee_labelrijen: bool,
         /// De kleur van de Zetels in de labels (Tekst uit de Stijl).
         tekstkleur: Kleur,
@@ -1141,6 +1142,8 @@ pub struct Fractielabel {
     /// Bij een verdeelde Fractie: hoeveel Kamerleden aan deze kant stemden. Leeg als de hele
     /// Fractie hetzelfde stemde.
     pub aantal: Option<u16>,
+    /// Hoeveel Kamerleden van de Fractie aan deze kant stemden (0 buiten een Stemming).
+    pub stemmen: u16,
 }
 
 /// De namen van één Fractie aan één kant van een Hoofdelijke stemming.
@@ -1808,8 +1811,7 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
                         } else {
                             u.afwijkend.iter().filter(|a| a.fractie == f.afkorting && a.stem == stem).map(|a| achternaam(u, a)).collect()
                         };
-                        let aantal = label.aantal.unwrap_or(f.zetels);
-                        Some(Naamgroep { fractie: Fractielabel { aantal: Some(aantal), ..label.clone() }, namen })
+                        Some(Naamgroep { fractie: label.clone(), namen })
                     })
                     .collect()
             };
@@ -1845,6 +1847,7 @@ fn fractielabel(kort: &str, kleur: Option<&str>, logo: Option<String>, stijl: &S
         tekstkleur: tekst_op(kleur, stijl.kleur(Stijlkleur::Tekst), stijl.kleur(Stijlkleur::Vlak)),
         logo,
         aantal: None,
+        stemmen: 0,
     }
 }
 
@@ -1866,6 +1869,7 @@ fn fracties_aan_kant(u: &crate::stemmingen::Stemmingsuitslag, stem: Stem, stijl:
             let hier = if f.stem == stem { f.zetels.saturating_sub(anders) } else { anders };
             (hier > 0).then(|| Fractielabel {
                 aantal: (anders > 0).then_some(hier),
+                stemmen: hier,
                 ..fractielabel(f.kort.as_deref().unwrap_or(&f.afkorting), f.kleur.as_deref(), f.logo.clone(), stijl)
             })
         })
@@ -1984,10 +1988,10 @@ pub fn paneel(p: Plek) -> Blok {
     Blok {
         plek: p,
         soort: vlak_met(
-            95,
+            97,
             Some(Verloop {
                 naar: Kleurkeuze::Stijl(Stijlkleur::Vlak),
-                naar_dekking: 95,
+                naar_dekking: 97,
                 richting: 120,
                 van: 0,
                 tot: 62,
@@ -2096,8 +2100,8 @@ fn titelkaart() -> Sjabloon {
 
 /// De Zetelverdeling in de Zaal: de Stoelen kleuren in de Uitslagindeling (dat doet de Zaal, niet
 /// een Blok), als Opbouw: één Partij tegelijk, de grootste eerst, met haar label groot op de
-/// vloer. Daarna staan alle Partijen als kaartjes in het plafond (meer dan acht: twee rijen), in
-/// dezelfde volgorde als hun Stoelen van links naar rechts. Linksboven een naambalk met de kicker "ZETELVERDELING"
+/// vloer. Daarna staan alle Partijen als kaartjes op één rij in het plafond, in dezelfde volgorde
+/// als hun Stoelen van links naar rechts. Linksboven een naambalk met de kicker "ZETELVERDELING"
 /// en de naam van de set; rechtsboven het programmalogo. De camera staat stil op Standpunt A, met
 /// de hele halve cirkel in beeld: zo zie je bij elke stap het blok bij het label. De plekken passen
 /// daarbij en bij het eindbeeld van de Onthulling.
@@ -2124,7 +2128,7 @@ fn zetelverdeling() -> Sjabloon {
             },
             programmabug(),
             Blok {
-                plek: plek(96, 236, 1728, 128),
+                plek: plek(96, 236, 1728, 124),
                 soort: Bloksoort::Partijlabels {
                     letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                     naamletter: Letterkeuze::Stijl(Stijlletter::Tekst),
@@ -2179,7 +2183,7 @@ fn persoonskaart() -> Sjabloon {
                     naar_dekking: 97,
                     richting: 180,
                     van: 0,
-                    tot: 62,
+                    tot: 55,
                 }),
                 0,
                 None,
@@ -2379,7 +2383,8 @@ fn groot_stemmingspaneel(id: &str, naam: &str, kicker_tekst: &str, groot: Blokso
         naam: naam.into(),
         groep: "Stemmingen".into(),
         snelheid: 100,
-        achtergrond: Achtergrond::Zaal,
+        // het paneel vult bijna het hele beeld: de Zaal erachter donker en onscherp
+        achtergrond: Achtergrond::ZaalDonker,
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken,

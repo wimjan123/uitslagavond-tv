@@ -13,6 +13,12 @@ const OVERVLOEI: f32 = 0.25;
 const INLEIDING: f32 = 0.5;
 /// Bij de Opbouw: hoe lang een Partij oplicht, als deel van de tijd per Partij.
 const OPLICHTEN: f32 = 0.4;
+/// Bij de Opbouw: hoe snel een Partij na haar stap dimt (en haar gloed verliest), en aan het eind
+/// weer opkomt, als deel van de tijd per Partij.
+const NAGLOED: f32 = 0.25;
+/// Bij de Opbouw: hoe ver een Partij na haar stap naar de wachtkleur zakt, zodat alleen de Partij
+/// van het label vol oplicht. Aan het eind komen ze allemaal tegelijk terug.
+pub const DIMMEN: f32 = 0.7;
 
 /// De duur van de overgang in seconden bij deze snelheid van de Stijl (in procent); bij de
 /// Opbouw de tijd per Partij.
@@ -83,9 +89,29 @@ impl Opbouw {
         INLEIDING * self.per_stap
     }
 
-    /// Hoe lang de hele Opbouw duurt, met de nagloed van de laatste stap.
+    /// Wanneer de laatste stap voorbij is.
+    fn alle_stappen(&self) -> f32 {
+        self.inleiding() + self.stappen.len() as f32 * self.per_stap
+    }
+
+    /// Hoe lang de hele Opbouw duurt, met het opkomen van de gedimde Partijen aan het eind.
     pub fn duur(&self) -> f32 {
-        self.inleiding() + (self.stappen.len() as f32 + OPLICHTEN) * self.per_stap
+        self.alle_stappen() + OPLICHTEN.max(NAGLOED) * self.per_stap
+    }
+
+    /// Hoe ver Stoel `i` op `t` seconden gedimd is (0 tot [`DIMMEN`]): na zijn stap zakt hij,
+    /// zodat alleen de Partij van het label vol oplicht; na de laatste stap komt alles tegelijk terug.
+    pub fn gedimd(&self, i: usize, t: f32) -> f32 {
+        let Some(k) = self.stap_van.get(i).copied().flatten() else { return 0.0 };
+        let einde = self.inleiding() + (k + 1) as f32 * self.per_stap;
+        let (alle, overgang) = (self.alle_stappen(), NAGLOED * self.per_stap);
+        if t < einde || einde >= alle {
+            0.0
+        } else if t < alle {
+            DIMMEN * zacht(((t - einde) / overgang).min(1.0))
+        } else {
+            DIMMEN * (1.0 - zacht(((t - alle) / overgang).min(1.0)))
+        }
     }
 
     /// Hoe sterk Stoel `i` op `t` seconden gloeit (0 tot 1): de stap die aan de beurt is, licht
@@ -94,13 +120,13 @@ impl Opbouw {
     pub fn gloed(&self, i: usize, t: f32) -> f32 {
         let Some(k) = self.stap_van.get(i).copied().flatten() else { return 0.0 };
         let start = self.inleiding() + k as f32 * self.per_stap;
-        let (einde, overgang) = (start + self.per_stap, OPLICHTEN * self.per_stap);
+        let einde = start + self.per_stap;
         if t < start {
             0.0
         } else if t < einde {
-            zacht(((t - start) / overgang).min(1.0))
+            zacht(((t - start) / (OPLICHTEN * self.per_stap)).min(1.0))
         } else {
-            1.0 - zacht(((t - einde) / overgang).min(1.0))
+            1.0 - zacht(((t - einde) / (NAGLOED * self.per_stap)).min(1.0))
         }
     }
 
@@ -207,9 +233,21 @@ mod tests {
         // stap 0 loopt van 0,5 tot 1,5 seconde
         assert_eq!(o.gloed(0, 0.4), 0.0);
         assert_eq!(o.gloed(0, 1.0), 1.0);
-        assert!(o.gloed(0, 1.7) > 0.0 && o.gloed(0, 1.7) < 1.0, "na zijn stap zakt hij terug");
-        assert_eq!(o.gloed(0, 1.9), 0.0);
+        assert!(o.gloed(0, 1.6) > 0.0 && o.gloed(0, 1.6) < 1.0, "na zijn stap zakt hij terug");
+        assert_eq!(o.gloed(0, 1.75), 0.0);
         assert_eq!(o.gloed(1, 1.0), 0.0, "de volgende wacht nog");
+    }
+
+    #[test]
+    fn na_haar_stap_dimt_een_partij_tot_de_laatste_stap_voorbij_is() {
+        let o = Opbouw::nieuw(&[k(1), k(2), k(2), None], &[0, 1, 2, 3], 1.0);
+        // stap 0 (kleur 2) van 0,5 tot 1,5, stap 1 (kleur 1) van 1,5 tot 2,5
+        assert_eq!(o.gedimd(1, 1.0), 0.0, "tijdens haar stap vol");
+        assert_eq!(o.gedimd(1, 2.0), DIMMEN, "tijdens de volgende stap gedimd");
+        assert_eq!(o.gedimd(0, 2.0), 0.0, "de Partij van het label niet");
+        assert_eq!(o.gedimd(0, 2.7), 0.0, "de laatste stap dimt nooit");
+        assert_eq!(o.gedimd(1, o.duur()), 0.0, "aan het eind komt alles terug");
+        assert_eq!(o.gedimd(3, 2.0), 0.0, "zonder kleur niets");
     }
 
     #[test]
