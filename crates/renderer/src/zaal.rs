@@ -110,16 +110,21 @@ pub struct StoelLeer {
     pub index: usize,
 }
 
-/// De bies langs de rand van de rugleuning: een donkere tint van het leer van zijn Stoel. In het
-/// model is hij donkerblauw, en dat bleef hij op een groene of grijze Stoel (council-ronde 6).
+/// De bies langs de rand van de rugleuning en de naad over de rugleuning: een donkere tint van het
+/// leer van zijn Stoel. In het model zijn ze donkerblauw, en dat bleven ze op een groene of grijze
+/// Stoel (council-ronde 6). `naad`: de naad, anders de bies.
 #[derive(Component, Debug)]
 struct StoelBies {
     index: usize,
+    naad: bool,
 }
 
-/// Het materiaal van de bies, en hoeveel donkerder dan het leer hij is (zoals in het model).
+/// De materialen van bies en naad, en hoeveel donkerder dan het leer ze zijn (de bies zoals in het
+/// model, de naad iets donkerder, zodat hij als naad in het leer leest).
 const STOEL_BIES: &str = "stoel_bies";
+const STOEL_NAAD: &str = "stoel_naad";
 const BIES_DONKER: f32 = 0.45;
+const NAAD_DONKER: f32 = 0.3;
 
 /// Eén materiaal per kleur, gedeeld door alle Stoelen met die kleur.
 #[derive(Resource, Default)]
@@ -408,7 +413,7 @@ fn herken_stoelen(
         }
     }
     for (e, materiaal) in &nieuwe_materialen {
-        if materiaal.0 != STOEL_LEER && materiaal.0 != STOEL_BIES {
+        if ![STOEL_LEER, STOEL_BIES, STOEL_NAAD].contains(&materiaal.0.as_str()) {
             continue;
         }
         let stoel = ouders
@@ -418,61 +423,71 @@ fn herken_stoelen(
             if materiaal.0 == STOEL_LEER {
                 commands.entity(e).insert(StoelLeer { index });
             } else {
-                commands.entity(e).insert(StoelBies { index });
+                commands.entity(e).insert(StoelBies { index, naad: materiaal.0 == STOEL_NAAD });
             }
         }
     }
 }
 
-/// Geeft de bies van elke Stoel een donkere tint van zijn leer, ook midden in een kleurgolf: per
-/// materiaal van het leer één materiaal voor de bies.
+/// Geeft de bies en de naad van elke Stoel een donkere tint van zijn leer, ook midden in een
+/// kleurgolf: per materiaal van het leer één materiaal voor de bies en één voor de naad.
+#[allow(clippy::type_complexity)]
 fn kleur_de_bies(
     leer: Query<(&StoelLeer, &MeshMaterial3d<StandardMaterial>)>,
     mut bies: Query<(&StoelBies, &mut MeshMaterial3d<StandardMaterial>), Without<StoelLeer>>,
     mut materialen: ResMut<Assets<StandardMaterial>>,
-    mut per_leer: Local<HashMap<AssetId<StandardMaterial>, Handle<StandardMaterial>>>,
-    mut origineel: Local<Option<Handle<StandardMaterial>>>,
+    mut per_leer: Local<HashMap<(AssetId<StandardMaterial>, bool), Handle<StandardMaterial>>>,
+    mut origineel: Local<[Option<Handle<StandardMaterial>>; 2]>,
     mut leer_van: Local<Vec<Option<AssetId<StandardMaterial>>>>,
 ) {
     if bies.is_empty() {
         return;
     }
-    if origineel.is_none() {
-        *origineel = bies.iter().next().map(|(_, m)| m.0.clone());
+    for (b, m) in &bies {
+        let o = &mut origineel[b.naad as usize];
+        if o.is_none() {
+            *o = Some(m.0.clone());
+        }
     }
-    let Some(basis) = origineel.clone() else { return };
+    leer_van.clear();
     leer_van.resize(AANTAL_STOELEN, None);
-    leer_van.iter_mut().for_each(|l| *l = None);
     for (s, m) in &leer {
         if let Some(l) = leer_van.get_mut(s.index) {
             *l = Some(m.0.id());
         }
     }
     // materialen van leer dat niet meer gebruikt wordt, kunnen weg
-    per_leer.retain(|id, _| leer_van.contains(&Some(*id)));
-    for id in leer_van.iter().flatten() {
-        let Some((kleur, straling)) = materialen.get(*id).map(|m| (LinearRgba::from(m.base_color), m.emissive)) else {
+    per_leer.retain(|(id, _), _| leer_van.contains(&Some(*id)));
+    let gebruikt: std::collections::HashSet<AssetId<StandardMaterial>> = leer_van.iter().flatten().copied().collect();
+    for id in gebruikt {
+        let Some((kleur, straling)) = materialen.get(id).map(|m| (LinearRgba::from(m.base_color), m.emissive)) else {
             continue;
         };
-        let (kleur, straling) = ((kleur * BIES_DONKER).with_alpha(1.0), straling * BIES_DONKER);
-        let h = match per_leer.get(id) {
-            Some(h) => h.clone(),
-            None => {
-                let Some(m) = materialen.get(&basis).cloned() else { return };
-                let h = materialen.add(m);
-                per_leer.insert(*id, h.clone());
-                h
+        for naad in [false, true] {
+            let Some(basis) = origineel[naad as usize].clone() else { continue };
+            let donker = if naad { NAAD_DONKER } else { BIES_DONKER };
+            let (kleur, straling) = ((kleur * donker).with_alpha(1.0), straling * donker);
+            let h = match per_leer.get(&(id, naad)) {
+                Some(h) => h.clone(),
+                None => {
+                    let Some(mut m) = materialen.get(&basis).cloned() else { continue };
+                    // de naad heeft een blauwe textuur: zonder, dan is hij effen de tint van het leer
+                    m.base_color_texture = None;
+                    let h = materialen.add(m);
+                    per_leer.insert((id, naad), h.clone());
+                    h
+                }
+            };
+            if materialen.get(&h).is_some_and(|m| LinearRgba::from(m.base_color) != kleur || m.emissive != straling)
+                && let Some(mut m) = materialen.get_mut(&h)
+            {
+                m.base_color = kleur.into();
+                m.emissive = straling;
             }
-        };
-        if materialen.get(&h).is_some_and(|m| LinearRgba::from(m.base_color) != kleur || m.emissive != straling)
-            && let Some(mut m) = materialen.get_mut(&h)
-        {
-            m.base_color = kleur.into();
-            m.emissive = straling;
         }
     }
-    for (s, mut m) in &mut bies {
-        let Some(h) = leer_van.get(s.index).copied().flatten().and_then(|id| per_leer.get(&id)) else { continue };
+    for (b, mut m) in &mut bies {
+        let Some(h) = leer_van.get(b.index).copied().flatten().and_then(|id| per_leer.get(&(id, b.naad))) else { continue };
         if m.0 != *h {
             m.0 = h.clone();
         }
@@ -795,8 +810,10 @@ const GLOED_STRAALT: f32 = 0.4;
 /// voorbij is: zo blijft het blok te vinden als de flits weg is (council-ronde 6).
 const NAGLOED_STRAALT: f32 = 0.16;
 /// Hoeveel licht de rest van de Zaal bij Kleurkracht 100 overhoudt, zolang er Stoelen gekleurd
-/// zijn. Daartussen daalt het licht in gelijke stappen voor het oog: bij 50 ongeveer een derde.
-const MINSTE_LICHT: f32 = 0.1;
+/// zijn. Daartussen daalt het licht in gelijke stappen voor het oog: bij 50 ongeveer 40 procent.
+/// Met een tiende (bij 50 een derde) waren de wijde shots na compressie te donker, met tapijt en
+/// banken die wegzakten (council-ronde 6); de gekleurde Stoelen springen er nog steeds uit.
+const MINSTE_LICHT: f32 = 0.16;
 
 /// De Kleurkracht van de Ether, van 0 tot 1.
 fn kleurkracht(standen: &Standen) -> f32 {
@@ -988,10 +1005,10 @@ fn kleur_stoelen(
 /// dat de partijkleur verbleekte (ronde 6); dit licht valt alleen op wat naar boven kijkt.
 ///
 /// Het extra licht op de top van de flits (1 is twee keer zo licht) en wat daarna blijft.
-const OPBOUWLICHT_TOP: f32 = 4.0;
+const OPBOUWLICHT_TOP: f32 = 6.5;
 const OPBOUWLICHT_BLIJFT: f32 = 0.7;
 /// Zo ver buiten de buitenste Stoel van het blok reikt de kring, in meter; de rand loopt zacht af.
-const OPBOUWLICHT_RAND: f32 = 1.6;
+const OPBOUWLICHT_RAND: f32 = 2.0;
 /// Hoeveel van de partijkleur in het licht zit; de rest is warm wit.
 const OPBOUWLICHT_KLEUR: f32 = 0.25;
 
@@ -1066,7 +1083,7 @@ const SLEUTEL_OMHOOG: f32 = 42.0;
 const SLEUTEL_KEGEL: f32 = 0.75;
 /// Bij de Persoonskaart is de spot zoveel zwakker: de Zaal is daar achtergrond, en een fel
 /// verlichte Stoel trok eerder het oog dan het gezicht op de kaart (council-ronde 5).
-const PERSOON_SLEUTEL: f32 = 0.4;
+const PERSOON_SLEUTEL: f32 = 0.3;
 /// Op deze afstand van de camera stelt hij scherp als er geen Stoel in het midden staat.
 const SLEUTEL_STANDAARD_AFSTAND: f32 = 5.0;
 /// Hoeveel van het gebakken licht het leer van de Stoelen bij een volle close-up houdt.
@@ -1221,7 +1238,7 @@ const TITELLICHT_DOEL: Vec3 = Vec3::new(0.0, 0.9, -4.9);
 const TITELLICHT_LUMEN: f32 = 9000.0;
 /// Bij de Titelkaart houdt de rest van de Zaal (niet het leer van de Stoelen) dit deel van zijn
 /// licht, zodat de Stoelen in het zijlicht het lichtst zijn en de tribune zachter.
-const TITEL_ZAALLICHT: f32 = 0.4;
+const TITEL_ZAALLICHT: f32 = 0.5;
 const TITELLICHT_KEGEL: f32 = 0.5;
 const TITELLICHT_S: f32 = 0.8;
 
@@ -1501,14 +1518,14 @@ const LIJN_76_KERN: f32 = 4.5;
 /// De lichtstrook om de lijn: zo breed (meter, met een zachte rand) en zoveel extra licht, met
 /// zoveel van Accent erin (de rest warm wit).
 const LIJN_76_GLOED_BREEDTE: f32 = 1.8;
-const LIJN_76_GLOED: f32 = 1.0;
+const LIJN_76_GLOED: f32 = 1.5;
 const LIJN_76_TINT: f32 = 0.7;
 /// Het getal 76 plat op het open tapijt tussen de katheder en de voorzittersbank, in de richting
 /// van de lijn: het midden zoveel meter van het midden van de Zaal, zo lang in de diepte, en zo
 /// breed als de letters keer [`GETAL_76_BREED`]. Vanaf Standpunt A ongeveer 70 px hoog. Aan het
 /// voeteind van de lijn was er tot de katheder maar plaats voor 35 tot 45 px (council-ronde 6).
-const GETAL_76_AFSTAND: f32 = 0.8;
-const GETAL_76_HOOGTE: f32 = 1.3;
+const GETAL_76_AFSTAND: f32 = 0.6;
+const GETAL_76_HOOGTE: f32 = 1.65;
 const GETAL_76_BREED: f32 = 1.05;
 /// Zo lang groeit de lijn van voor naar achter, of krimpt hij weer, bij snelheid 100.
 const LIJN_76_GROEIT: f32 = 0.6;
@@ -2601,9 +2618,45 @@ mod tests {
         let midden = vier.iter().map(|&i| Vec3::from(gedeeld::zaalkaart::STOELPLEKKEN[i])).sum::<Vec3>() / 4.0;
         assert!(plek.with_y(0.0).distance(midden.with_y(0.0)) < 1e-3, "recht onder het blok");
         assert!(plek.y < midden.y - 0.5 && plek.y > -0.5, "op de vloer: {}", plek.y);
-        assert!(straal < 3.5, "klein: {straal}");
+        assert!(straal < 4.5, "klein: {straal}");
         let alle: Vec<usize> = (0..AANTAL_STOELEN).collect();
         assert!(opbouwlicht_plek(&alle).unwrap().1 > straal);
+    }
+
+    #[test]
+    fn de_bies_en_de_naad_krijgen_een_donkere_tint_van_het_leer_van_hun_stoel() {
+        let (mut app, _) = zaal_zonder_gpu();
+        // de bies en de naad van het model zijn donkerblauw
+        let blauw = app.world_mut().resource_mut::<Assets<StandardMaterial>>().add(StandardMaterial::from_color(Color::srgb(0.0, 0.1, 0.4)));
+        let stoel = Stoel { vak: 2, rij: 3, nummer: 1 };
+        let ouder = app
+            .world_mut()
+            .query::<(Entity, &Name)>()
+            .iter(app.world())
+            .find(|(_, n)| stoel_uit_naam(n.as_str()) == Some(stoel))
+            .map(|(e, _)| e)
+            .unwrap();
+        let delen: Vec<Entity> = [STOEL_BIES, STOEL_NAAD]
+            .map(|naam| {
+                app.world_mut()
+                    .spawn((ChildOf(ouder), GltfMaterialName(naam.into()), MeshMaterial3d(blauw.clone()), Mesh3d::default()))
+                    .id()
+            })
+            .into();
+        app.update();
+        // VOORBEELDGEGEVENS: alle Stoelen groen
+        let groen = Kleur { r: 0x2d, g: 0xbe, b: 0x4f };
+        zet_stand(&mut app, 1, vec![groen; AANTAL_STOELEN]);
+        app.update();
+        app.update();
+        let leer = LinearRgba::from(leer_in_de_zaal(groen));
+        let materialen = app.world().resource::<Assets<StandardMaterial>>();
+        for (e, donker) in delen.into_iter().zip([BIES_DONKER, NAAD_DONKER]) {
+            let m = materialen.get(&app.world().get::<MeshMaterial3d<StandardMaterial>>(e).unwrap().0).unwrap();
+            let k = LinearRgba::from(m.base_color);
+            assert!((k.green - leer.green * donker).abs() < 1e-4 && k.green > k.blue, "groen, niet blauw: {k:?}");
+            assert!(m.base_color_texture.is_none(), "zonder de blauwe textuur");
+        }
     }
 
     #[test]
@@ -2717,7 +2770,7 @@ mod tests {
     }
 
     #[test]
-    fn al_geweest_is_grijs_en_leeg_is_donker_blauwgrijs_niet_zwart() {
+    fn actief_is_het_lichtst_al_geweest_grijs_en_leeg_donker_blauwgrijs_niet_zwart() {
         // VOORBEELDGEGEVENS: de felste kleuren uit het palet van een uitslag
         for k in ["#e8336b", "#2dbe4f", "#0a8a74", "#2b63d9", "#a8c81e", "#ff7a1a"] {
             let g = Oklcha::from(gedimd_leer(k.parse().unwrap()));
@@ -2726,8 +2779,18 @@ mod tests {
         let leeg = Srgba::from(leeg_leer() * (1.0 / kalibratie().albedo));
         assert!(leeg.blue > leeg.red + 0.03, "blauwgrijs: {leeg:?}");
         let licht = helderheid(LinearRgba::from(leeg));
-        assert!(licht > 0.04, "geen zwart gat: {licht}");
+        assert!(licht > 0.025, "geen zwart gat: {licht}");
         assert!(helderheid(gedimd_leer("#2b63d9".parse().unwrap())) > 2.0 * helderheid(leeg_leer()), "donkerder dan al geweest");
+        // een donkere Partij (JA21) is aan de beurt lichter dan haar gewone kleur en veel lichter
+        // dan al geweest, en houdt haar tint
+        let ja21: Kleur = "#3a4fb8".parse().unwrap();
+        let (actief, gewoon) = (actief_leer(ja21, 0.0), leer_in_de_zaal(ja21));
+        assert!(helderheid(actief) > 1.2 * helderheid(gewoon), "lichter dan gewoon");
+        assert!(helderheid(actief) > 2.0 * helderheid(gedimd_leer(ja21)), "veel lichter dan al geweest");
+        assert!((Oklcha::from(actief).hue - Oklcha::from(gewoon).hue).abs() < 3.0, "zelfde tint");
+        // een lichte Partij (VVD-oranje) verandert niet
+        let vvd: Kleur = "#ff7a1a".parse().unwrap();
+        assert!((helderheid(actief_leer(vvd, 0.0)) - helderheid(leer_in_de_zaal(vvd))).abs() < 1e-3);
     }
 
     #[test]

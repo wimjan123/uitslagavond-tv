@@ -44,7 +44,7 @@ const HELEMAAL_GRADEN: f32 = 40.0;
 const DIAFRAGMA: f32 = 0.25;
 /// Bij een volle close-up is de occlusie sterker en dichter bij: contactschaduw onder bureaus en
 /// Stoelen, die in een wijd shot te zwaar zou zijn.
-const OCCLUSIE_EXTRA: f32 = 0.3;
+const OCCLUSIE_EXTRA: f32 = 0.45;
 const OCCLUSIE_STRAAL_DICHTBIJ: f32 = 0.35;
 /// Nooit onscherper dan dit, in pixels.
 const MEESTE_ONSCHERPTE: f32 = 20.0;
@@ -54,7 +54,7 @@ const DIAFRAGMA_PERSOON: f32 = 0.14;
 const MEESTE_ONSCHERPTE_PERSOON: f32 = 30.0;
 /// Bij de Persoonskaart wordt wat voor de Stoel staat (het bureau vooraan) zoveel donkerder: het
 /// trok met de lege Stoel eerder het oog dan het portret (council-ronde 6).
-const VOORGROND_PERSOON: f32 = 0.55;
+const VOORGROND_PERSOON: f32 = 0.85;
 /// Alleen in de Zaal: onder het plafond.
 const ONDER_Y: f32 = 5.0;
 

@@ -75,10 +75,13 @@ pub const STOF: Afwerking = Afwerking {
 /// Het leer van de Stoelen: mat zoals [`STOF`], maar met meer nerf en meer verschil in kleur. De
 /// textuur uit het model is bijna vlak (de normal map wijkt gemiddeld minder dan 1 procent af),
 /// dus in een close-up waren alle rugleuningen even glad en glansden ze gelijk, als in een
-/// game-render (council-ronde 5).
+/// game-render (council-ronde 5). Iets minder ruw dan de stof, zodat het sleutellicht van een
+/// close-up een zachte glans geeft die met de vorm van de rugleuning en de nerf verloopt, in plaats
+/// van een egale matte kleur (ronde 6).
 pub const STOELLEER: Afwerking = Afwerking {
     contrast: 2.6,
     relief: 4.0,
+    ruwheid: Some(0.7),
     ..STOF
 };
 

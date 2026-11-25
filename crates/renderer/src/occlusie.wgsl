@@ -71,7 +71,7 @@ fn kring(p: vec3<f32>, k: vec4<f32>) -> f32 {
         return 0.0;
     }
     let r = length(vlak(p - k.xyz)) / k.w;
-    return 1.0 - smoothstep(0.5, 1.0, r);
+    return 1.0 - smoothstep(0.65, 1.0, r);
 }
 
 // Hoeveel van de lichtstrook op punt p valt: zacht over de breedte, met zachte uiteinden.
@@ -129,7 +129,7 @@ fn fragment(@builtin(position) positie: vec4<f32>, @location(0) uv: vec2<f32>) -
         licht *= boven * op_de_vloer(p);
     }
     // de voorgrond donkerder (de Persoonskaart): het bureau vooraan trekt dan niet het oog
-    let voor = s.voorgrond_donker * (1.0 - smoothstep(0.55, 0.95, -p.z / max(s.voorgrond, 1e-3)));
+    let voor = s.voorgrond_donker * (1.0 - smoothstep(0.6, 0.92, -p.z / max(s.voorgrond, 1e-3)));
     let verlicht = kleur.rgb * (1.0 + licht) * (1.0 - voor);
     if (s.sterkte <= 0.0) {
         return vec4<f32>(verlicht, kleur.a);
