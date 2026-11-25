@@ -7,77 +7,92 @@
     {
       "sleutel": "pvv",
       "naam": "PVV (Partij voor de Vrijheid)",
-      "kort": "PVV"
+      "kort": "PVV",
+      "kleur": "#2B63D9"
     },
     {
       "sleutel": "gl-pvda",
       "naam": "GROENLINKS / Partij van de Arbeid (PvdA)",
-      "kort": "GL-PvdA"
+      "kort": "GL-PvdA",
+      "kleur": "#D0213A"
     },
     {
       "sleutel": "vvd",
       "naam": "VVD",
-      "kort": "VVD"
+      "kort": "VVD",
+      "kleur": "#FF7A1A"
     },
     {
       "sleutel": "nsc",
       "naam": "Nieuw Sociaal Contract (NSC)",
-      "kort": "NSC"
+      "kort": "NSC",
+      "kleur": "#4A6FA5"
     },
     {
       "sleutel": "d66",
       "naam": "D66",
-      "kort": "D66"
+      "kort": "D66",
+      "kleur": "#2DBE4F"
     },
     {
       "sleutel": "bbb",
       "naam": "BBB",
-      "kort": "BBB"
+      "kort": "BBB",
+      "kleur": "#A8C81E"
     },
     {
       "sleutel": "cda",
       "naam": "CDA",
-      "kort": "CDA"
+      "kort": "CDA",
+      "kleur": "#0A8A74"
     },
     {
       "sleutel": "sp",
       "naam": "SP (Socialistische Partij)",
-      "kort": "SP"
+      "kort": "SP",
+      "kleur": "#F0412A"
     },
     {
       "sleutel": "denk",
       "naam": "DENK",
-      "kort": "DENK"
+      "kort": "DENK",
+      "kleur": "#22B5C2"
     },
     {
       "sleutel": "pvdd",
       "naam": "Partij voor de Dieren",
-      "kort": "PvdD"
+      "kort": "PvdD",
+      "kleur": "#5E8F23"
     },
     {
       "sleutel": "fvd",
       "naam": "Forum voor Democratie",
-      "kort": "FvD"
+      "kort": "FvD",
+      "kleur": "#A3243A"
     },
     {
       "sleutel": "sgp",
       "naam": "Staatkundig Gereformeerde Partij (SGP)",
-      "kort": "SGP"
+      "kort": "SGP",
+      "kleur": "#E6A11B"
     },
     {
       "sleutel": "cu",
       "naam": "ChristenUnie",
-      "kort": "CU"
+      "kort": "CU",
+      "kleur": "#1E9BE6"
     },
     {
       "sleutel": "volt",
       "naam": "Volt",
-      "kort": "Volt"
+      "kort": "Volt",
+      "kleur": "#5A2D91"
     },
     {
       "sleutel": "ja21",
       "naam": "JA21",
-      "kort": "JA21"
+      "kort": "JA21",
+      "kleur": "#3A4FB8"
     },
     {
       "sleutel": "vrede-voor-dieren",
@@ -102,7 +117,8 @@
     {
       "sleutel": "50plus",
       "naam": "50PLUS",
-      "kort": "50PLUS"
+      "kort": "50PLUS",
+      "kleur": "#9B2D8F"
     },
     {
       "sleutel": "piratenpartij",

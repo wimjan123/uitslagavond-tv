@@ -101,6 +101,11 @@ pub struct Opbouwkaart {
 #[derive(Component, Clone, Copy)]
 pub struct Randkleur(pub Color);
 
+/// Hoeveel kaartjes van Partijlabels op één rij passen voordat ze over twee rijen gaan.
+const KAARTJES_PER_RIJ: usize = 8;
+/// Ruimte tussen de kaartjes, naast en onder elkaar.
+const KAARTJE_TUSSEN: f32 = 8.0;
+
 /// Een tekst die op één regel blijft: de letter krimpt tot hij in `breedte` past.
 #[derive(Component, Clone, Copy)]
 pub struct Krimp {
@@ -251,17 +256,46 @@ fn met_vorige<'a>(
     alle
 }
 
-/// De ruimte voor het label van elk deel (`heeft label`, breedte): zijn eigen breedte plus die van
-/// de delen erna zonder label, tot het volgende label. Zo staat "9 JA21" onder de Coalitiebalk ook
-/// als het deel van JA21 smaller is dan het label (mockup `3-zetelbalk.jpg`).
-fn labelruimte(delen: &[(bool, f32)]) -> Vec<f32> {
-    let mut uit = vec![0.0; delen.len()];
-    let mut erna = 0.0;
-    for (i, (label, breedte)) in delen.iter().enumerate().rev() {
-        uit[i] = breedte + erna;
-        erna = if *label { 0.0 } else { erna + breedte };
+/// Hoe ver de tweede rij labels onder de eerste staat, in pixels.
+const LABELRIJ: f32 = 46.0;
+
+/// Op welke rij het label van elk deel staat en hoeveel ruimte het heeft, in pixels. `delen` is
+/// per deel: waar het begint, hoe breed het is en de geschatte breedte van zijn label (geen label:
+/// `None`). De breedste delen kiezen eerst: een label komt op de eerste rij als het daar niemand
+/// raakt, anders (met `twee_rijen`) op de tweede, anders nergens. Zijn ruimte loopt tot het
+/// volgende label op dezelfde rij, zodat "9 JA21" onder de Coalitiebalk ook past als het deel van
+/// JA21 smaller is (mockup `3-zetelbalk.jpg`).
+fn labelrijen(delen: &[(f32, f32, Option<f32>)], b: f32, twee_rijen: bool) -> Vec<Option<(usize, f32)>> {
+    const RUIMTE: f32 = 10.0;
+    let mut volgorde: Vec<usize> = (0..delen.len()).filter(|&i| delen[i].2.is_some()).collect();
+    volgorde.sort_by(|&a, &b| delen[b].1.total_cmp(&delen[a].1).then(a.cmp(&b)));
+    let mut rijen: Vec<Option<usize>> = vec![None; delen.len()];
+    let mut bezet: [Vec<(f32, f32)>; 2] = [Vec::new(), Vec::new()];
+    for i in volgorde {
+        let (x, _, Some(breed)) = delen[i] else { continue };
+        let stuk = (x, x + breed + RUIMTE);
+        let vrij = |r: &Vec<(f32, f32)>| r.iter().all(|&(a, z)| stuk.1 <= a || stuk.0 >= z);
+        if let Some(r) = (0..if twee_rijen { 2 } else { 1 }).find(|&r| vrij(&bezet[r])) {
+            bezet[r].push(stuk);
+            rijen[i] = Some(r);
+        }
     }
-    uit
+    rijen
+        .iter()
+        .enumerate()
+        .map(|(i, rij)| {
+            let rij = (*rij)?;
+            let volgende = (i + 1..delen.len()).find(|&j| rijen[j] == Some(rij)).map_or(b, |j| delen[j].0);
+            Some((rij, volgende - delen[i].0))
+        })
+        .collect()
+}
+
+/// De geschatte breedte van een label onder een Zetelbalk bij letter `g`: de Zetels in de
+/// cijferletter, 8 pixels ruimte en de korte naam.
+fn geschat_label(d: &Zeteldeel, g: f32) -> f32 {
+    let cijfers = d.zetels.to_string().len() as f32;
+    (cijfers * 0.62 + d.kort.chars().count() as f32 * 0.6) * g + 8.0
 }
 
 /// Een getal dat bij Bijwerken telt vanaf `was`.
@@ -489,6 +523,7 @@ pub fn bouw_inhoud(
             lijn_bij_76,
             naamletter,
             labels,
+            twee_labelrijen,
             tekstkleur,
             naamkleur,
         } => {
@@ -505,8 +540,18 @@ pub fn bouw_inhoud(
                 naam_kleur: kleur(*naamkleur),
             };
             let delen = met_vorige(delen, vorig.as_ref(), breed);
-            let ruimte = labelruimte(&delen.iter().map(|(d, _, naar, _)| (!d.kort.is_empty(), *naar)).collect::<Vec<_>>());
-            for ((d, van, naar, was), ruimte) in delen.into_iter().zip(ruimte) {
+            let mut x = 0.0;
+            let plaatsen: Vec<(f32, f32, Option<f32>)> = delen
+                .iter()
+                .map(|(d, _, naar, _)| {
+                    let begin = x;
+                    x += naar * b;
+                    let label = *labels && *naar > 0.0 && d.partij.is_some() && !d.kort.is_empty();
+                    (begin, naar * b, label.then(|| geschat_label(d, 30.0)))
+                })
+                .collect();
+            let rijen = labelrijen(&plaatsen, b, *twee_labelrijen);
+            for ((d, van, naar, was), plaats) in delen.into_iter().zip(rijen) {
                 let kl = kleur(d.kleur).with_alpha(f32::from(d.dekking) / 100.0);
                 let seg = commands
                     .spawn((
@@ -535,19 +580,19 @@ pub fn bouw_inhoud(
                 ));
                 // zonder korte naam geen label: Zetels zonder Partij, en in de Coalitiebalk de
                 // Partijen buiten de coalitie
-                if *labels && naar > 0.0 && d.partij.is_some() && !d.kort.is_empty() {
+                if let Some((rij, ruimte)) = plaats {
                     let label = commands
                         .spawn((
                             ChildOf(seg),
                             Node {
                                 position_type: PositionType::Absolute,
                                 left: Val::Px(0.0),
-                                top: Val::Px(h + 20.0),
+                                top: Val::Px(h + 20.0 + rij as f32 * LABELRIJ),
                                 flex_direction: FlexDirection::Column,
                                 align_items: AlignItems::FlexStart,
                                 ..default()
                             },
-                            PastIn(b * ruimte),
+                            PastIn(ruimte),
                         ))
                         .id();
                     zetellabel(commands, bestanden, label, d, was, vorig.as_ref().map(|v| v.duur), &letters, 30.0, dekking);
@@ -978,59 +1023,67 @@ pub fn bouw_inhoud(
             naamkleur,
             kaartjes: true,
         } => {
-            // Elke Partij een eigen kaartje, even breed: de Zetels boven de naam, een streep in de
-            // partijkleur onderaan.
+            // Elke Partij een eigen kaartje, even breed, net als het Opbouwlabel: een streep in de
+            // partijkleur links, de Zetels, dan de naam. Meer dan KAARTJES_PER_RIJ Partijen gaan
+            // over twee rijen, de linker helft van de Zaal boven, zodat de naam groot genoeg blijft.
+            let n = labels.len().max(1);
+            let per_rij = if n > KAARTJES_PER_RIJ { n.div_ceil(2) } else { n };
+            let rijen = n.div_ceil(per_rij) as f32;
+            let breed = ((b - KAARTJE_TUSSEN * (per_rij as f32 - 1.0)) / per_rij as f32).floor();
+            let hoog = ((h - KAARTJE_TUSSEN * (rijen - 1.0)) / rijen).floor();
             commands.entity(binnen).insert(Node {
                 flex_direction: FlexDirection::Row,
-                column_gap: Val::Px(8.0),
-                align_items: AlignItems::Stretch,
+                flex_wrap: FlexWrap::Wrap,
+                column_gap: Val::Px(KAARTJE_TUSSEN),
+                row_gap: Val::Px(KAARTJE_TUSSEN),
+                align_content: AlignContent::FlexStart,
                 ..vol
             });
             let (tk, nk) = (kleur(*tekstkleur), kleur(*naamkleur));
             let g = f32::from(*grootte);
-            let vlakkleur = k.with_alpha(0.92);
-            let n = labels.len().max(1) as f32;
-            let tekstbreedte = (b - 8.0 * (n - 1.0)) / n - 12.0;
+            let vlakkleur = k.with_alpha(0.97);
+            let streep = 10.0;
             for l in labels {
                 let kaartje = commands
                     .spawn((
                         ChildOf(binnen),
                         Node {
-                            flex_grow: 1.0,
-                            flex_basis: Val::Px(0.0),
-                            flex_direction: FlexDirection::Column,
+                            width: Val::Px(breed),
+                            height: Val::Px(hoog),
+                            flex_direction: FlexDirection::Row,
                             align_items: AlignItems::Center,
-                            justify_content: JustifyContent::Center,
-                            padding: UiRect::bottom(Val::Px(8.0)),
-                            border_radius: BorderRadius::all(Val::Px(9.0)),
+                            column_gap: Val::Px(14.0),
+                            overflow: Overflow::clip(),
                             ..default()
                         },
                         BackgroundColor(vlakkleur.with_alpha(vlakkleur.alpha() * dekking)),
                         Deel { kleur: vlakkleur },
                     ))
                     .id();
-                let regels = [
-                    l.zetels.map(|z| (z.to_string(), letter, (g * 2.1).round(), tk)),
-                    l.kort.as_deref().map(|t| (t.to_string(), naamletter, g, nk)),
-                ];
-                for (tekst, letter, grootte, kl) in regels.into_iter().flatten() {
-                    let t = tekst_deel(commands, bestanden, kaartje, &tekst, letter, grootte, kl, Uitlijning::Midden, dekking);
-                    commands.entity(t).insert((TextLayout::no_wrap(), Krimp { grootte, breedte: tekstbreedte }));
-                }
                 let pk = kleur(l.kleur);
                 commands.spawn((
                     ChildOf(kaartje),
-                    Node {
-                        position_type: PositionType::Absolute,
-                        left: Val::Px(8.0),
-                        right: Val::Px(8.0),
-                        bottom: Val::Px(3.0),
-                        height: Val::Px(5.0),
-                        ..default()
-                    },
+                    Node { width: Val::Px(streep), height: Val::Percent(100.0), flex_shrink: 0.0, ..default() },
                     BackgroundColor(pk.with_alpha(dekking)),
                     Deel { kleur: pk },
                 ));
+                let cijfer = (g * 1.5).round();
+                // de Zetels in een vaste kolom, zodat de namen onder elkaar beginnen
+                let vak = commands
+                    .spawn((
+                        ChildOf(kaartje),
+                        Node { width: Val::Px(cijfer * 1.25), flex_shrink: 0.0, justify_content: JustifyContent::FlexEnd, ..default() },
+                    ))
+                    .id();
+                if let Some(z) = l.zetels {
+                    let t = tekst_deel(commands, bestanden, vak, &z.to_string(), letter, cijfer, tk, Uitlijning::Rechts, dekking);
+                    commands.entity(t).insert(TextLayout::no_wrap());
+                }
+                if let Some(kort) = l.kort.as_deref() {
+                    let rest = breed - streep - cijfer * 1.25 - 2.0 * 14.0 - 10.0;
+                    let t = tekst_deel(commands, bestanden, kaartje, kort, naamletter, g, nk, Uitlijning::Links, dekking);
+                    commands.entity(t).insert((TextLayout::no_wrap(), Krimp { grootte: g, breedte: rest }));
+                }
             }
         }
         Inhoud::Opbouwlabel {
@@ -1072,7 +1125,6 @@ pub fn bouw_inhoud(
                             flex_direction: FlexDirection::Row,
                             align_items: AlignItems::Center,
                             padding: UiRect::right(Val::Px(50.0)),
-                            border_radius: BorderRadius::all(Val::Px(14.0)),
                             ..default()
                         },
                         BackgroundColor(vlakkleur.with_alpha(vlakkleur.alpha() * dekking)),
@@ -1086,7 +1138,6 @@ pub fn bouw_inhoud(
                         width: Val::Px(18.0),
                         height: Val::Percent(100.0),
                         margin: UiRect::right(Val::Px(34.0)),
-                        border_radius: BorderRadius::all(Val::Px(7.0)),
                         ..default()
                     },
                     BackgroundColor(pk.with_alpha(dekking)),
@@ -1369,13 +1420,32 @@ mod tests {
 
     #[test]
     fn een_label_mag_doorlopen_over_de_delen_erna_zonder_label() {
-        // (heeft een label, breedte): D66, CDA, JA21, dan de rest van de Coalitiebalk zonder label
-        let delen = [(true, 0.2), (true, 0.1), (true, 0.05), (false, 0.3), (false, 0.35)];
-        let r = labelruimte(&delen);
-        assert_eq!(r.len(), 5);
-        assert!((r[0] - 0.2).abs() < 1e-6, "tot het volgende label");
-        assert!((r[2] - 0.7).abs() < 1e-6, "de laatste in de coalitie loopt door tot het eind");
-        assert_eq!(labelruimte(&[]), Vec::<f32>::new());
+        // (begin, breedte, label): D66, CDA, JA21, dan de rest van de Coalitiebalk zonder label
+        let delen = [
+            (0.0, 200.0, Some(150.0)),
+            (200.0, 100.0, Some(90.0)),
+            (300.0, 50.0, Some(120.0)),
+            (350.0, 300.0, None),
+            (650.0, 350.0, None),
+        ];
+        let r = labelrijen(&delen, 1000.0, false);
+        assert_eq!(r[0], Some((0, 200.0)), "tot het volgende label");
+        assert_eq!(r[2], Some((0, 700.0)), "de laatste in de coalitie loopt door tot het eind");
+        assert_eq!(r[3], None);
+        assert_eq!(labelrijen(&[], 1000.0, false), Vec::new());
+    }
+
+    #[test]
+    fn de_grootste_partijen_krijgen_eerst_een_plek_en_de_rest_gaat_naar_de_tweede_rij_of_valt_weg() {
+        // twee smalle delen vooraan, dan een groot deel dat ze anders zou verliezen
+        let delen = [(0.0, 20.0, Some(80.0)), (20.0, 20.0, Some(80.0)), (40.0, 40.0, Some(80.0)), (80.0, 400.0, Some(120.0))];
+        let twee = labelrijen(&delen, 1000.0, true);
+        assert_eq!(twee[3], Some((0, 920.0)), "het grote deel staat op de eerste rij");
+        assert_eq!(twee[2], Some((1, 960.0)), "het op een na grootste op de tweede rij");
+        assert_eq!(twee[0], None, "botst op beide rijen");
+        let een = labelrijen(&delen, 1000.0, false);
+        assert_eq!(een[3], Some((0, 920.0)));
+        assert_eq!(een[2], None, "zonder tweede rij valt het weg");
     }
 
     #[test]

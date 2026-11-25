@@ -52,7 +52,7 @@ vorige_set: boolean,
 pijlen: boolean, 
 /**
  * Coalitiebalk: de Partijen van de Coalitiebouwer vooraan in hun partijkleur, de rest
- * erachter in Hoofd op 20 procent zonder label.
+ * erachter in Tekst op [`RESTDEKKING`] procent zonder label.
  */
 coalitie: boolean, } | { "blok": "Partijlogo", bron: Partijbron, hoek: number, } | { "blok": "FotoKamerlid", hoek: number, letter: Letterkeuze, } | { "blok": "Partijregel", bron: Partijbron, letter: Letterkeuze, grootte: number, tekst: Tekstbron, tekstletter: Letterkeuze, tekstgrootte: number, } | { "blok": "Lijn", dekking: number, } | { "blok": "Programmalogo", letter: Letterkeuze, dekking: number, } | { "blok": "Afbeelding", bestand: string, dekking: number, } | { "blok": "Partijlabels", letter: Letterkeuze, naamletter: Letterkeuze, grootte: number, 
 /**

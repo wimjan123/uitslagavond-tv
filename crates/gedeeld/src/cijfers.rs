@@ -323,13 +323,14 @@ fn naam_van(w: &serde_json::Value, veld: &str, anders: &str) -> String {
         .to_owned()
 }
 
-/// Kleuren voor een Partij zonder kleur: de 20 kleuren met groot onderling contrast van
-/// Kenneth Kelly (1965), zonder wit en zwart. Een nieuwe Partij krijgt de kleur die het verst
-/// afligt van alle kleuren die al in gebruik zijn.
-pub const TIJDELIJKE_KLEUREN: [&str; 20] = [
-    "#F3C300", "#875692", "#F38400", "#A1CAF1", "#BE0032", "#C2B280", "#848482", "#008856",
-    "#E68FAC", "#0067A5", "#F99379", "#604E97", "#F6A600", "#B3446C", "#DCD300", "#882D17",
-    "#8DB600", "#654522", "#E25822", "#2B3D26",
+/// Kleuren voor een Partij zonder kleur: de kleuren met groot onderling contrast van Kenneth
+/// Kelly (1965), zonder wit en zwart, en zonder grijs (`#848482`), bruin (`#654522`) en
+/// olijfzwart (`#2B3D26`): die vallen weg op grafiet en tussen het hout van de Zaal. Een nieuwe
+/// Partij krijgt de kleur die het verst afligt van alle kleuren die al in gebruik zijn.
+pub const TIJDELIJKE_KLEUREN: [&str; 17] = [
+    "#F3C300", "#875692", "#F38400", "#A1CAF1", "#BE0032", "#C2B280", "#008856", "#E68FAC",
+    "#0067A5", "#F99379", "#604E97", "#F6A600", "#B3446C", "#DCD300", "#882D17", "#8DB600",
+    "#E25822",
 ];
 
 fn geldige_kleur(k: &str) -> bool {
