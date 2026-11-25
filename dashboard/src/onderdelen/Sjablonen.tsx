@@ -309,7 +309,7 @@ export function SjablonenDeel() {
 function SjabloonVelden({ sjabloon: s, vast, zet }: { sjabloon: Sjabloon; vast: boolean; zet(s: Sjabloon): void }) {
   const regie = useRegie();
   const stand = regie.stand?.stand;
-  const keuzes = cameraKeuzes(stand?.standpunten ?? [], stand?.cameraritten ?? []);
+  const keuzes = cameraKeuzes(stand?.standpunten ?? [], stand?.cameraritten ?? [], true);
   const stijlOvergang = (stand?.stijl ?? STANDAARD_STIJL).kleurovergang;
   const wijzig = (w: (s: Sjabloon) => void) => {
     const n = structuredClone(s);

@@ -28,7 +28,11 @@ export function toetsVan(p: { letter: string; toets?: string; vast?: boolean }):
   return p.vast ? p.letter : (p.toets ?? null);
 }
 
-export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[]): Camerakeus[] {
+/** Aanschuiven: langzaam naar het blok van de gekozen Partij (gelijk aan `camera::AANSCHUIVEN`). */
+export const AANSCHUIVEN = "aanschuiven";
+
+/** Alle Standpunten en Cameraritten; met `aanschuiven` ook Aanschuiven, voor een Graphic met een Partij. */
+export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[], aanschuiven = false): Camerakeus[] {
   const keus = (letter: string, toets: string | null, naam: string, soort: Camerakeus["soort"]): Camerakeus => ({
     letter,
     toets,
@@ -39,6 +43,7 @@ export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[]): Cam
   return [
     ...standpunten.map((p) => keus(p.letter, toetsVan(p), p.naam, "Standpunt")),
     ...ritten.map((r) => keus(r.letter, toetsVan(r), r.naam, "Camerarit")),
+    ...(aanschuiven ? [keus(AANSCHUIVEN, null, "Aanschuiven naar de gekozen Partij", "Standpunt")] : []),
   ];
 }
 

@@ -127,7 +127,7 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
   const regie = useRegie();
   const status = statusVan(p, s);
   const letter = p.standpunt ?? standaardStandpunt(p.graphic);
-  const standpunt = cameraKeuzes(s.standpunten, s.cameraritten).find((x) => x.letter === letter);
+  const standpunt = cameraKeuzes(s.standpunten, s.cameraritten, true).find((x) => x.letter === letter);
   const rij = status.live ? "rij-live" : status.klaar ? "rij-klaar" : "";
   const zetKlaar = () => verbonden && void regie.stuur({ soort: "ZetPresetKlaar", nummer: p.nummer }, PRESETS);
   return (
