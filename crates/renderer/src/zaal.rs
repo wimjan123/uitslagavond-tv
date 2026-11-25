@@ -891,7 +891,7 @@ const OPBOUWLICHT_HOOGTE: f32 = 3.2;
 /// Zo ver buiten de buitenste Stoel van het blok reikt de kring, in meter.
 const OPBOUWLICHT_RAND: f32 = 0.9;
 /// De sterkte op de top van de flits en daarna, in lumen.
-const OPBOUWLICHT_TOP: f32 = 9000.0;
+const OPBOUWLICHT_TOP: f32 = 1200.0;
 const OPBOUWLICHT_BLIJFT: f32 = 0.45;
 /// Hoeveel van de partijkleur in het licht zit; de rest is warm wit.
 const OPBOUWLICHT_KLEUR: f32 = 0.35;
@@ -1442,7 +1442,8 @@ fn partijkleur(stand: &gedeeld::Stand, graphic: &gedeeld::Graphic) -> Option<Kle
 /// Tussen gekleurde Stoelen licht hij boven zijn buren uit.
 fn uitgelicht(leer: LinearRgba, straalt: LinearRgba, partij: Option<Kleur>, kracht: f32, nabij: f32, sterkte: f32) -> (LinearRgba, LinearRgba) {
     let eigen = partij.map_or(leer * (1.0 / kalibratie().albedo), |k| gekalibreerd(k, nabij)).with_alpha(1.0);
-    let gewoon = partij.map_or(eigen * (kalibratie().straalt * kalibratie().nabij_straalt), |k| straling_bij(k, kracht, nabij));
+    let kal = kalibratie();
+    let gewoon = partij.map_or(eigen * (kal.straalt * (1.0 - (1.0 - kal.nabij_straalt) * nabij)), |k| straling_bij(k, kracht, nabij));
     let naar = partij.map_or(leer, |k| leer_bij(k, nabij));
     let straling = if straalt == LinearRgba::BLACK { gewoon } else { gewoon + eigen * UITGELICHT_EXTRA };
     (leer.mix(&naar, sterkte), straalt.mix(&straling, sterkte))
@@ -1981,14 +1982,14 @@ mod tests {
         wacht(&mut app, 0.74);
         assert!(app.world().resource::<Opbouwstand>().bezig);
         assert_eq!(stap(&app), None, "eerst worden de Stoelen donker");
-        let wachtkleur = lin(OPBOUW_WACHTKLEUR);
+        let wachtkleur = Srgba::from(leeg_leer());
         let bijna = |l: &Srgba| (l.red - wachtkleur.red).abs().max((l.green - wachtkleur.green).abs()) < 0.01;
         assert!(leerkleuren(&mut app).iter().all(bijna), "alle 150 (bijna) in de wachtkleur");
 
         // de grootste Partij (nu rood, 110) eerst en flitst kort op; de rest wacht donker
         wacht(&mut app, 0.36);
         assert_eq!(stap(&app), Some(rood));
-        assert_eq!(tel(&mut app, OPBOUW_WACHTKLEUR), 40);
+        assert_eq!(leerkleuren(&mut app).iter().filter(|l| ongeveer(**l, wachtkleur)).count(), 40);
         assert_eq!(tel(&mut app, rood), 0, "rood flitst, lichter dan zijn eigen kleur");
         // midden in de stap staat rood in zijn eigen kleur
         wacht(&mut app, 0.4);
@@ -2002,6 +2003,12 @@ mod tests {
         let vol = Srgba::from(leer_in_de_zaal(rood));
         assert!(grijs < 0.3 * (vol.red - vol.green).abs(), "gedimd is bijna grijs: {gedimd:?} tegen {vol:?}");
         assert!(gedimd.red + gedimd.green + gedimd.blue < vol.red + vol.green + vol.blue, "en donkerder");
+        // drie lichtheden: leeg donker, al geweest middengrijs, aan de beurt vol
+        let licht = |l: Srgba| helderheid(LinearRgba::from(l));
+        assert!(licht(gedimd) > 2.0 * licht(wachtkleur), "al geweest is veel lichter dan leeg: {gedimd:?} {wachtkleur:?}");
+        let blauw: Kleur = "#0e3a8c".parse().unwrap();
+        let (b, r) = (licht(Srgba::from(gedimd_leer(blauw))), licht(gedimd));
+        assert!((b - r).abs() < 0.1 * r, "elke Partij even licht gedimd, ook een donkere: {b} {r}");
         // na de laatste stap komt alles tegelijk terug in zijn eigen kleur
         wacht(&mut app, 1.5);
         assert_eq!(tel(&mut app, rood), 110);
@@ -2208,6 +2215,25 @@ mod tests {
                 e.red + e.green + e.blue
             })
             .collect()
+    }
+
+    #[test]
+    fn de_lichtkring_flitst_met_de_stap_blijft_zacht_branden_en_staat_boven_het_blok() {
+        let per_stap = 1.5;
+        assert_eq!(opbouwlicht_sterkte(0.0, per_stap), 0.0, "begint uit");
+        let top = (0..30).map(|i| opbouwlicht_sterkte(i as f32 * 0.05, per_stap)).fold(0.0, f32::max);
+        assert!(top > 0.95, "flitst op: {top}");
+        let midden = opbouwlicht_sterkte(0.9, per_stap);
+        assert!((midden - OPBOUWLICHT_BLIJFT).abs() < 0.05, "brandt zacht: {midden}");
+        assert!(opbouwlicht_sterkte(per_stap, per_stap) < 1e-3, "uit voor de volgende stap");
+        // een klein blok van vier: een smalle kring recht erboven
+        let vier: Vec<usize> = stoelen_van_links_naar_rechts().into_iter().take(4).collect();
+        let (plek, hoek) = opbouwlicht_plek(&vier).unwrap();
+        let midden = vier.iter().map(|&i| Vec3::from(gedeeld::zaalkaart::STOELPLEKKEN[i])).sum::<Vec3>() / 4.0;
+        assert!(plek.with_y(0.0).distance(midden.with_y(0.0)) < 1e-3 && plek.y > midden.y + 2.0);
+        assert!(hoek < 1.0, "smal: {hoek}");
+        let alle: Vec<usize> = (0..AANTAL_STOELEN).collect();
+        assert!(opbouwlicht_plek(&alle).unwrap().1 > hoek);
     }
 
     #[test]

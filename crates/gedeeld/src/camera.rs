@@ -216,16 +216,18 @@ impl Standpunt {
             // daar vliegen (de studio in `crates/server/src/camera.rs`).
             //
             // Van hoog en ver, met een lens van 48 graden (council-ronde 3: 58 gaf te veel
-            // lege ruimte rond de banken): alle 150 Stoelen staan van x 45 tot 1875 en van y 373
-            // (de rugleuningen van de achterste rij, net onder de kaartjes van de Zetelverdeling
-            // tot y 360) tot ongeveer 732 (de voorste Stoelen opzij, boven het Opbouwlabel vanaf
-            // y 760). De Stoelen achterin zijn groter dan van dichtbij met een wijde lens, en het
-            // plafond is uit beeld. Sjablonen met een paneel onderin kiezen
-            // [`BOVEN_HET_PANEEL`].
+            // lege ruimte rond de banken): alle 150 Stoelen staan van x 30 tot 1890 en van y 426
+            // (de rugleuningen van de achterste rij, 66 px onder de kaartjes van de
+            // Zetelverdeling tot y 360) tot ongeveer 787 (de voorste Stoelen helemaal opzij; in
+            // het midden, waar het Opbouwlabel vanaf y 760 staat, tot y 643). Iets minder steil
+            // dan in ronde 4 (-28 graden): toen zaten de kaartjes strak tegen de achterste rij en
+            // vulden lege kabinetsbanken het onderste derde (council-ronde 4). De Stoelen
+            // achterin zijn groter dan van dichtbij met een wijde lens, en het plafond is uit
+            // beeld. Sjablonen met een paneel onderin kiezen [`BOVEN_HET_PANEEL`].
             vast(
                 "A",
                 "Totaal vanaf voorzitter",
-                Camerastand::uit_graden([0.0, 10.5, 12.5], 0.0, -28.0, 48.0),
+                Camerastand::uit_graden([0.0, 10.5, 12.5], 0.0, -25.5, 48.0),
             ),
             vast(
                 "S",
@@ -261,10 +263,11 @@ impl Standpunt {
 /// [`Standpunt::vaste`]. Een Stand van een oudere versie bewaart zijn vaste Standpunten zelf;
 /// staat er een nog op een vroegere standaard, dan krijgt hij die van nu
 /// ([`ververs_vaste_standpunten`]).
-const VORIGE_STANDAARDEN: [(&str, [f32; 3], f32, f32, f32); 3] = [
+const VORIGE_STANDAARDEN: [(&str, [f32; 3], f32, f32, f32); 4] = [
     ("A", [0.0, 4.5, 4.45], 0.0, -23.0, 99.0),
     ("A", [0.0, 4.56, 4.48], 0.0, -25.0, 96.5),
     ("A", [0.0, 10.0, 9.0], 0.0, -32.0, 58.3),
+    ("A", [0.0, 10.5, 12.5], 0.0, -28.0, 48.0),
 ];
 
 /// Totaal boven het paneel: de sleutel van een vast shot voor Sjablonen met een paneel onderin
