@@ -2,20 +2,15 @@
 import type { ReactNode } from "react";
 
 export function Werkbalk({ naam, children, hint }: { naam: string; children?: ReactNode; hint?: ReactNode }) {
+  // Zonder filters of hint geen lege band onder de multiviewer: dan alleen de kop voor schermlezers.
+  if (!children && !hint) return <h2 className="alleen-voorlezen">{naam}</h2>;
   return (
     <div className="werkbalk">
-      <h2 className="label">{naam}</h2>
+      {/* De naam staat al op het tabblad; hier alleen voor schermlezers. */}
+      <h2 className="alleen-voorlezen">{naam}</h2>
       {children}
       {hint && <span className="werkbalk-hint">{hint}</span>}
     </div>
   );
 }
 
-/** De sneltoetsen om te tonen, voor rechts in de werkbalk. */
-export function TakeHint() {
-  return (
-    <>
-      <kbd>Spatie</kbd> toont · <kbd>B</kbd> werkt bij · <kbd>X</kbd> haalt uit beeld · <kbd>Z</kbd> kleur uit · <kbd>C</kbd> slaat Opbouw over
-    </>
-  );
-}

@@ -586,7 +586,7 @@ function BlokVelden({ blok: b, stijl, zet }: { blok: Blok; stijl: Stijl; zet(w: 
             </select>
           </label>
           <label className="veld">
-            <span className="zacht">Uit beeld</span>
+            <span className="zacht">Bij Take out</span>
             <select value={b.animatie.eruit} onChange={(e) => zet((x) => (x.animatie.eruit = e.target.value as Blok["animatie"]["eruit"]))}>
               {ERUIT.map((x) => (
                 <option key={x.eruit} value={x.eruit}>

@@ -31,11 +31,16 @@ export function toetsVan(p: { letter: string; toets?: string; vast?: boolean }):
 /** Aanschuiven: langzaam naar het blok van de gekozen Partij (gelijk aan `camera::AANSCHUIVEN`). */
 export const AANSCHUIVEN = "aanschuiven";
 
+/** Camera blijft staan: Toon verandert alleen de Graphic en de Stoelen, de Live-camera blijft
+ * waar hij is, ook als hij vrij rijdt of een rit speelt (gelijk aan `camera::BLIJF`). */
+export const BLIJF = "blijf";
+export const BLIJF_NAAM = "Camera blijft staan";
+
 /** Totaal boven het paneel: alle Stoelen boven een paneel onderin (gelijk aan `camera::BOVEN_HET_PANEEL`). */
 export const BOVEN_HET_PANEEL = "boven-het-paneel";
 export const BOVEN_HET_PANEEL_NAAM = "Totaal boven het paneel";
 
-/** Alle Standpunten en Cameraritten, met Totaal boven het paneel; met `aanschuiven` ook Aanschuiven, voor een Graphic met een Partij. */
+/** Camera blijft staan, alle Standpunten en Cameraritten, en Totaal boven het paneel; met `aanschuiven` ook Aanschuiven, voor een Graphic met een Partij. */
 export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[], aanschuiven = false): Camerakeus[] {
   const keus = (letter: string, toets: string | null, naam: string, soort: Camerakeus["soort"]): Camerakeus => ({
     letter,
@@ -45,6 +50,7 @@ export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[], aans
     soort,
   });
   return [
+    keus(BLIJF, null, BLIJF_NAAM, "Standpunt"),
     ...standpunten.map((p) => keus(p.letter, toetsVan(p), p.naam, "Standpunt")),
     ...ritten.map((r) => keus(r.letter, toetsVan(r), r.naam, "Camerarit")),
     keus(BOVEN_HET_PANEEL, null, BOVEN_HET_PANEEL_NAAM, "Standpunt"),
@@ -142,16 +148,21 @@ export function komma(v: number): string {
   return v.toFixed(1).replace(".", ",");
 }
 
-/** De tijdregel in de lijst, zoals "16,0 s · herhaalt". */
+/** Een duur zoals op de knoppen in de multiviewer: hele seconden zonder ",0" ("16 s"), anders "2,5 s". */
+export function duur(v: number): string {
+  return Math.abs(v - Math.round(v)) < 0.05 ? `${Math.round(v)} s` : `${komma(v)} s`;
+}
+
+/** De tijdregel in de lijst, zoals "16 s · herhaalt". */
 export function ritTiming(r: Camerarit): string {
-  const s = `${komma(r.bijschaving.duur_s)} s`;
+  const s = duur(r.bijschaving.duur_s);
   return r.bijschaving.eind === "Herhalen" ? `${s} · herhaalt` : s;
 }
 
-/** De tijdregel van een Standpunt, zoals "2,0 s · schuift" of "knipt". */
+/** De tijdregel van een Standpunt, zoals "2 s · schuift" of "knipt". */
 export function standpuntTiming(p: Standpunt): string {
   if (p.overgang.soort === "Knippen") return "knipt";
-  const s = `${komma(p.overgang.duur_s)} s`;
+  const s = duur(p.overgang.duur_s);
   return p.na_aankomst.soort === "Schuiven" ? `${s} · schuift` : s;
 }
 

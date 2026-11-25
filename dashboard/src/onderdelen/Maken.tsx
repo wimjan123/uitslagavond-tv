@@ -10,8 +10,10 @@ import type { Graphic } from "../typen/Graphic";
 import type { Indeling } from "../typen/Indeling";
 import type { Sjabloon } from "../typen/Sjabloon";
 import { benodigd, geldendSjabloon, standaardVan } from "../vormgeving/sjablonen";
+import { Schets } from "../presets/Schets";
+import { CameraKeuze } from "./CameraKeuze";
 import { Persoonskaart } from "./Persoonskaart";
-import { TakeHint, Werkbalk } from "./Werkbalk";
+import { Werkbalk } from "./Werkbalk";
 
 // Gelijk aan MAX_KOP en MAX_REGEL in crates/gedeeld.
 const MAX_KOP = 80;
@@ -70,7 +72,7 @@ export function Maken() {
   const gekozen = typeof keuze === "number" ? keuze : eigenGekozen ? -1 : 0;
   return (
     <>
-      <Werkbalk naam="Maken" hint={<TakeHint />} />
+      <Werkbalk naam="Maken" />
       <div className="werkvlak-inhoud twee-delen">
         <div className="lijst">
           <table className="tabel">
@@ -152,10 +154,10 @@ function Titelkaart() {
   };
 
   return (
+    <div className="maken-met-schets">
     <form className="paneel-detail" onSubmit={zetKlaar}>
       <header>
-        <h3 className="kop-regel">Titelkaart</h3>
-        <p className="zacht">{SJABLONEN[0].uitleg}</p>
+        <h3 className="kop-regel" title={SJABLONEN[0].uitleg}>Titelkaart</h3>
       </header>
       <label className="veld">
         <span className="veld-kop">
@@ -164,7 +166,7 @@ function Titelkaart() {
             {kop.length}/{MAX_KOP}
           </span>
         </span>
-        <input value={kop} maxLength={MAX_KOP} onChange={(e) => setKop(e.target.value)} placeholder="De Uitslagavond" />
+        <input value={kop} maxLength={MAX_KOP} onChange={(e) => setKop(e.target.value)} placeholder="bijv. De Uitslagavond" />
       </label>
       <label className="veld">
         <span className="veld-kop">
@@ -173,49 +175,51 @@ function Titelkaart() {
             {regel.length}/{MAX_REGEL}
           </span>
         </span>
-        <input value={regel} maxLength={MAX_REGEL} onChange={(e) => setRegel(e.target.value)} placeholder="Live vanuit Den Haag" />
+        <input value={regel} maxLength={MAX_REGEL} onChange={(e) => setRegel(e.target.value)} placeholder="bijv. Live vanuit Den Haag" />
       </label>
-      <label className="veld">
-        <span className="veld-kop">
-          <span className="label">Standpunt</span>
-          <span className="zacht">Toon beweegt de camera hierheen</span>
-        </span>
-        <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
-          <option value="">Van het Sjabloon{standaard ? ` (${standaard.tekst})` : ""}</option>
-          {(["Standpunt", "Camerarit"] as const).map((soort) => (
-            <optgroup key={soort} label={soort === "Standpunt" ? "Standpunten" : "Cameraritten"}>
-              {keuzes
-                .filter((k) => k.soort === soort)
-                .map((k) => (
-                  <option key={k.letter} value={k.letter}>
-                    {k.tekst}
-                  </option>
-                ))}
-            </optgroup>
-          ))}
-        </select>
-      </label>
+      <CameraKeuze
+        waarde={standpunt}
+        zet={setStandpunt}
+        standaard={standaard?.tekst ?? null}
+        opties={keuzes.map((k) => ({ waarde: k.letter, tekst: k.tekst, soort: k.soort }))}
+      />
       <div className="knoppen">
-        <button className="knop knop-hoofd" type="submit" disabled={!verbonden || !graphic.kop}>
+        <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic.kop}>
           Zet klaar
         </button>
-        <button className="knop" type="button" disabled={!verbonden || !klaarIsTitelkaart || !graphic.kop || zelfde} onClick={wijzig}>
-          Wijzig klaargezette
+        <button
+          className="knop"
+          type="button"
+          disabled={!verbonden || !klaarIsTitelkaart || !graphic.kop || zelfde}
+          title={klaarIsTitelkaart ? "Past de Titelkaart in Preview aan; staat die al in Live, dan pas na Update" : "Kan als er een Titelkaart klaarstaat"}
+          onClick={wijzig}
+        >
+          Pas Preview aan
         </button>
-        <button className="knop knop-stil" type="button" disabled={!klaarIsTitelkaart || zelfde} onClick={neemOver}>
-          Neem over uit Voorbeeld
+        <button
+          className="knop knop-stil"
+          type="button"
+          disabled={!klaarIsTitelkaart || zelfde}
+          title={klaarIsTitelkaart ? "Haalt kop en regel uit de Titelkaart die klaarstaat" : "Kan als er een Titelkaart klaarstaat"}
+          onClick={neemOver}
+        >
+          Laad uit Preview
         </button>
+        {!graphic.kop && <span className="knop-reden">Vul eerst een kop in</span>}
       </div>
-      <p className="zacht">
-        Zet klaar maakt een nieuwe Graphic. Wijzig klaargezette past de Graphic in het Voorbeeld aan; staat die al in de Ether,
-        dan verandert de Ether pas na Bijwerken.
-      </p>
       {melding && (
         <p className="melding" role="alert">
           {melding}
         </p>
       )}
     </form>
+    <figure className="maken-schets">
+      <figcaption className="label">Schets</figcaption>
+      {regie.stand && (
+        <Schets graphic={{ sjabloon: "Titelkaart", kop: kop.trim() || "Kop", regel: regel.trim() }} kleuren={regie.stand.stand.stijl.kleuren} />
+      )}
+    </figure>
+    </div>
   );
 }
 
@@ -258,8 +262,7 @@ function Zetelverdeling() {
   return (
     <form className="paneel-detail" onSubmit={zetKlaar}>
       <header>
-        <h3 className="kop-regel">{SJABLONEN[1].naam}</h3>
-        <p className="zacht">{SJABLONEN[1].uitleg}</p>
+        <h3 className="kop-regel" title={SJABLONEN[1].uitleg}>{SJABLONEN[1].naam}</h3>
       </header>
       <fieldset className="veld">
         <span className="veld-kop">
@@ -281,7 +284,7 @@ function Zetelverdeling() {
         <label className="veld">
           <span className="veld-kop">
             <span className="label">Set</span>
-            <span className="zacht">De Graphic houdt deze cijfers vast tot Bijwerken</span>
+            <span className="zacht">De Graphic houdt deze cijfers vast tot Update</span>
           </span>
           <select value={gekozenSet?.id ?? ""} onChange={(e) => setSet(e.target.value)}>
             {sets.map((x) => (
@@ -304,26 +307,18 @@ function Zetelverdeling() {
           <input type="checkbox" checked={zetels} onChange={(e) => setZetels(e.target.checked)} /> Zetels
         </label>
       </fieldset>
-      <label className="veld">
-        <span className="veld-kop">
-          <span className="label">Standpunt</span>
-          <span className="zacht">Toon beweegt de camera hierheen</span>
-        </span>
-        <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
-          <option value="">Van het Sjabloon{standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}</option>
-          {standpunten.map((p) => (
-            <option key={p.letter} value={p.letter}>
-              {p.letter} {p.naam}
-            </option>
-          ))}
-        </select>
-      </label>
+      <CameraKeuze
+        waarde={standpunt}
+        zet={setStandpunt}
+        standaard={standaard ? `${standaard.letter} · ${standaard.naam}` : null}
+        opties={standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} · ${p.naam}` }))}
+      />
       <div className="knoppen">
-        <button className="knop knop-hoofd" type="submit" disabled={!verbonden || !graphic}>
+        <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
           Zet klaar
         </button>
         <button className="knop" type="button" disabled={!verbonden || !klaarIsZetelverdeling || !graphic} onClick={wijzig}>
-          Wijzig klaargezette
+          Pas Preview aan
         </button>
       </div>
       {inZaal ? (
@@ -413,14 +408,13 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
   return (
     <form className="paneel-detail" onSubmit={zetKlaar}>
       <header>
-        <h3 className="kop-regel">{sjabloon.naam}</h3>
-        <p className="zacht">{sjabloon.uitleg}</p>
+        <h3 className="kop-regel" title={sjabloon.uitleg}>{sjabloon.naam}</h3>
       </header>
       {sets.length < (twee ? 2 : 1) ? (
         <p className="melding">{twee ? "Er zijn twee sets nodig" : "Nog geen sets"}: lees eerst het invoerbestand in of maak een set (zie Systeem).</p>
       ) : (
         <>
-          {setKeuze(eerste?.id ?? "", setSet, twee ? "Eerste set" : "Set", "De Graphic houdt deze cijfers vast tot Bijwerken")}
+          {setKeuze(eerste?.id ?? "", setSet, twee ? "Eerste set" : "Set", "De Graphic houdt deze cijfers vast tot Update")}
           {twee && setKeuze(ander?.id ?? "", setTweede, "Tweede set", "Kies een andere set dan de eerste")}
           {twee && boven && onder && boven.id !== onder.id && (
             <p className="zacht">
@@ -443,26 +437,18 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
           ))}
         </select>
       </label>
-      <label className="veld">
-        <span className="veld-kop">
-          <span className="label">Standpunt</span>
-          <span className="zacht">Toon beweegt de camera hierheen</span>
-        </span>
-        <select value={standpunt} onChange={(e) => setStandpunt(e.target.value)}>
-          <option value="">Van het Sjabloon{standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}</option>
-          {standpunten.map((p) => (
-            <option key={p.letter} value={p.letter}>
-              {p.letter} {p.naam}
-            </option>
-          ))}
-        </select>
-      </label>
+      <CameraKeuze
+        waarde={standpunt}
+        zet={setStandpunt}
+        standaard={standaard ? `${standaard.letter} · ${standaard.naam}` : null}
+        opties={standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} · ${p.naam}` }))}
+      />
       <div className="knoppen">
-        <button className="knop knop-hoofd" type="submit" disabled={!verbonden || !graphic}>
+        <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
           Zet klaar
         </button>
         <button className="knop" type="button" disabled={!verbonden || klaar?.graphic.sjabloon !== soort || !graphic} onClick={wijzig}>
-          Wijzig klaargezette
+          Pas Preview aan
         </button>
       </div>
       {melding && (
@@ -524,7 +510,7 @@ function useCijferformulier() {
   const setVeld = (
     <Keuze
       label="Set"
-      uitleg="De Graphic houdt deze cijfers vast tot Bijwerken"
+      uitleg="De Graphic houdt deze cijfers vast tot Update"
       waarde={gekozenSet?.id ?? ""}
       zet={setSet}
       opties={sets.map((x) => ({ waarde: x.id, tekst: x.label }))}
@@ -537,22 +523,18 @@ function useCijferformulier() {
     const verbonden = regie.staat === "verbonden";
     return (
       <>
-        <Keuze
-          label="Standpunt"
-          uitleg="Toon beweegt de camera hierheen"
+        <CameraKeuze
           waarde={standpunt}
           zet={setStandpunt}
-          opties={[
-            { waarde: "", tekst: `Van het Sjabloon${standaard ? ` (${standaard.letter} ${standaard.naam})` : ""}` },
-            ...standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} ${p.naam}` })),
-          ]}
+          standaard={standaard ? `${standaard.letter} · ${standaard.naam}` : null}
+          opties={standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} · ${p.naam}` }))}
         />
         <div className="knoppen">
-          <button className="knop knop-hoofd" type="submit" disabled={!verbonden || !graphic}>
+          <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
             Zet klaar
           </button>
           <button className="knop" type="button" disabled={!verbonden || s?.klaar?.graphic.sjabloon !== sjabloon || !graphic} onClick={() => stuur(graphic, true)}>
-            Wijzig klaargezette
+            Pas Preview aan
           </button>
         </div>
         {melding && (
@@ -585,8 +567,7 @@ function WinstEnVerlies() {
   return (
     <form className="paneel-detail" onSubmit={zetKlaar(graphic)}>
       <header>
-        <h3 className="kop-regel">{sjabloon.naam}</h3>
-        <p className="zacht">{sjabloon.uitleg}</p>
+        <h3 className="kop-regel" title={sjabloon.uitleg}>{sjabloon.naam}</h3>
       </header>
       {sets.length < 2 ? (
         <p className="melding">Er zijn twee sets nodig: lees eerst het invoerbestand in of maak een set (zie Systeem).</p>
@@ -627,8 +608,7 @@ function PartijUitgelicht() {
   return (
     <form className="paneel-detail" onSubmit={zetKlaar(graphic)}>
       <header>
-        <h3 className="kop-regel">{sjabloon.naam}</h3>
-        <p className="zacht">{sjabloon.uitleg}</p>
+        <h3 className="kop-regel" title={sjabloon.uitleg}>{sjabloon.naam}</h3>
       </header>
       {sets.length === 0 ? (
         <p className="melding">Nog geen sets: lees eerst het invoerbestand in of maak een set (zie Systeem).</p>

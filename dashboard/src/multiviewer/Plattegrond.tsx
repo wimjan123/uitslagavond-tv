@@ -1,6 +1,6 @@
 // De plattegrond van de Zaal van bovenaf (DESIGN.md, Floor Plan): de Stoelen in de kleuren van nu,
 // een ronde pin per Standpunt, een vierkante pin met routelijn per Camerarit, een rode markering
-// waar de camera van de Ether staat en kijkt, en tijdens Oefenen of afspelen een groene voor het
+// waar de Live-camera staat en kijkt, en tijdens Oefenen of afspelen een groene voor het
 // Voorbeeld. Tijdens een opname tekent een groen spoor de route. Met de Vrije camera of Oefenen aan
 // toont een gestippelde lijn de onzichtbare ruimte waarin de camera mag vliegen. De Stoel van een
 // Persoonskaart heeft een ring; met `kiesStoel` (formulier van de Persoonskaart open) kies je een
@@ -16,8 +16,14 @@ import type { Standpunt } from "../typen/Standpunt";
 import { toetsVan } from "../regie/toetsen";
 import { HANGLAMPEN, RUIMTE, STOELPLEKKEN } from "../typen/zaalkaart";
 
-/** Van -14 tot 14 meter breed, van de tribune tot net achter de wand achter de Voorzitter, met ruimte voor pin A. */
-const VIEWBOX = "-14 -13.6 28 19.4";
+/** Van -14 tot 14 meter breed, van de tribune tot net achter de wand achter de Voorzitter. Staat een
+ * Standpunt verder naar voren (zoals A, hoog achter de Voorzitter), dan groeit de
+ * kaart naar onderen mee, zodat elke pin te zien en aan te klikken is. Niet naar de vrije camera: dan
+ * zou de kaart tijdens het vliegen verspringen. */
+function viewBox(zs: number[]): string {
+  const onder = Math.min(12, Math.max(5.8, ...zs.map((z) => z + 1.4)));
+  return `-14 -13.6 28 ${(13.6 + onder).toFixed(1)}`;
+}
 /** De vloer: de halve cirkel tot de balustrade van de tribune en de rechthoek voor de Voorzitter. */
 const VLOER = "M -13 0 A 13 13 0 0 1 13 0 L 13 0 L 11.5 0 L 11.5 4.6 L -11.5 4.6 L -11.5 0 Z";
 /** De balie van de Voorzitter en vak K, als lijn. */
@@ -81,7 +87,7 @@ export function Plattegrond({
   huidig: string | null;
   /** De Vrije camera of Oefenen staat aan: toon de onzichtbare ruimte. */
   vrij?: boolean;
-  /** Toon ook de camera van het Voorbeeld (tijdens Oefenen of als het iets afspeelt). */
+  /** Toon ook de camera van Preview (tijdens Oefenen of als het iets afspeelt). */
   voorbeeld?: boolean;
   /** Het Standpunt dat de Regie bewerkt (onder Camera). */
   gekozen?: string | null;
@@ -106,7 +112,7 @@ export function Plattegrond({
   // een vaste Camerarit heeft een toets; zijn route en pin staan alleen in beeld als hij gekozen is
   const zichtbareRitten = cameraritten.filter((r) => !r.vast || r.letter === huidig || r.letter === gekozen);
   return (
-    <svg className={`plattegrond${groot ? " plattegrond-groot" : ""}`} viewBox={VIEWBOX} role="group" aria-label="Plattegrond van de Zaal">
+    <svg className={`plattegrond${groot ? " plattegrond-groot" : ""}`} viewBox={viewBox(standpunten.map((p) => p.stand.positie[2]))} role="group" aria-label="Plattegrond van de Zaal">
       <path className="plattegrond-vloer" d={VLOER} />
       <polyline className="plattegrond-balie" points={BALIE} />
       {HANGLAMPEN.map(([x, z], i) => (
@@ -148,13 +154,13 @@ export function Plattegrond({
       {spoor.length > 1 && <polyline className="plattegrond-spoor" points={spoor.map(([x, z]) => `${x},${z}`).join(" ")} />}
       {/* onder de pins, zodat de letter leesbaar blijft als de camera op een Standpunt staat */}
       {camera && voorbeeld && (
-        <g className="camera-voorbeeld" aria-label="Camera van het Voorbeeld">
+        <g className="camera-voorbeeld" aria-label="Camera van Preview">
           <Kegel stand={camera.voorbeeld.stand} className="camera-voorbeeld-kegel" lengte={2.2} />
           <circle cx={camera.voorbeeld.stand.positie[0]} cy={camera.voorbeeld.stand.positie[2]} r={1.1} />
         </g>
       )}
       {camera && (
-        <g className="camera-ether" aria-label="Camera van de Ether">
+        <g className="camera-ether" aria-label="Live-camera">
           <Kegel stand={camera.ether.stand} className="camera-ether-kegel" lengte={2.2} />
           <circle cx={camera.ether.stand.positie[0]} cy={camera.ether.stand.positie[2]} r={1.45} />
         </g>

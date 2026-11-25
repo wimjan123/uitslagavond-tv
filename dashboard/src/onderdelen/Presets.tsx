@@ -4,7 +4,7 @@
 import { telling } from "../coalitie/coalitie";
 import { useState } from "react";
 import type { MouseEvent } from "react";
-import { graphicTekst, sjabloonNaam, standaardStandpunt, uurMinuut } from "../graphic";
+import { graphicTekst, nieuwereCijfers, sjabloonNaam, standaardStandpunt, uurMinuut } from "../graphic";
 import { cameraKeuzes } from "../regie/camerarit";
 import { Plus, Tablet } from "../iconen";
 import { Schets } from "../presets/Schets";
@@ -15,7 +15,7 @@ import { PRESETS } from "../regie/take";
 import type { Graphic } from "../typen/Graphic";
 import type { Preset } from "../typen/Preset";
 import type { Stand } from "../typen/Stand";
-import { TakeHint, Werkbalk } from "./Werkbalk";
+import { Werkbalk } from "./Werkbalk";
 import type { WerkvlakProps } from "./index";
 import "./presets.css";
 
@@ -36,14 +36,7 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
 
   return (
     <>
-      <Werkbalk
-        naam="Presets"
-        hint={
-          <>
-            <kbd>1</kbd> tot <kbd>9</kbd> zet klaar · <TakeHint />
-          </>
-        }
-      >
+      <Werkbalk naam="Presets">
         <div className="filters" role="group" aria-label="Welke groep">
           <button className="filter" aria-pressed={groep === null} onClick={() => setGroep(null)}>
             Alle {lijst.length}
@@ -67,7 +60,7 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
           onMouseDown={zonderFocus}
           onClick={() => klaar && void regie.stuur({ soort: "BewaarPreset", graphic: klaar.graphic, standpunt: klaar.standpunt }, PRESETS)}
         >
-          <Plus /> Voorbeeld bewaren als Preset
+          <Plus /> Preview bewaren als Preset
         </button>
       </Werkbalk>
       {melding && (
@@ -77,17 +70,6 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
       )}
       <div className="werkvlak-inhoud">
         <table className="tabel presets-tabel">
-          <thead>
-            <tr>
-              <th className="kol-toets">Toets</th>
-              <th className="kol-beeld">Beeld</th>
-              <th>Graphic</th>
-              <th>Gegevens</th>
-              <th className="kol-camera">Camera</th>
-              <th className="kol-tablet">Tablet</th>
-              <th className="kol-status">Status</th>
-            </tr>
-          </thead>
           <tbody>
             {s &&
               zichtbaar.map((p) => (
@@ -103,14 +85,14 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
             {lijst.length === 0 && (
               <tr className="presets-leeg">
                 <td colSpan={7} className="zacht">
-                  Nog geen Presets. Zet een Graphic klaar en kies "Voorbeeld bewaren als Preset": de Preset houdt de gegevens van dat
+                  Nog geen Presets. Zet een Graphic klaar en kies "Preview bewaren als Preset": de Preset houdt de gegevens van dat
                   moment.
                 </td>
               </tr>
             )}
             <tr className="presets-nieuw">
-              <td />
-              <td colSpan={6}>
+              <td colSpan={2} />
+              <td colSpan={5}>
                 <button className="nieuw-knop" onClick={() => kiesOnderdeel("maken")}>
                   <Plus /> Nieuwe Graphic maken
                 </button>
@@ -128,31 +110,62 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
   const status = statusVan(p, s);
   const letter = p.standpunt ?? standaardStandpunt(p.graphic);
   const standpunt = cameraKeuzes(s.standpunten, s.cameraritten, true).find((x) => x.letter === letter);
+  // Een Persoonskaart met een Stoel gaat naar een shot op die Stoel: geen Standpunt, maar ook geen fout.
+  const stoel = /^stoel-(\d+)-(\d+)-(\d+)$/.exec(letter);
   const rij = status.live ? "rij-live" : status.klaar ? "rij-klaar" : "";
   const zetKlaar = () => verbonden && void regie.stuur({ soort: "ZetPresetKlaar", nummer: p.nummer }, PRESETS);
+  const oud = nieuwereCijfers(s, p.graphic);
   return (
-    <tr className={rij} onClick={zetKlaar} title={`Zet Preset ${p.nummer} klaar`}>
+    <tr
+      className={rij}
+      onClick={zetKlaar}
+      title={`Zet Preset ${p.nummer} klaar${p.nummer <= 9 ? ` (toets ${p.nummer})` : ""} · bewaard ${uurMinuut(p.bewaard_ms)} door ${p.bewaard_door}${oud ? " · er zijn nieuwere cijfers: druk N na klaarzetten" : ""}`}
+    >
       <td className="kol-toets">
-        <span className="toets-kap">{p.nummer}</span>
+        {/* Alleen 1 tot 9 zijn sneltoetsen; een hoger nummer krijgt geen toetsvorm. */}
+        <span className={p.nummer <= 9 ? "toets-kap" : "preset-nummer"}>{p.nummer}</span>
+      </td>
+      <td className="kol-status">
+        <span className="status-cel">
+          {status.live && <span className="stempel stempel-live">Live</span>}
+          {status.klaar && <span className="stempel stempel-klaar">Klaar</span>}
+          {!status.live && !status.klaar && status.wasLiveOm !== null && <span className="stempel stempel-was">was live {uurMinuut(status.wasLiveOm)}</span>}
+        </span>
       </td>
       <td className="kol-beeld">
         <Schets graphic={p.graphic} kleuren={s.stijl.kleuren} />
       </td>
       <td className="cel-tekst">
-        <div className="titel-cel">{sjabloonNaam(p.graphic, s.sjablonen)}</div>
-        <div className="zacht een-regel">{p.graphic.sjabloon === "Titelkaart" ? p.graphic.kop : groepVan(p.graphic)}</div>
-      </td>
-      <td className="cel-tekst">
-        <Gegevens graphic={p.graphic} />
-        <div className="zacht een-regel">
-          bewaard {uurMinuut(p.bewaard_ms)} door {p.bewaard_door}
+        <div className="een-regel">
+          {/* Een knop, zodat ook Presets vanaf 10 (zonder sneltoets) met Tab en Enter klaar te zetten zijn. */}
+          <button
+            className="preset-titel titel-cel"
+            disabled={!verbonden}
+            onClick={(e) => {
+              e.stopPropagation();
+              zetKlaar();
+            }}
+          >
+            {sjabloonNaam(p.graphic, s.sjablonen)}
+          </button>
+          {p.graphic.sjabloon === "Titelkaart" && <span className="zacht"> · {p.graphic.kop}</span>}
         </div>
       </td>
-      <td className="kol-camera">
+      <td className="cel-tekst">
+        {/* Eén regel. Wie en wanneer staat in de tooltip; oude cijfers rustig als tijdstip, want na de eerste
+            nieuwe cijfers geldt het voor bijna elke Preset (de waarschuwing staat in Take en bij Preview). */}
+        <div className="een-regel gegevens-regel">
+          <Gegevens graphic={p.graphic} />
+          {oud && <span className="zacht"> · bewaard {uurMinuut(p.bewaard_ms)}</span>}
+        </div>
+      </td>
+      <td className="kol-camera" title={standpunt?.naam}>
         <span className="camera-cel">
           {standpunt?.toets && <kbd>{standpunt.toets}</kbd>}
-          {standpunt ? (
-            <span className="zacht een-regel">
+          {stoel ? (
+            <span className="zacht een-regel">Shot op de eigen Stoel</span>
+          ) : standpunt ? (
+            <span className="zacht twee-regels">
               {standpunt.soort === "Camerarit" ? `Camerarit ${standpunt.naam}` : standpunt.naam}
             </span>
           ) : (
@@ -165,7 +178,7 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
           className="tablet-knop"
           aria-pressed={p.op_tablet}
           aria-label={p.op_tablet ? `Preset ${p.nummer} van de tablet halen` : `Preset ${p.nummer} op de tablet zetten`}
-          title={p.op_tablet ? "Staat op de tablet. Klik om eraf te halen" : "Op de tablet zetten"}
+          title={p.op_tablet ? "Staat op de tablet van de Presentator. Klik om eraf te halen" : "Niet op de tablet. Klik om hem op de tablet van de Presentator te zetten"}
           disabled={!verbonden}
           onMouseDown={zonderFocus}
           onClick={(e) => {
@@ -174,14 +187,9 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
           }}
         >
           <Tablet />
+          {/* Een toestand, geen opdracht: "Op tablet" als hij erop staat, anders alleen een gedimd icoon. */}
+          {p.op_tablet && <span>Op tablet</span>}
         </button>
-      </td>
-      <td className="kol-status">
-        <span className="status-cel">
-          {status.live && <span className="stempel stempel-live">Live</span>}
-          {status.klaar && <span className="stempel stempel-klaar">Klaar</span>}
-          {!status.live && !status.klaar && status.wasLiveOm !== null && <span className="zacht">was live {uurMinuut(status.wasLiveOm)}</span>}
-        </span>
       </td>
     </tr>
   );

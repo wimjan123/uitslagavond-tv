@@ -1,7 +1,7 @@
 // Cameraritten in het dashboard: `npm test` (node --test).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cameraKeuzes, kanHerhalen, opnameS, opnameTijd, ritAangepast, ritTiming, routeVan, standaardRit, stukS } from "./camerarit.ts";
+import { cameraKeuzes, duur, kanHerhalen, opnameS, opnameTijd, ritAangepast, ritTiming, routeVan, standaardRit, stukS } from "./camerarit.ts";
 import type { Camerarit } from "../typen/Camerarit";
 import type { Standpunt } from "../typen/Standpunt";
 
@@ -61,12 +61,13 @@ test("de lijst toont de duur en wat de rit aan het eind doet", () => {
   const r = rond();
   r.bijschaving.duur_s = 16;
   r.bijschaving.eind = "Herhalen";
-  assert.equal(ritTiming(r), "16,0 s · herhaalt");
-  assert.equal(ritTiming(rechtdoor()), "10,0 s");
+  assert.equal(ritTiming(r), "16 s · herhaalt", "hele seconden zonder ,0, zoals in de multiviewer");
+  assert.equal(ritTiming(rechtdoor()), "10 s");
+  assert.equal(duur(2.5), "2,5 s");
   assert.equal(opnameTijd(1234), "12,3 s");
 });
 
-test("waar je een Standpunt kiest, kies je ook een Camerarit, met toets en naam", () => {
+test("waar je een Standpunt kiest, kies je ook Camera blijft staan of een Camerarit, met toets en naam", () => {
   const vast: Standpunt = {
     letter: "A",
     naam: "Totaal vanaf voorzitter",
@@ -81,6 +82,7 @@ test("waar je een Standpunt kiest, kies je ook een Camerarit, met toets en naam"
   assert.deepEqual(
     keuzes.map((k) => [k.letter, k.toets, k.tekst, k.soort]),
     [
+      ["blijf", null, "Camera blijft staan", "Standpunt"],
       ["A", "A", "A · Totaal vanaf voorzitter", "Standpunt"],
       ["E1", "J", "J · Close-up", "Standpunt"],
       ["E2", null, "Achter", "Standpunt"],
