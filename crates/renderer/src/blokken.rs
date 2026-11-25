@@ -1026,13 +1026,25 @@ pub fn bouw_inhoud(
                 border_radius: BorderRadius::all(Val::Px(f32::from(*hoek))),
                 ..midden
             };
-            commands.entity(binnen).insert(foto_node.clone());
             if let Some(beeld) = foto
                 .as_deref()
                 .and_then(|f| beeld_of_wacht(commands, bestanden, knoop, f))
             {
-                beeld_deel(commands, binnen, beeld, beelden, b, h, true, dekking, 1.0);
+                // Een portret staat vrijstaand op het paneel (`crate::vrijstaand`): even hoog als
+                // het vlak tot [`PORTRET_ZICHTBAAR`] van de foto, in het midden, en nooit breder
+                // dan het vlak. Zo zijn hoofd en schouders te zien; de onderkant valt weg in het
+                // verloop eronder.
+                commands.entity(binnen).insert(Node { align_items: AlignItems::FlexStart, ..foto_node.clone() });
+                let (bw, bh) = beelden.get(&beeld).map_or((b, h), |i| (i.width() as f32, i.height() as f32));
+                let schaal = (h / (bh * PORTRET_ZICHTBAAR)).min(b / bw);
+                commands.spawn((
+                    ChildOf(binnen),
+                    ImageNode { image: beeld, color: Color::WHITE.with_alpha(dekking), image_mode: NodeImageMode::Stretch, ..default() },
+                    Node { width: Val::Px((bw * schaal).round()), height: Val::Px((bh * schaal).round()), flex_shrink: 0.0, ..default() },
+                    Deel { kleur: Color::WHITE },
+                ));
             } else {
+                commands.entity(binnen).insert(foto_node.clone());
                 // geen foto: de voorletters in de kleur van het Blok op de partijkleur; op een
                 // donkere partijkleur in wit
                 vlak(commands, kleur(*vlakkleur), *hoek, foto_node);
@@ -1482,6 +1494,9 @@ pub(crate) fn beeld_of_wacht(
     b
 }
 
+/// Welk deel van een portretfoto, van boven af, in het fotovlak past: de rest valt onder het vlak.
+const PORTRET_ZICHTBAAR: f32 = 0.85;
+
 /// Een beeld in `ouder`: passend (logo's) of vullend en bijgesneden (foto's).
 #[allow(clippy::too_many_arguments)]
 pub(crate) fn beeld_deel(
@@ -1494,7 +1509,7 @@ pub(crate) fn beeld_deel(
     vullend: bool,
     dekking: f32,
     eigen_dekking: f32,
-) {
+) -> Entity {
     let (bw, bh) = beelden
         .get(&beeld)
         .map_or((b, h), |i| (i.width() as f32, i.height() as f32));
@@ -1503,7 +1518,8 @@ pub(crate) fn beeld_deel(
     } else {
         (b / bw).min(h / bh)
     };
-    commands.spawn((
+    commands
+        .spawn((
         ChildOf(ouder),
         ImageNode {
             image: beeld,
@@ -1520,7 +1536,8 @@ pub(crate) fn beeld_deel(
         Deel {
             kleur: Color::WHITE.with_alpha(eigen_dekking),
         },
-    ));
+    ))
+        .id()
 }
 
 #[cfg(test)]

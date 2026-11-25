@@ -2220,9 +2220,10 @@ fn persoonskaart() -> Sjabloon {
         },
     ];
     blokken.extend([
-        // 2: de foto, of de voorletters in de kopletter op de partijkleur; links gelijk met de tekst
+        // 2: de foto, of de voorletters in de kopletter op de partijkleur; zo breed als de tekst.
+        // De Renderer maakt een portret vrijstaand: het paneel loopt achter het hoofd door.
         Blok {
-            plek: plek(1214, 230, 400, 400),
+            plek: plek(1214, 150, 610, 480),
             soort: Bloksoort::FotoKamerlid {
                 hoek: 0,
                 letter: Letterkeuze::Stijl(Stijlletter::Kop),
@@ -2286,7 +2287,7 @@ fn persoonskaart() -> Sjabloon {
         ),
         // de onderkant van de foto loopt over in het paneel, zodat hij er niet op geplakt lijkt
         Blok {
-            plek: plek(1214, 450, 400, 180),
+            plek: plek(1166, 450, 754, 180),
             soort: vlak_met(
                 0,
                 Some(Verloop {
