@@ -328,7 +328,7 @@ fn labelplekken(delen: &[(f32, f32, Option<f32>)], b: f32) -> Vec<Labelplek> {
     let mut eind = [f32::NEG_INFINITY; 2];
     // waar de labels op de eerste rij beginnen: een label op de tweede rij lijnt daarop uit,
     // als dat hooguit zoveel pixels van zijn eigen plek is
-    const UITLIJNEN: f32 = 60.0;
+    const UITLIJNEN: f32 = 72.0;
     let mut kolommen: Vec<f32> = Vec::new();
     delen
         .iter()

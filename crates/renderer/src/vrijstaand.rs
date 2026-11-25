@@ -26,6 +26,10 @@ const ZOOM_GRIJSLOOS: u8 = 32;
 /// Aan de linker- en rechterkant van de foto vloeit hij over zoveel van zijn breedte weg, zodat
 /// de schouders niet in een rechte lijn ophouden.
 const ZIJ_VERLOOP: f32 = 0.07;
+/// Zo dun mag een haarlok tussen de achtergrond en een wit zakje zijn, in pixels, en zo groot
+/// (deel van de foto) een wit zakje dat ook achtergrond is.
+const LOK: usize = 3;
+const ZAK: f32 = 0.004;
 /// Is meer dan dit deel achtergrond, dan klopt er iets niet en blijft de foto zoals hij is.
 const HOOGSTENS: f32 = 0.85;
 
@@ -57,6 +61,36 @@ pub fn achtergrond(foto: &RgbImage) -> Vec<bool> {
         for (nx, ny) in buren {
             if nx < w && ny < h {
                 zaai(nx, ny, &mut bg, &mut rij);
+            }
+        }
+    }
+    // Witte zakjes tussen losse haren: de vulling hierboven komt niet over een dunne haarlok, dus
+    // het wit erachter bleef staan als witte vlekken langs het haar (council-ronde 7). Een klein
+    // wit vlak dat tot op [`LOK`] pixels bij de achtergrond komt, hoort er ook bij. Een groot wit
+    // vlak (wit haar, een overhemd) is geen zakje en blijft.
+    let dicht = groei(&bg, w, h, LOK);
+    let max_zak = ((w * h) as f32 * ZAK) as usize;
+    let mut gezien = bg.clone();
+    for start in 0..w * h {
+        if gezien[start] || !dicht[start] || !kan(start % w, start / w) {
+            continue;
+        }
+        let mut zak = vec![start];
+        gezien[start] = true;
+        let mut i = 0;
+        while i < zak.len() {
+            let (x, y) = (zak[i] % w, zak[i] / w);
+            i += 1;
+            for (nx, ny) in [(x.wrapping_sub(1), y), (x + 1, y), (x, y.wrapping_sub(1)), (x, y + 1)] {
+                if nx < w && ny < h && !gezien[ny * w + nx] && kan(nx, ny) {
+                    gezien[ny * w + nx] = true;
+                    zak.push(ny * w + nx);
+                }
+            }
+        }
+        if zak.len() <= max_zak {
+            for p in zak {
+                bg[p] = true;
             }
         }
     }
@@ -132,6 +166,23 @@ pub fn maak_vrijstaand(foto: &RgbImage) -> RgbaImage {
         let donker = |c: u8| (f32::from(c) * f).round() as u8;
         image::Rgba([donker(p[0]), donker(p[1]), donker(p[2]), d])
     })
+}
+
+/// Het masker `r` pixels opgerekt (een vierkant eromheen).
+fn groei(m: &[bool], w: usize, h: usize, r: usize) -> Vec<bool> {
+    let mut uit = vec![false; m.len()];
+    for y in 0..h {
+        for x in 0..w {
+            if m[y * w + x] {
+                for ny in y.saturating_sub(r)..(y + r + 1).min(h) {
+                    for nx in x.saturating_sub(r)..(x + r + 1).min(w) {
+                        uit[ny * w + nx] = true;
+                    }
+                }
+            }
+        }
+    }
+    uit
 }
 
 /// Gemiddelde over vijf pixels in een richting.
@@ -214,6 +265,26 @@ mod tests {
         // een randpixel die half doorzichtig is, is donkerder dan in de foto
         let p = uit.get_pixel(20, 11).0;
         assert!(p[3] < 255 && p[0] < 90, "{p:?}");
+    }
+
+    #[test]
+    fn een_wit_zakje_achter_een_losse_haarlok_wordt_ook_doorzichtig() {
+        // een hoofd met erboven een dunne donkere lok (2 pixels) die een wit zakje insluit
+        let foto = RgbImage::from_fn(200, 200, |x, y| {
+            let hoofd = (10..190).contains(&x) && y >= 20;
+            let lok = (x == 20 || x == 21 || x == 30 || x == 31) && (12..20).contains(&y) || (20..32).contains(&x) && (y == 12 || y == 13);
+            if hoofd || lok {
+                image::Rgb([60, 45, 35])
+            } else {
+                image::Rgb([252, 252, 252])
+            }
+        });
+        let bg = achtergrond(&foto);
+        assert!(bg[16 * 200 + 25], "het zakje binnen de lok is achtergrond");
+        assert!(!bg[12 * 200 + 25], "de lok zelf blijft");
+        // het witte haar in het portret blijft (het grote witte vlak telt niet als zakje)
+        let uit = maak_vrijstaand(&portret());
+        assert_eq!(uit.get_pixel(20, 13).0[3], 255);
     }
 
     #[test]
