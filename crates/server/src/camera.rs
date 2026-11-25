@@ -1278,7 +1278,7 @@ mod tests {
             volgnummer: 1,
             tijd_ms: 0,
         };
-        assert!(stand.voer_uit(&kies("Q", false), &h).is_err());
+        assert!(stand.voer_uit(&kies("P", false), &h).is_err());
         let graphic = Graphic::Titelkaart {
             kop: "Voorbeeldgegevens".into(),
             regel: String::new(),
@@ -1288,7 +1288,7 @@ mod tests {
                 .voer_uit(
                     &Opdracht::ZetKlaar {
                         graphic,
-                        standpunt: Some("Q".into())
+                        standpunt: Some("P".into())
                     },
                     &h
                 )
@@ -1673,6 +1673,15 @@ mod tests {
     }
 
     #[test]
+    fn elke_vaste_camerarit_blijft_in_de_ruimte() {
+        let r = ruimte();
+        for rit in gedeeld::vaste_ritten::vaste() {
+            let buiten: Vec<usize> = rit.punten().iter().enumerate().filter(|(_, p)| !r.bevat([p[0], p[1], p[2]], 0.1)).map(|(i, _)| i).collect();
+            assert!(buiten.is_empty(), "{}: {} standen buiten de ruimte, de eerste op tik {:?}", rit.naam, buiten.len(), buiten.first());
+        }
+    }
+
+    #[test]
     fn herhalen_begint_opnieuw_zonder_knip() {
         let mut stand = Stand::default();
         let mut v = 0;
@@ -1686,8 +1695,9 @@ mod tests {
         doe(&mut stand, &mut v, Opdracht::ZetOefenen { aan: true });
         doe(&mut stand, &mut v, Opdracht::ZetOpnemen { aan: true, voor: None, opname: None });
         doe(&mut stand, &mut v, Opdracht::ZetOpnemen { aan: false, voor: None, opname: Some(rond) });
-        let r = stand.cameraritten[0].letter.clone();
-        let mut b = stand.cameraritten[0].bijschaving;
+        let eigen = stand.cameraritten.iter().find(|r| !r.vast).unwrap();
+        let r = eigen.letter.clone();
+        let mut b = eigen.bijschaving;
         b.eind = gedeeld::camerarit::RitEind::Herhalen;
         b.begin = gedeeld::camerarit::RitBegin::Knippen;
         doe(&mut stand, &mut v, Opdracht::BijschaafCamerarit { letter: r.clone(), bijschaving: b });
@@ -1727,7 +1737,7 @@ mod tests {
         let b = regie.beeld(tik);
         assert!(ongeveer(b.voorbeeld.stand, standpunt(&stand, "A")));
         let eind = gedeeld::camerarit::als_stand(opname.last().unwrap());
-        let r = &stand.cameraritten[0];
+        let r = stand.cameraritten.iter().find(|r| !r.vast).unwrap();
         let klaar = tik + 2 * T + (r.duur_s() * T as f32) as u64;
         assert!(len(sub(regie.beeld(klaar + 1).voorbeeld.stand.positie, eind.positie)) < 0.02);
         assert!(regie.beeld(tik + 3 * T).voorbeeld_rit.is_some(), "de groene streep op de balk");

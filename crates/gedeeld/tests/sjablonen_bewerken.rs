@@ -237,7 +237,7 @@ fn een_sjabloon_dat_niet_kan_wordt_geweigerd() {
     verwijzing.blokken[0].soort =
         sjabloon::vlak_met(90, None, 0, None, Some(sjabloon::OmTekst { blokken: vec![7], marge: 10 }));
     let mut standpunt = eigen_sjabloon();
-    standpunt.standpunt = Some("Q".into());
+    standpunt.standpunt = Some("P".into());
     for s in [zonder_naam, vreemd_id, pad, verwijzing, standpunt] {
         assert!(p.door("Vormgeving", Opdracht::ZetSjabloon { sjabloon: s.clone() }).is_err(), "{s:?}");
     }

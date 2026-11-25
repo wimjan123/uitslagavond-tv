@@ -449,14 +449,18 @@ impl Stand {
 
     /// Geeft een eigen Standpunt of een Camerarit een toets; wie hem had, raakt hem kwijt.
     pub(crate) fn zet_standpunt_toets(&mut self, letter: &str, toets: Option<&str>) -> Result<(), Weigering> {
-        if self.camerarit(letter).is_none() {
-            self.eigen_standpunt_mut(letter)?;
+        match self.camerarit(letter) {
+            Some(r) if r.vast => return Err(Weigering::VasteCamerarit(letter.into())),
+            Some(_) => {}
+            None => {
+                self.eigen_standpunt_mut(letter)?;
+            }
         }
         if let Some(t) = toets.filter(|t| !EIGEN_TOETSEN.contains(t)) {
             return Err(Weigering::OnbekendeToets(t.into()));
         }
         let eigen = self.standpunten.iter_mut().filter(|s| !s.vast).map(|s| (&s.letter, &mut s.toets));
-        let ritten = self.cameraritten.iter_mut().map(|r| (&r.letter, &mut r.toets));
+        let ritten = self.cameraritten.iter_mut().filter(|r| !r.vast).map(|r| (&r.letter, &mut r.toets));
         for (l, t) in eigen.chain(ritten) {
             if l == letter {
                 *t = toets.map(Into::into);
@@ -470,6 +474,7 @@ impl Stand {
     /// Wist een eigen Standpunt of een Camerarit, als niets het gebruikt.
     pub(crate) fn wis_standpunt(&mut self, letter: &str) -> Result<(), Weigering> {
         let kenmerk = match self.camerarit(letter) {
+            Some(r) if r.vast => return Err(Weigering::VasteCamerarit(letter.into())),
             Some(r) => r.kenmerk(),
             None => self.eigen_standpunt_mut(letter)?.kenmerk(),
         };

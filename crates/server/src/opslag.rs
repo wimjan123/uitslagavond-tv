@@ -50,6 +50,7 @@ impl Opslag {
                 let mut s: GenummerdeStand = serde_json::from_str(&tekst)
                     .with_context(|| format!("{} is geen geldige Stand", pad.display()))?;
                 s.stand.stijl = s.stand.stijl.na_laden();
+                s.stand.vul_vaste_ritten_aan();
                 Ok(s)
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(GenummerdeStand::default()),

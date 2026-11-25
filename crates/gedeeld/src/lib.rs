@@ -22,6 +22,7 @@ pub mod sjabloon;
 mod tablet;
 pub mod stemmingen;
 pub mod uitslagindeling;
+pub mod vaste_ritten;
 pub mod zaalindeling;
 pub mod zaalkaart;
 pub mod zetelbalk;
@@ -83,8 +84,9 @@ pub struct Stand {
     /// De Standpunten, eerst de zes vaste.
     #[serde(default = "Standpunt::vaste")]
     pub standpunten: Vec<Standpunt>,
-    /// De Cameraritten, op volgorde van opnemen.
-    #[serde(default)]
+    /// De Cameraritten: eerst de zes vaste ([`vaste_ritten`]), dan de eigen op volgorde van
+    /// opnemen.
+    #[serde(default = "vaste_ritten::vaste")]
     pub cameraritten: Vec<Camerarit>,
     /// Waar de Regie de camera van de Ether heen stuurde. De server rekent de beweging uit.
     #[serde(default)]
@@ -129,7 +131,7 @@ impl Default for Stand {
             kamer: Kamer::default(),
             stijl: sjabloon::Stijl::default(),
             standpunten: Standpunt::vaste(),
-            cameraritten: Vec::new(),
+            cameraritten: vaste_ritten::vaste(),
             camera: Camerakeuze::default(),
             stemmingen: Stemmingen::default(),
             presets: Vec::new(),
@@ -299,6 +301,9 @@ pub enum Opdracht {
     ZetStandpuntOvergang { letter: String, overgang: CameraOvergang, na_aankomst: NaAankomst },
     /// Zet de schuifjes van een Camerarit. Speelt af in het Voorbeeld.
     BijschaafCamerarit { letter: String, bijschaving: Bijschaving },
+    /// Zet een vaste Camerarit terug naar zijn standaard: naam en schuifjes. Speelt af in het
+    /// Voorbeeld.
+    HerstelCamerarit { letter: String },
     /// Bewaart een nieuw eigen Standpunt. Zonder `stand` vult de server in waar de camera van de
     /// Ether nu staat.
     BewaarStandpunt {
@@ -493,6 +498,8 @@ pub enum Weigering {
     OnbekendStandpunt(String),
     #[error("Standpunt {0} is vast")]
     VastStandpunt(String),
+    #[error("Camerarit {0} is vast: bijschaven en hernoemen kan, wissen of opnieuw opnemen niet")]
+    VasteCamerarit(String),
     #[error("{standpunt} wordt gebruikt door {waar}")]
     StandpuntInGebruik { standpunt: String, waar: String },
     #[error("de naam van een Standpunt is leeg")]
@@ -674,6 +681,7 @@ impl Stand {
             Opdracht::ZetStandpuntOvergang { letter, overgang, na_aankomst } => {
                 self.zet_standpunt_overgang(letter, *overgang, *na_aankomst, h)?
             }
+            Opdracht::HerstelCamerarit { letter } => self.herstel_camerarit(letter, h)?,
             Opdracht::BijschaafCamerarit { letter, bijschaving } => {
                 self.bijschaaf_camerarit(letter, *bijschaving, h)?
             }

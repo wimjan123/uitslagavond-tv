@@ -32,6 +32,7 @@ fn rit(opname: Vec<[f32; 6]>) -> Camerarit {
             begin: RitBegin::Overgang,
             eind: RitEind::Stoppen,
         },
+        vast: false,
     }
 }
 
@@ -331,7 +332,7 @@ fn opnieuw_opnemen_vervangt_de_opname_van_dezelfde_camerarit() {
     doe(&mut stand, &mut v, Opdracht::ZetOpnemen { aan: true, voor: Some(r.clone()), opname: None }).unwrap();
     let nieuw = opname(3.0, |t| [0.0, 3.0, -4.0 - t]);
     doe(&mut stand, &mut v, stop_opname(nieuw.clone())).unwrap();
-    assert_eq!(stand.cameraritten.len(), 1);
+    assert_eq!(stand.cameraritten.iter().filter(|r| !r.vast).count(), 1);
     let rit = stand.camerarit(&r).unwrap();
     assert_eq!((rit.opname.clone(), rit.toets.as_deref(), rit.bijschaving.begin_eraf_s), (nieuw, Some("J"), 0.0));
     assert!((rit.bijschaving.duur_s - 3.0).abs() < 1e-4);
@@ -343,4 +344,52 @@ fn de_beginstand_is_de_eerste_stand_van_de_baan() {
     r.bijschaving.begin_eraf_s = 2.5;
     r.bijschaving.gladheid = 1.0;
     assert_eq!(r.beginstand(), Some(r.baan().standen[0]));
+}
+
+#[test]
+fn de_vaste_cameraritten_staan_op_q_tot_u_en_blijven_staan() {
+    let mut stand = Stand::default();
+    let mut v = 0;
+    let toetsen: Vec<&str> = stand.cameraritten.iter().filter_map(|r| r.sneltoets()).collect();
+    assert_eq!(toetsen, ["Q", "W", "E", "T", "Y", "U"]);
+    assert!(stand.cameraritten.iter().all(|r| r.vast && r.opname.is_empty()), "de opname staat niet in de Stand");
+
+    for o in [
+        Opdracht::WisStandpunt { letter: "Q".into() },
+        Opdracht::ZetStandpuntToets { letter: "W".into(), toets: Some("J".into()) },
+    ] {
+        assert!(matches!(doe(&mut stand, &mut v, o), Err(Weigering::VasteCamerarit(_))));
+    }
+    doe(&mut stand, &mut v, oefenen(true)).unwrap();
+    let opnieuw = Opdracht::ZetOpnemen { aan: true, voor: Some("E".into()), opname: None };
+    assert_eq!(doe(&mut stand, &mut v, opnieuw), Err(Weigering::VasteCamerarit("E".into())));
+}
+
+#[test]
+fn een_bijgeschaafde_vaste_camerarit_gaat_terug_naar_zijn_standaard() {
+    let mut stand = Stand::default();
+    let mut v = 0;
+    let standaard = stand.camerarit("W").unwrap().clone();
+    let mut b = standaard.bijschaving;
+    b.duur_s = standaard.bijschaving.duur_s * 1.5;
+    doe(&mut stand, &mut v, Opdracht::BijschaafCamerarit { letter: "W".into(), bijschaving: b }).unwrap();
+    doe(&mut stand, &mut v, Opdracht::HernoemStandpunt { letter: "W".into(), naam: "Langzame zwenk".into() }).unwrap();
+    assert_ne!(stand.camerarit("W"), Some(&standaard));
+
+    doe(&mut stand, &mut v, Opdracht::HerstelCamerarit { letter: "W".into() }).unwrap();
+    assert_eq!(stand.camerarit("W"), Some(&standaard));
+    assert_eq!(stand.camera.proef.as_ref().map(|p| p.letter.as_str()), Some("W"), "hij speelt af in het Voorbeeld");
+}
+
+#[test]
+fn een_stand_van_een_oudere_versie_krijgt_de_vaste_cameraritten_erbij() {
+    // een oude Stand met alleen een eigen Camerarit
+    let mut stand = Stand::default();
+    let mut eigen = rechtdoor();
+    eigen.letter = "R1".into();
+    stand.cameraritten = vec![eigen.clone()];
+    stand.vul_vaste_ritten_aan();
+    let letters: Vec<&str> = stand.cameraritten.iter().map(|r| r.letter.as_str()).collect();
+    assert_eq!(letters, ["Q", "W", "E", "T", "Y", "U", "R1"]);
+    assert_eq!(stand.camerarit("R1"), Some(&eigen));
 }

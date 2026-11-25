@@ -10,10 +10,17 @@ export type Camerarit = {
  */
 letter: string, naam: string, 
 /**
- * J, K of L, gedeeld met de eigen Standpunten, of geen.
+ * J, K of L, gedeeld met de eigen Standpunten, of geen. Een vaste Camerarit heeft zijn
+ * sleutel als toets (Q, W, E, T, Y of U).
  */
 toets?: string, 
 /**
+ * Een vaste Camerarit komt mee met het systeem ([`crate::vaste_ritten`]): je kunt hem
+ * bijschaven en hernoemen, niet wissen of opnieuw opnemen.
+ */
+vast: boolean, 
+/**
  * 100 standen per seconde: x, y, z, draai, helling en beeldhoek, zoals [`Camerastand`].
+ * Leeg bij een vaste Camerarit: die opname rekent de software uit ([`Camerarit::punten`]).
  */
 opname: Array<[number, number, number, number, number, number]>, bijschaving: Bijschaving, };
