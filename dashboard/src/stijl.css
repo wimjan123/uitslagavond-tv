@@ -536,7 +536,7 @@ input:focus-visible { outline-offset: 0; }
 .knop-vraag, .knop-vraag:not(:disabled) { color: var(--ether-red-ink); background: var(--ether-red); border-color: var(--ether-red); }
 
 /* Camera: één regel per Standpunt of Camerarit, zodat de hele lijst op een laptop past. */
-.camerawerk .lijst .tabel td { height: 30px; padding-top: 2px; padding-bottom: 2px; }
+.camerawerk .lijst .tabel td { height: 27px; padding-top: 2px; padding-bottom: 2px; }
 .camera-rij { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
 .camera-rij-naam { flex: 1; min-width: 0; line-height: 1.15; }
 .camera-rij-tijd { flex: none; font-size: 11.5px; }

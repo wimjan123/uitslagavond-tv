@@ -133,3 +133,4 @@
   .tablet .tablet-tab { font-size: 17px; }
   .tablet .boog-totaal { font-size: 56px; }
 }
+.tablet .boog-raster .boog-partij { width: auto; }
