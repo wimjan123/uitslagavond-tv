@@ -1536,12 +1536,12 @@ struct LijnBij76 {
 }
 
 /// De lijn bij 76 is licht op de vloer ([`crate::occlusie::Vloerlicht`]): een smalle felle kern
-/// van zoveel meter breed met zoveel extra licht, in een brede zachte lichtstrook. Als lijn van
-/// licht over de vloer valt hij alleen op de treden en niet op de stootborden ertussen, dus hij
-/// ligt plat. Een effen streep van 10 cm die ook over de stootborden liep, las vanaf Standpunt A
-/// als een rechtopstaande staaf (council-ronde 6).
+/// van zoveel meter breed met zoveel extra licht, in een brede zachte lichtstrook. Een effen
+/// streep van 10 cm las vanaf Standpunt A als een rechtopstaande staaf (council-ronde 6); licht
+/// alleen op de treden las als losse roze stukken tussen de bureaus (ronde 7). Nu valt het licht
+/// ook op de stootborden (`occlusie.wgsl`), zodat de lijn één gloed is, met een rustiger kern.
 const LIJN_76_BREEDTE: f32 = 0.14;
-const LIJN_76_KERN: f32 = 4.5;
+const LIJN_76_KERN: f32 = 3.0;
 /// De lichtstrook om de lijn: zo breed (meter, met een zachte rand) en zoveel extra licht, met
 /// zoveel van Accent erin (de rest warm wit).
 const LIJN_76_GLOED_BREEDTE: f32 = 1.8;
@@ -1568,7 +1568,7 @@ const STIL_RAD_PER_S: f32 = 0.05;
 /// een dikke donkere rand las als een sticker, in een ander roze dan Accent in de Graphics
 /// (council-ronde 7). Dit licht komt minder ver boven het tapijt uit dan dat getal en haalt nog
 /// 3:1 tegen het tapijt.
-const GETAL_76_LICHT: f32 = 2.2;
+const GETAL_76_LICHT: f32 = 2.8;
 /// De tint van Accent, met hoogstens deze lichtheid (Oklch): de kleur van het licht, niet van een
 /// vlak, dus niet lichter gemaakt.
 const LIJN_76_L: f32 = 0.7;
@@ -1870,9 +1870,10 @@ fn uitgelicht(leer: LinearRgba, straalt: LinearRgba, partij: Option<Kleur>, krac
     let eigen = partij.map_or(leer * (1.0 / kalibratie().albedo), |k| gekalibreerd(k, nabij)).with_alpha(1.0);
     let kal = kalibratie();
     let gewoon = partij.map_or(eigen * (kal.straalt * (1.0 - (1.0 - kal.nabij_straalt) * nabij)), |k| straling_bij(k, kracht, nabij));
-    let naar = gedempt(partij.map_or(leer, |k| leer_bij(k, nabij)));
+    let naar = partij.map_or(leer, |k| gedempt(leer_bij(k, nabij)));
     let straling = if straalt == LinearRgba::BLACK { gewoon } else { gewoon + eigen * UITGELICHT_EXTRA };
-    (leer.mix(&naar, sterkte), straalt.mix(&gedempt(straling), sterkte))
+    let straling = if partij.is_some() { gedempt(straling) } else { straling };
+    (leer.mix(&naar, sterkte), straalt.mix(&straling, sterkte))
 }
 
 /// In het shot van de Persoonskaart is de Stoel achtergrond bij het portret: zijn leer is zoveel
@@ -2789,7 +2790,10 @@ mod tests {
         zet_persoonskaart_van(&mut app, 1, Some(stoel), vec!["#1f4fd6".parse().unwrap(); 150], Some("#007c5e"));
         wacht(&mut app, 1.0);
         let groen: Kleur = "#007c5e".parse().unwrap();
-        assert!(ongeveer(leerkleuren(&mut app)[i], Srgba::from(leer_in_de_zaal(groen))), "het leer is groen");
+        // gedempt, zodat het portret het eerste leespunt blijft
+        let verwacht = gedempt(leer_in_de_zaal(groen));
+        assert!(ongeveer(leerkleuren(&mut app)[i], Srgba::from(verwacht)), "het leer is groen");
+        assert!(helderheid(verwacht) < helderheid(leer_in_de_zaal(groen)), "en minder licht dan gewoon");
         let mut q = app.world_mut().query::<(&StoelLeer, &MeshMaterial3d<StandardMaterial>)>();
         let h = q.iter(app.world()).find(|(s, _)| s.index == i).unwrap().1.0.clone();
         let e = app.world().resource::<Assets<StandardMaterial>>().get(&h).unwrap().emissive;
