@@ -147,6 +147,9 @@ pub fn zaalcamera() -> impl Bundle {
         b.vignet(),
         Occlusie::new(b.occlusie_straal, b.occlusie),
         Msaa::Sample4,
+        crate::schil::ZietSchil,
+        // tot de eerste keuze van de schil: binnen, alles in beeld
+        bevy::camera::visibility::RenderLayers::from_layers(&[0, 1]),
     )
 }
 

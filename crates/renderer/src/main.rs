@@ -26,6 +26,7 @@ mod meting;
 mod occlusie;
 mod omgeving;
 mod opname;
+mod schil;
 mod scherm;
 mod stemmingsblokken;
 mod volging;

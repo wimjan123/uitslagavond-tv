@@ -440,6 +440,7 @@ impl Graphic {
                 let (partij, cijfers) = (self.partij()?, self.zetelstand()?);
                 Some(cijfers.stoelkleuren_van(partij))
             }
+            Stoelen::StoelUitgelicht => Some(vec![crate::sjabloon::GRIJS; crate::AANTAL_STOELEN]),
         }
     }
 

@@ -57,6 +57,22 @@ static ZAAL: LazyLock<Ruimte> = LazyLock::new(|| {
 /// Over zoveel meter rond z = 0 gaan de vloer achter en voor in elkaar over.
 const VLOER_OVERGANG: f32 = 1.0;
 
+/// De studio boven en achter de Voorzitter: daar staat Totaal vanaf voorzitter (Standpunt A),
+/// hoog boven het plafond en achter de voorwand. De Renderer laat het plafond en wat erboven
+/// hangt weg zolang de camera daar is (`crates/renderer/src/schil.rs`), zoals in een virtuele
+/// studio.
+///
+/// - Voor de Voorzitter (vanaf [`STUDIO_HELLING_VAN`]) loopt het plafond van de ruimte zacht op
+///   tot [`STUDIO_HOOGTE`] bij de voorwand van de ruimte. Zo glijdt de camera van de studio de
+///   Zaal in zonder sprong. Boven de halve cirkel, waar de hanglampen hangen, blijft het plafond
+///   zoals het was.
+/// - Achter de voorwand van de ruimte (tot [`STUDIO_DIEPTE`]) mag de camera alleen boven
+///   [`STUDIO_VLOER`]: lager staat de echte voorwand in de weg.
+const STUDIO_HELLING_VAN: f32 = 0.0;
+const STUDIO_HOOGTE: f32 = 11.0;
+const STUDIO_DIEPTE: f32 = 10.0;
+const STUDIO_VLOER: f32 = 5.0;
+
 impl Ruimte {
     /// De ruimte in de Zaal, zoals getekend in Blender.
     pub fn zaal() -> Ruimte {
@@ -94,6 +110,24 @@ impl Ruimte {
         }
     }
 
+    /// Hoe hoog de camera op deze z mag: het plafond van de ruimte, voor de Voorzitter zacht
+    /// oplopend naar de studio.
+    pub fn plafond_op(&self, z: f32) -> f32 {
+        let t = ((z - STUDIO_HELLING_VAN) / (self.voor_diepte - STUDIO_HELLING_VAN)).clamp(0.0, 1.0);
+        // zacht begin en eind: wie langs het plafond glijdt, voelt geen knik
+        self.plafond + (STUDIO_HOOGTE - self.plafond) * t * t * (3.0 - 2.0 * t)
+    }
+
+    /// Of een punt in de studio achter de voorwand van de ruimte ligt.
+    fn in_studio_achter(&self, p: [f32; 3], marge: f32) -> bool {
+        let [x, y, z] = p;
+        z > self.voor_diepte - marge
+            && z <= STUDIO_DIEPTE - marge
+            && x.abs() <= self.voor_halve_breedte - marge
+            && y >= STUDIO_VLOER + marge
+            && y <= STUDIO_HOOGTE - marge
+    }
+
     fn binnen_wanden(&self, x: f32, z: f32, marge: f32) -> bool {
         let in_cirkel = z <= 0.0 && x * x + z * z <= (self.straal - marge).powi(2);
         let voor = z >= -marge
@@ -105,13 +139,17 @@ impl Ruimte {
     /// Of een punt in de ruimte ligt, met `marge` meter afstand tot elke rand.
     pub fn bevat(&self, p: [f32; 3], marge: f32) -> bool {
         let [x, y, z] = p;
-        self.binnen_wanden(x, z, marge)
+        let binnen = self.binnen_wanden(x, z, marge)
             && y >= self.vloer_op(x, z) + marge
-            && y <= self.plafond - marge
+            && y <= self.plafond_op(z) - marge;
+        binnen || self.in_studio_achter(p, marge)
     }
 
     /// Het dichtstbijzijnde punt in de ruimte, met `marge` meter afstand tot elke rand.
     fn klem_binnen(&self, p: [f32; 3], marge: f32) -> [f32; 3] {
+        if self.in_studio_achter(p, marge) {
+            return p;
+        }
         let [mut x, y, mut z] = p;
         if !self.binnen_wanden(x, z, marge) {
             // naar de rechthoek voor de Voorzitter, of naar de halve cirkel; de dichtstbijzijnde
@@ -137,7 +175,7 @@ impl Ruimte {
             };
         }
         let vloer = self.vloer_op(x, z) + marge;
-        let y = y.clamp(vloer, (self.plafond - marge).max(vloer));
+        let y = y.clamp(vloer, (self.plafond_op(z) - marge).max(vloer));
         [x, y, z]
     }
 
@@ -337,6 +375,10 @@ impl Route {
         // en in de hoogte naar het midden: hoog onder de lampen door duikt hij omlaag
         let hoogte = (MIDDEN[1] - midden[1]).clamp(-0.5 * BOOG * lengte, 0.5 * BOOG * lengte);
         let bocht = add(scale(opzij, BOOG * lengte), [0.0, hoogte, 0.0]);
+        // De grootste boog die in de ruimte blijft. Blijft geen enkele erin (van of naar de
+        // studio boven het plafond), dan de boog die er het minst buiten komt: de camera glijdt
+        // daar langs de rand (zie [`Ruimte::klem`]).
+        let mut beste: Option<(f32, Route)> = None;
         for factor in [1.0, 0.5, 0.25, 0.0] {
             let b = scale(bocht, factor);
             let route = Route {
@@ -347,20 +389,20 @@ impl Route {
                     naar,
                 ],
             };
-            let binnen = (0..=CONTROLEPUNTEN)
-                .all(|i| ruimte.bevat(route.punt(i as f32 / CONTROLEPUNTEN as f32), 0.0));
-            if binnen {
+            let buiten: f32 = (0..=CONTROLEPUNTEN)
+                .map(|i| {
+                    let p = route.punt(i as f32 / CONTROLEPUNTEN as f32);
+                    len(sub(ruimte.klem(p), p))
+                })
+                .sum();
+            if buiten <= 0.0 {
                 return route;
             }
+            if beste.as_ref().is_none_or(|(b, _)| buiten < *b - 1e-3) {
+                beste = Some((buiten, route));
+            }
         }
-        Route {
-            punten: [
-                van,
-                lerp3(van, naar, 1.0 / 3.0),
-                lerp3(van, naar, 2.0 / 3.0),
-                naar,
-            ],
-        }
+        beste.expect("vier bogen geprobeerd").1
     }
 
     /// Het punt bij `s` van 0 (begin) tot 1 (eind).
@@ -1051,6 +1093,29 @@ mod tests {
         assert!(!ongeveer(halverwege, shot) && !ongeveer(halverwege, standpunt(&stand, "A")));
         assert!(ongeveer(regie.beeld(20 + 2 * T).ether.stand, shot));
         assert!(ongeveer(regie.beeld(20 + 30 * T).ether.stand, shot), "daarna staat hij stil");
+    }
+
+    #[test]
+    fn van_de_studio_glijdt_de_camera_zonder_sprong_de_zaal_in() {
+        use gedeeld::Stoel;
+        let a = Standpunt::vaste()[0].stand.positie;
+        assert!(a[1] > 5.2 && a[2] > ruimte().voor_diepte, "A staat in de studio: {a:?}");
+        let mut doelen: Vec<[f32; 3]> = Standpunt::vaste().iter().map(|s| s.stand.positie).collect();
+        doelen.extend(Stoel::alle().filter_map(|s| shot_op_stoel(s).map(|s| s.positie)));
+        for doel in doelen {
+            for (van, naar) in [(a, doel), (doel, a)] {
+                let route = Route::boog(van, naar, &ruimte());
+                let n = 400;
+                let punten: Vec<[f32; 3]> = (0..=n).map(|i| ruimte().klem(route.punt(i as f32 / n as f32))).collect();
+                // stappen van een vierhonderdste van de route, nooit een sprong
+                let stap = len(sub(naar, van)) / n as f32;
+                for w in punten.windows(2) {
+                    let d = len(sub(w[1], w[0]));
+                    assert!(d < 4.0 * stap + 0.01, "{van:?} naar {naar:?}: sprong van {d} m bij {:?}", w[0]);
+                }
+                assert!(punten.iter().all(|p| onder_de_lampen(*p)), "{van:?} naar {naar:?} tegen een lamp");
+            }
+        }
     }
 
     #[test]

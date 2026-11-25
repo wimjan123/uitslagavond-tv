@@ -51,6 +51,7 @@ impl Opslag {
                     .with_context(|| format!("{} is geen geldige Stand", pad.display()))?;
                 s.stand.stijl = s.stand.stijl.na_laden();
                 s.stand.vul_vaste_ritten_aan();
+                gedeeld::camera::ververs_vaste_standpunten(&mut s.stand.standpunten);
                 Ok(s)
             }
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(GenummerdeStand::default()),

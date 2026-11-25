@@ -210,15 +210,22 @@ impl Standpunt {
             na_aankomst: NaAankomst::Stil,
         };
         vec![
-            // Hoog tegen de wand achter de Voorzitter, met een heel wijde lens: zo staan alle
-            // 150 Stoelen in beeld, ook de voorste aan de zijkanten. Zo hoog en ver naar achteren
-            // als de ruimte toelaat en iets meer omlaag, zodat de Stoelen de band tussen de
-            // Graphics boven (tot y 330) en onder (vanaf y 640) vullen; smaller kan niet, want
-            // dan vallen de voorste Stoelen opzij uit beeld.
+            // Virtueel, zoals in een studio: hoog boven het plafond en achter de voorwand, met
+            // een normale lens. De Renderer laat het plafond en de nis achter de Voorzitter weg
+            // zolang de camera daar staat (`crates/renderer/src/schil.rs`), de server laat hem
+            // daar vliegen (de studio in `crates/server/src/camera.rs`).
+            //
+            // Van hoog en ver oogt het halfrond minder plat: alle 150 Stoelen staan van x 80 tot
+            // 1840 en van y 368 (de rugleuningen van de achterste rij, net onder de kaartjes van
+            // de Zetelverdeling tot y 360) tot ongeveer 740 (de voorste Stoelen opzij, boven het
+            // Opbouwlabel vanaf y 760). Een rugleuning achterin is 26 in plaats van 18 pixels
+            // breed, en het plafond is uit beeld. De verhouding: de Zetelverdeling houdt de hele
+            // Zaal vrij; de panelen van Zetelbalk (vanaf y 646) en Coalitiebalk (vanaf y 676)
+            // vallen over de voorste Stoelen opzij, want daar telt de balk.
             vast(
                 "A",
                 "Totaal vanaf voorzitter",
-                Camerastand::uit_graden([0.0, 4.56, 4.48], 0.0, -25.0, 96.5),
+                Camerastand::uit_graden([0.0, 10.0, 9.0], 0.0, -32.0, 58.3),
             ),
             vast(
                 "S",
@@ -247,6 +254,35 @@ impl Standpunt {
                 Camerastand::uit_graden([1.21, 1.7, -0.68], -145.5, -2.0, 30.0),
             ),
         ]
+    }
+}
+
+/// Vroegere standaarden van de vaste Standpunten, als letter en stand in graden zoals in
+/// [`Standpunt::vaste`]. Een Stand van een oudere versie bewaart zijn vaste Standpunten zelf;
+/// staat er een nog op een vroegere standaard, dan krijgt hij die van nu
+/// ([`ververs_vaste_standpunten`]).
+const VORIGE_STANDAARDEN: [(&str, [f32; 3], f32, f32, f32); 2] = [
+    ("A", [0.0, 4.5, 4.45], 0.0, -23.0, 99.0),
+    ("A", [0.0, 4.56, 4.48], 0.0, -25.0, 96.5),
+];
+
+/// Zet elk vast Standpunt dat nog op een vroegere standaard staat op de standaard van nu. Een vast
+/// Standpunt dat de Regie zelf opnieuw opsloeg, blijft zoals het is.
+pub fn ververs_vaste_standpunten(standpunten: &mut [Standpunt]) {
+    let nu = Standpunt::vaste();
+    let gelijk = |a: &Camerastand, b: &Camerastand| {
+        (0..3).all(|i| (a.positie[i] - b.positie[i]).abs() < 1e-3)
+            && (a.draai - b.draai).abs() < 1e-4
+            && (a.helling - b.helling).abs() < 1e-4
+            && (a.beeldhoek - b.beeldhoek).abs() < 1e-4
+    };
+    for s in standpunten.iter_mut().filter(|s| s.vast) {
+        let oud = VORIGE_STANDAARDEN
+            .iter()
+            .any(|(l, p, d, h, b)| *l == s.letter && gelijk(&s.stand, &Camerastand::uit_graden(*p, *d, *h, *b)));
+        if let Some(n) = nu.iter().find(|n| n.letter == s.letter).filter(|_| oud) {
+            s.stand = n.stand;
+        }
     }
 }
 

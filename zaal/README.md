@@ -94,3 +94,9 @@ blender -b --factory-startup --python-exit-code 1 --python zaal/ruimte.py -- \
 ```
 
 De tests van de server controleren dat de ruimte onder alle hanglampen ligt, dat de vloer boven elke Stoel ligt en dat de vaste Standpunten erin staan.
+
+### De studio en de schil
+
+Totaal vanaf voorzitter (Standpunt A) staat niet in de Zaal maar erboven en erachter, op 10 m hoogte en 9 m achter het midden, met een lens van 58 graden. Van daar oogt het halfrond minder plat dan vanaf de wand achter de Voorzitter, zodat de Stoelen groter in beeld staan (een rugleuning achterin 26 in plaats van 18 pixels breed) en het plafond uit beeld is. De verhouding met de Graphics: alle 150 Stoelen staan tussen de kaartjes van de Zetelverdeling (tot y 360) en het Opbouwlabel (vanaf y 760); de panelen van Zetelbalk en Coalitiebalk vallen over de voorste Stoelen opzij.
+
+Dat werkt als in een virtuele studio. De server laat de camera daar vliegen: boven de Voorzitter loopt het plafond van de ruimte zacht op naar de studio, en achter de voorwand mag de camera boven 5 m (`Ruimte` in `crates/server/src/camera.rs`). De Renderer splitst bij het laden de schil af (`crates/renderer/src/schil.rs`): alles boven 5 m (plafond, daklicht, hanglampen en spots) en alles achter z 4,55 (de nis achter de Voorzitter met de zuil, het lage plafond en de voorwand). Elk deel van het model houdt twee meshes, heel en zonder schil, en tekent de mesh die bij de plek van de camera past; alleen als twee camera's in één Renderer het oneens zijn (het Voorbeeld), staat de schil los op een eigen laag die alleen een camera in de Zaal ziet. Een camera die van A de Zaal in vliegt, ziet het plafond dus pas als hij eronder is.
