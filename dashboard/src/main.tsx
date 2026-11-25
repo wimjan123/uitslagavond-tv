@@ -1,14 +1,13 @@
 // De algemene stijl eerst, zodat de stijl van elk onderdeel erna komt en hem kan aanvullen
 // (zoals de groene knop "Vastleggen en klaarzetten" boven de gewone knop).
-import "@fontsource/barlow-semi-condensed/400.css";
-import "@fontsource/barlow-semi-condensed/500.css";
-import "@fontsource/barlow-semi-condensed/600.css";
-import "@fontsource/barlow-semi-condensed/700.css";
+import "@fontsource-variable/geist";
 import "./stijl.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { TabletApp } from "./tablet/Tablet";
+// Het ontwerp als laatste, zodat het boven de stijl van elk onderdeel komt (DESIGN.md).
+import "./ontwerp.css";
 
 // De tablet van de Presentator heeft een eigen adres in dezelfde webapp.
 const opTablet = /^\/tablet\/?$/.test(location.pathname);

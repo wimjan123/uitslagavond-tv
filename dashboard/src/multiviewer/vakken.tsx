@@ -9,6 +9,7 @@ import { doelVan } from "../regie/toetsen";
 import type { BewerktSjabloon } from "../typen/BewerktSjabloon";
 import type { Graphic } from "../typen/Graphic";
 import type { Stand } from "../typen/Stand";
+import { Druppel, Overslaan, UitBeeld, Ververs } from "../iconen";
 import { Camera, OpnameTijd, naamVan } from "./Camera";
 import { Monitor } from "./Monitor";
 
@@ -78,7 +79,7 @@ function Voorbeeld() {
   );
   return (
     <Monitor
-      label="Voorbeeld"
+      label="Preview"
       kop={kop}
       toestand={oefenen ? "oefenen" : klaar && !inBeeld ? "klaar" : "rust"}
       gestippeld={!!proef}
@@ -102,7 +103,7 @@ function Ether() {
   const geenEther = staat === "verbonden" && !renderers.includes("Ether");
   const rechts = geenEther ? (
     <span className="strook-fout" title="De Renderer met rol Ether is niet verbonden. Schakel op de mixer over naar Reserve.">
-      Ether-Renderer weg
+      Live-Renderer weg
     </span>
   ) : !ether ? null : s && kanBijwerken(s) ? (
     <span className="let-op" title="Wat klaarstaat is een nieuwere versie van deze Graphic, of heeft nieuwere cijfers">
@@ -125,7 +126,7 @@ function Ether() {
   );
   return (
     <Monitor
-      label="Ether"
+      label="Live"
       toestand={geenEther ? "fout" : ether ? "ether" : "rust"}
       {...regels(ether?.graphic, s?.sjablonen)}
       rechts={rechts}
@@ -151,7 +152,7 @@ function Take() {
   const typen = useTypt();
   return (
     <div className="take">
-      <span className="take-uitleg" title={kanToon ? "Zet wat klaarstaat in de Ether (Spatie). Enter toont nooit." : waaromGeenToon(s)}>
+      <span className="take-uitleg" title={kanToon ? "Take: zet wat in Preview staat Live (Spatie). Enter doet dit nooit." : waaromGeenToon(s)}>
         <button
           className={`toon${oud ? " toon-oud" : ""}`}
           disabled={!kanToon}
@@ -160,7 +161,7 @@ function Take() {
           onClick={() => voerUit(regie, "Toon")}
         >
           <span className="toon-regel">
-            <span>Toon</span>
+            <span>Take</span>
             <kbd>Spatie</kbd>
           </span>
           {oud && <span className="toon-let-op">oude cijfers (N)</span>}
@@ -176,12 +177,16 @@ function Take() {
         }
       >
         <button className="knop knop-take" disabled={!verbonden || !kan("Bijwerken", s)} onClick={() => voerUit(regie, "Bijwerken")}>
-          Bijwerken <kbd>B</kbd>
+          <Ververs />
+          <span className="knop-woord">Update</span>
+          <kbd>B</kbd>
         </button>
       </span>
       <span className="take-uitleg" title={s?.ether ? "Haalt de Graphic uit de Ether. Daarna kun je hem nog terugzetten (Ctrl+Z)." : "Er staat niets in de Ether"}>
         <button className="knop knop-take knop-uit" disabled={!verbonden || !kan("UitBeeld", s)} onClick={() => voerUit(regie, "UitBeeld")}>
-          Uit beeld <kbd>X</kbd>
+          <UitBeeld />
+          <span className="knop-woord">Take out</span>
+          <kbd>X</kbd>
         </button>
       </span>
       <button
@@ -190,7 +195,9 @@ function Take() {
         onClick={() => voerUit(regie, "KleurUit")}
         title="De Stoelen in de Ether krijgen hun eigen leer terug; de Graphic blijft staan"
       >
-        Kleur uit <kbd>Z</kbd>
+        <Druppel />
+        <span className="knop-woord">Kleur uit</span>
+        <kbd>Z</kbd>
       </button>
       <button
         className="knop knop-take"
@@ -198,7 +205,9 @@ function Take() {
         onClick={() => voerUit(regie, "SlaOpbouwOver")}
         title="De Partijen die nog niet aan de beurt waren, kleuren meteen mee; de kaartjes komen direct"
       >
-        Opbouw overslaan <kbd>C</kbd>
+        <Overslaan />
+        <span className="knop-woord">Opbouw over</span>
+        <kbd>C</kbd>
       </button>
       {melding && (
         <p className="take-melding" role="alert">

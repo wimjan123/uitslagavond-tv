@@ -106,8 +106,8 @@ export function Camera() {
   return (
     <section className="camera" aria-label="Camera">
       <div className="camera-kop">
-        <span className="monitor-label" title="Deze toetsen sturen de camera van de Ether">
-          Camera Ether
+        <span className="monitor-label" title="Deze toetsen sturen de Live-camera">
+          Camera
         </span>
         <span className="camera-naam" title={naam}>
           {naam}
