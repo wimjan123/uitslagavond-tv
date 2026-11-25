@@ -110,6 +110,19 @@ export function Camera() {
         <span className="camera-naam" title={naam}>
           {naam}
         </span>
+      </div>
+      <div className="camera-kaart">
+        <Plattegrond
+          standpunten={standpunten}
+          cameraritten={ritten}
+          huidig={huidig}
+          vrij={vrij || oefenen}
+          voorbeeld={oefenen || !!s?.camera.proef}
+          stoelkleuren={s?.stoelkleuren ?? []}
+          uitgelicht={stoel ? plaatsVan(stoel) : null}
+          kiesStoel={kiesStoel}
+          kies={(l) => kies(l)}
+        />
         <span className="camera-schakels">
           <button
             className="camera-schakel"
@@ -124,17 +137,6 @@ export function Camera() {
           <OefenToetsen klasse="camera-schakel" />
         </span>
       </div>
-      <Plattegrond
-        standpunten={standpunten}
-        cameraritten={ritten}
-        huidig={huidig}
-        vrij={vrij || oefenen}
-        voorbeeld={oefenen || !!s?.camera.proef}
-        stoelkleuren={s?.stoelkleuren ?? []}
-        uitgelicht={stoel ? plaatsVan(stoel) : null}
-        kiesStoel={kiesStoel}
-        kies={(l) => kies(l)}
-      />
       <div className="standpunt-toetsen" role="group" aria-label="Standpunten">
         {vastePunten.map((p) => toets(p, false))}
       </div>

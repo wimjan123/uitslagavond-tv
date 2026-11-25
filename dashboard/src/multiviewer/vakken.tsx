@@ -193,7 +193,9 @@ function HerstelKnop() {
   if (!h) return null;
   return (
     <div className="herstel" role="status">
-      <span className="herstel-tekst">{h.tekst}</span>
+      <span className="herstel-tekst" title={h.tekst}>
+        {h.tekst}
+      </span>
       <button className="knop herstel-knop" onClick={herstel}>
         {h.knop}
       </button>
