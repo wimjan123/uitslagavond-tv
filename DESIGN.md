@@ -358,8 +358,9 @@ The keyboard works anywhere outside a text field. Inside a field keys type, and 
 | B | Bijwerken: refresh the figures of the Graphic on air. |
 | X | Uit beeld: take the Graphic off air. |
 | Z | Kleur uit: the Stoelen in the Ether go back to their own blue leather; the Graphic stays. |
+| C | Opbouw overslaan: during an Opbouw, the Partijen not yet lit colour at once and the labels go to their end state. |
 
-When focus sits on a button, Space and Enter press that button and do not show. Every shortcut is printed on its control as a key cap: Spatie on TOON, B, X and Z under it, the letter on each Standpunt key and pin, the number in the first column of each Preset row.
+When focus sits on a button, Space and Enter press that button and do not show. Every shortcut is printed on its control as a key cap: Spatie on TOON, B, X, Z and C under it, the letter on each Standpunt key and pin, the number in the first column of each Preset row.
 
 ## Elevation & Depth
 

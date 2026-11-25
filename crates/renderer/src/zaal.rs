@@ -1308,6 +1308,60 @@ mod tests {
     }
 
     #[test]
+    fn de_opbouw_kleurt_een_partij_tegelijk_de_grootste_eerst_en_kan_worden_overgeslagen() {
+        let (mut app, _) = zaal_zonder_gpu();
+        app.update();
+        // VOORBEELDGEGEVENS: 40 Stoelen rood links, 110 groen rechts; anderhalve seconde per Partij
+        let rood: Kleur = "#d4202c".parse().unwrap();
+        let groen: Kleur = "#00ae41".parse().unwrap();
+        let mut kleuren = vec![groen; 150];
+        for i in stoelen_van_links_naar_rechts().into_iter().take(40) {
+            kleuren[i] = rood;
+        }
+        let opbouw = Kleurovergang::standaard(Overgangsvorm::Opbouw);
+        let stand = Stand { stoelkleuren: kleuren.clone(), kleurovergang: opbouw, ..default() };
+        app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 1, stand: stand.clone() });
+        app.update();
+        let lin = |k: Kleur| Srgba::from(LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * 0.5);
+        let stap = |app: &App| app.world().resource::<Opbouwstand>().stap.map(|(k, _)| k);
+        let tel = |app: &mut App, k: Kleur| leerkleuren(app).iter().filter(|l| ongeveer(**l, lin(k))).count();
+
+        // de eerste Stand na het opstarten komt meteen; de volgende bouwt op
+        let mut nieuw = stand.clone();
+        nieuw.stoelkleuren.iter_mut().for_each(|k| *k = if *k == rood { groen } else { rood });
+        app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 2, stand: nieuw.clone() });
+        app.update();
+        wacht(&mut app, 0.74);
+        assert!(app.world().resource::<Opbouwstand>().bezig);
+        assert_eq!(stap(&app), None, "eerst worden de Stoelen donker");
+        assert_eq!(tel(&mut app, OPBOUW_WACHTKLEUR), 150);
+
+        // de grootste Partij (nu rood, 110) eerst, de rest wacht donker
+        wacht(&mut app, 0.7);
+        assert_eq!(stap(&app), Some(rood));
+        assert_eq!((tel(&mut app, rood), tel(&mut app, OPBOUW_WACHTKLEUR)), (110, 40));
+        wacht(&mut app, 1.5);
+        assert_eq!(stap(&app), Some(groen));
+        assert_eq!(tel(&mut app, groen), 40);
+        wacht(&mut app, 1.0);
+        assert!(!app.world().resource::<Opbouwstand>().bezig, "na de laatste Partij klaar");
+
+        // overslaan: dezelfde kleuren met Vervagen; de Partijen die nog wachtten, kleuren meteen mee
+        app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 3, stand });
+        app.update();
+        wacht(&mut app, 1.0);
+        assert_eq!(stap(&app), Some(groen), "groen (110) is nu het grootst");
+        let mut over = app.world().resource::<Standen>().huidig.clone().unwrap();
+        over.volgnummer = 4;
+        over.stand.kleurovergang = Kleurovergang { vorm: Overgangsvorm::Vervagen, duur_ms: gedeeld::OPBOUW_OVERSLAAN_MS };
+        app.world_mut().resource_mut::<Standen>().huidig = Some(over);
+        app.update();
+        assert!(!app.world().resource::<Opbouwstand>().bezig);
+        wacht(&mut app, 0.55);
+        assert_eq!((tel(&mut app, groen), tel(&mut app, rood)), (110, 40));
+    }
+
+    #[test]
     fn de_zaal_dimt_naar_de_kleurkracht_zolang_er_stoelen_gekleurd_zijn() {
         let (mut app, _) = zaal_zonder_gpu();
         let grijs = Color::srgb(0.6, 0.6, 0.6);

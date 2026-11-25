@@ -19,6 +19,7 @@ test("spatie toont, B werkt bij, X haalt uit beeld, Z zet de kleur uit", () => {
   assert.equal(actieVoorToets(toets("B")), "Bijwerken");
   assert.equal(actieVoorToets(toets("x")), "UitBeeld");
   assert.equal(actieVoorToets(toets("z")), "KleurUit");
+  assert.equal(actieVoorToets(toets("c")), "SlaOpbouwOver");
 });
 
 test("Enter toont nooit iets", () => {

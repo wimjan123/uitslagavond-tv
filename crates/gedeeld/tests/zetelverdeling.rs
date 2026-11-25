@@ -182,3 +182,68 @@ fn de_labels_voor_naam_en_zetels_staan_aan_of_uit_in_de_volgorde_van_de_uitslagi
     let g = p.stand.klaar.clone().unwrap().graphic;
     assert!(labels(&g, &p.stand).is_empty(), "beide uit: geen labels");
 }
+
+// --- de Opbouw ---
+
+use gedeeld::sjabloon::{Kleurovergang, Overgangsvorm};
+
+#[test]
+fn toon_bouwt_de_zetelverdeling_op_en_bijwerken_gaat_als_golf() {
+    let mut p = Proef::new();
+    p.doe(Opdracht::ZetKlaar { graphic: zetelverdeling("prognose"), standpunt: None }).unwrap();
+    p.doe(Opdracht::Toon { versie: None }).unwrap();
+    assert_eq!(p.stand.kleurovergang, Kleurovergang::standaard(Overgangsvorm::Opbouw));
+
+    // nieuwe cijfers: alleen de Stoelen die veranderen, als Golf
+    p.doe(Opdracht::ZetZetels { set: "prognose".into(), partij: "rood".into(), zetels: 75 }).unwrap();
+    p.doe(Opdracht::Bijwerken).unwrap();
+    assert_eq!(p.stand.kleurovergang, Kleurovergang::default());
+}
+
+#[test]
+fn de_opbouw_overslaan_kleurt_de_rest_kort_en_kan_maar_een_keer() {
+    let mut p = Proef::new();
+    assert_eq!(p.doe(Opdracht::SlaOpbouwOver), Err(Weigering::GeenOpbouw), "er staat nog niets");
+    p.doe(Opdracht::ZetKlaar { graphic: zetelverdeling("prognose"), standpunt: None }).unwrap();
+    p.doe(Opdracht::Toon { versie: None }).unwrap();
+    let kleuren = p.stand.stoelkleuren.clone();
+
+    p.doe(Opdracht::SlaOpbouwOver).unwrap();
+    assert_eq!(p.stand.kleurovergang.vorm, Overgangsvorm::Vervagen);
+    assert_eq!(p.stand.kleurovergang.duur_ms, gedeeld::OPBOUW_OVERSLAAN_MS);
+    assert_eq!(p.stand.stoelkleuren, kleuren, "de kleuren blijven gelijk");
+    assert_eq!(p.doe(Opdracht::SlaOpbouwOver), Err(Weigering::GeenOpbouw));
+}
+
+#[test]
+fn de_opbouw_kan_niet_in_de_stijl() {
+    let mut p = Proef::new();
+    let mut stijl = p.stand.stijl.clone();
+    stijl.kleurovergang = Kleurovergang::standaard(Overgangsvorm::Opbouw);
+    assert!(p.doe(Opdracht::ZetStijl { stijl }).is_err());
+}
+
+/// Het grote label van de Opbouw zoekt zijn Partij op kleur: elke kleur die in de Zaal oplicht,
+/// hoort bij precies één label, met evenveel Zetels als Stoelen.
+#[test]
+fn elk_label_van_de_opbouw_hoort_bij_een_kleur_in_de_zaal() {
+    use gedeeld::sjabloon::{Inhoud, vast_sjabloon};
+    let mut p = Proef::new();
+    p.doe(Opdracht::ZetKlaar { graphic: zetelverdeling("prognose"), standpunt: None }).unwrap();
+    p.doe(Opdracht::Toon { versie: None }).unwrap();
+    let g = p.stand.ether.clone().unwrap().graphic;
+    let invulling = g.invulling();
+    let blokken = vast_sjabloon(&invulling.sjabloon).unwrap().vul_in(&invulling, &g.cijfers().unwrap(), &p.stand.stijl);
+    let labels = blokken
+        .into_iter()
+        .find_map(|b| match b.inhoud {
+            Inhoud::Opbouwlabel { labels, .. } => Some(labels),
+            _ => None,
+        })
+        .expect("de Zetelverdeling heeft een Opbouwlabel");
+    assert_eq!(labels.len(), 2);
+    for l in labels {
+        let stoelen = p.stand.stoelkleuren.iter().filter(|k| **k == l.kleur).count();
+        assert_eq!(Some(stoelen as u16), l.zetels, "{:?}", l.kort);
+    }
+}

@@ -378,7 +378,7 @@ function SjabloonVelden({ sjabloon: s, vast, zet }: { sjabloon: Sjabloon; vast: 
             <option value="eigen">Eigen Kleurovergang</option>
           </select>
         </label>
-        {s.kleurovergang && <KleurovergangKeuze waarde={s.kleurovergang} zet={(k) => wijzig((n) => (n.kleurovergang = k))} />}
+        {s.kleurovergang && <KleurovergangKeuze sjabloon waarde={s.kleurovergang} zet={(k) => wijzig((n) => (n.kleurovergang = k))} />}
       </div>
       <label className="veld">
         <span className="veld-kop">

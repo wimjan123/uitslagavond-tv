@@ -50,6 +50,9 @@ export function kan(actie: TakeActie, s: Stand | undefined): boolean {
       return !!s.ether;
     case "KleurUit":
       return s.stoelkleuren.length > 0;
+    case "SlaOpbouwOver":
+      // gelijk aan de Weigering GeenOpbouw; of de Opbouw al klaar is, weet alleen de Renderer
+      return s.stoelkleuren.length > 0 && s.kleurovergang.vorm === "Opbouw";
   }
 }
 
@@ -88,6 +91,9 @@ export function voerUit(regie: Regie, actie: Actie): void {
       return;
     case "KleurUit":
       void regie.stuur({ soort: "KleurUit" }, TAKE);
+      return;
+    case "SlaOpbouwOver":
+      void regie.stuur({ soort: "SlaOpbouwOver" }, TAKE);
       return;
   }
 }
