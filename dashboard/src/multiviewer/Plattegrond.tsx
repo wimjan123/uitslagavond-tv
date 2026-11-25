@@ -103,6 +103,8 @@ export function Plattegrond({
     }
   };
   const actief = standpunten.find((s) => s.letter === huidig);
+  // een vaste Camerarit heeft een toets; zijn route en pin staan alleen in beeld als hij gekozen is
+  const zichtbareRitten = cameraritten.filter((r) => !r.vast || r.letter === huidig || r.letter === gekozen);
   return (
     <svg className={`plattegrond${groot ? " plattegrond-groot" : ""}`} viewBox={VIEWBOX} role="group" aria-label="Plattegrond van de Zaal">
       <path className="plattegrond-vloer" d={VLOER} />
@@ -132,7 +134,7 @@ export function Plattegrond({
       )}
       {vrij && <path className="plattegrond-ruimte" d={RAND} aria-label="Onzichtbare ruimte van de camera" />}
       {actief && <Kegel stand={actief.stand} className="pin-kegel" />}
-      {cameraritten.map((r) => {
+      {zichtbareRitten.map((r) => {
         const route = routeVan(r);
         const aan = r.letter === huidig || r.letter === gekozen;
         return (
@@ -182,7 +184,7 @@ export function Plattegrond({
           </g>
         );
       })}
-      {cameraritten.map((r) => {
+      {zichtbareRitten.map((r) => {
         const route = routeVan(r);
         const [x, z] = route[0] ?? [0, 0];
         const [ex, ez] = route[route.length - 1] ?? [0, 0];

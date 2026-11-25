@@ -324,7 +324,7 @@ const AANSCHUIF_VANAF: [f32; 2] = [0.0, 1.5];
 /// De verticale beeldhoek van Aanschuiven, in graden.
 const AANSCHUIF_BEELDHOEK: f32 = 40.0;
 /// Welk deel van de breedte van het beeld het blok vult.
-const AANSCHUIF_VULLING: f32 = 0.6;
+const AANSCHUIF_VULLING: f32 = 0.5;
 
 /// De sleutel waarmee een Graphic de camera naar het shot van een Stoel stuurt, zoals
 /// "stoel-3-2-1". Die kies je overal waar je een Standpunt kiest; de overgang is die van een

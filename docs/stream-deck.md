@@ -46,7 +46,7 @@ Elke knop is een **POST** naar `api/opdracht` met **Content Type** `application/
 | Vrije camera uit | `api/opdracht` | `{"soort":"ZetVrijeCamera","aan":false}` |
 
 - **Preset**: het nummer is hetzelfde als de cijfertoets op het dashboard en staat vooraan in de rij in het onderdeel Presets. Via HTTP werken ook nummers boven de 9. Klaarzetten zet hem in het Voorbeeld; pas Toon zet hem in de Ether.
-- **Standpunt**: de letter is dezelfde als op het dashboard: A, S, D, F, G en H voor de vaste Standpunten, de letter van een eigen Standpunt of Camerarit (J, K en L als die toets is gekozen). Een Camerarit kies je ook met zijn letter.
+- **Standpunt**: de letter is dezelfde als op het dashboard: A, S, D, F, G en H voor de vaste Standpunten, Q, W, E, T, Y en U voor de vaste Cameraritten, de letter van een eigen Standpunt of Camerarit (J, K en L als die toets is gekozen). Een Camerarit kies je ook met zijn letter.
 - **Toon** zonder meer toont wat klaarstaat. Zie hieronder hoe een knop alleen toont wat hij liet zien.
 - Het antwoord is `{"soort":"Uitgevoerd","volgnummer":12}`, of bij een weigering status 422 met de reden, zoals `{"soort":"Geweigerd","reden":"er staat geen Graphic klaar"}`. Companion zet de verbinding dan op een fout en zet de reden in zijn log. Wil je de status op de knop zien, zet hem dan met **Response Status Code Variable** in een variabele.
 

@@ -349,6 +349,7 @@ The keyboard works anywhere outside a text field. Inside a field keys type, and 
 | Space | TOON: put the ready Graphic in the Ether. |
 | Enter | Never shows. It only presses the focused button. |
 | A, S, D, F, G, H | Pick a fixed Standpunt: Totaal vanaf voorzitter, Laag over de banken, Linkerflank, Rechterflank, Bovenaf, Katheder. |
+| Q, W, E, T, Y, U | Pick a fixed Camerarit: Onthulling, Zwenk linkerflank naar rechterflank, Rondje boven de zaal (repeats), Panorama vanuit het midden, Kraan omhoog naar overzicht, Naar de katheder. |
 | J, K, L | Pick an own Standpunt or Camerarit. A new one gets the first free letter; the Regie can move or clear a letter. |
 | Shift with a letter | Pick that Standpunt or Camerarit with a cut, without movement. |
 | V | Vrije camera on or off (gamepad). |
