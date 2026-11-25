@@ -212,13 +212,21 @@ impl Standpunt {
         vec![
             // Hoog tegen de wand achter de Voorzitter, met een heel wijde lens: zo staan alle
             // 150 Stoelen in beeld, ook de voorste aan de zijkanten. Zo hoog en ver naar achteren
-            // als de ruimte toelaat en iets meer omlaag, zodat de Stoelen de band tussen de
-            // Graphics boven (tot y 330) en onder (vanaf y 640) vullen; smaller kan niet, want
-            // dan vallen de voorste Stoelen opzij uit beeld.
+            // als de ruimte toelaat en zo ver omlaag dat de Stoelen in de band tussen de Graphics
+            // boven (de kaartjes van de Zetelverdeling tot y 364) en onder (panelen vanaf y 646)
+            // staan, van y 395 tot 630.
+            //
+            // Groter kan niet zolang alle 150 Stoelen in beeld moeten (gerekend met de
+            // Stoelplekken, de rugleuningen helemaal): van elke plek waar de camera kan staan, ook
+            // virtueel achter de voorwand met de wand weggeknipt, oogt het halfrond zo'n 8 keer zo
+            // breed als hoog. Een rugleuning is daar in het midden 42 tot 43 pixels breed, hier
+            // 41, en de band wordt lager (150 tot 200 pixels in plaats van 235). Achter de wand
+            // ziet de camera bovendien boven het plafond uit, tenzij hij laag kijkt, en dan vallen
+            // de Stoelen achter de kaartjes van de Zetelverdeling.
             vast(
                 "A",
                 "Totaal vanaf voorzitter",
-                Camerastand::uit_graden([0.0, 4.56, 4.48], 0.0, -25.0, 96.5),
+                Camerastand::uit_graden([0.0, 4.56, 4.48], 0.0, -27.5, 96.5),
             ),
             vast(
                 "S",

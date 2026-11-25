@@ -66,7 +66,7 @@ impl Plugin for ZaalPlugin {
                     affects_lightmapped_meshes: false,
                 })
                 .add_systems(Startup, (laad.after(crate::beeld::bouw), zet_lijn_bij_76))
-                .add_systems(Update, (stel_materialen_bij, spots_stralen, meld_klaar, toon_lijn_bij_76));
+                .add_systems(Update, (stel_materialen_bij, spots_stralen.before(dim_zaal), meld_klaar, toon_lijn_bij_76));
         }
     }
 }
@@ -720,8 +720,8 @@ fn kleur_stoelen(
 /// Kleurovergang.
 #[derive(Resource)]
 struct Zaaldimmer {
-    /// De kleur van elk materiaal van de Zaal zoals het model hem gaf.
-    origineel: HashMap<AssetId<StandardMaterial>, LinearRgba>,
+    /// De kleur en de straling van elk materiaal van de Zaal zoals het model ze gaf.
+    origineel: HashMap<AssetId<StandardMaterial>, (LinearRgba, LinearRgba)>,
     van: f32,
     naar: f32,
     nu: f32,
@@ -835,17 +835,24 @@ fn dim_zaal(
                     d.onaf = true;
                     continue;
                 };
-                let k = LinearRgba::from(m.base_color);
+                let k = (LinearRgba::from(m.base_color), m.emissive);
                 d.origineel.insert(id, k);
                 k
             }
         };
+        let (kleur, straling) = origineel;
         if let Some(mut m) = materialen.get_mut(id) {
             // de doorzichtigheid laat stel_materialen_bij staan (glas)
             let alpha = m.base_color.alpha();
-            let k = LinearRgba::new(origineel.red * nu, origineel.green * nu, origineel.blue * nu, alpha);
+            let k = LinearRgba::new(kleur.red * nu, kleur.green * nu, kleur.blue * nu, alpha);
             if LinearRgba::from(m.base_color) != k {
                 m.base_color = k.into();
+            }
+            // wat zelf licht geeft (de plafondspots) dimt mee: anders blijven die als felle
+            // vlekken in het plafond staan terwijl de rest donker wordt
+            let s = (straling * nu).with_alpha(straling.alpha);
+            if m.emissive != s {
+                m.emissive = s;
             }
         }
     }
