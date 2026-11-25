@@ -382,7 +382,7 @@ details > summary { cursor: pointer; }
 .toets-stem { font-size: 12.5px; font-weight: 600; }
 .fractie-toets .toets-naam { display: flex; align-items: flex-start; gap: 6px; min-width: 0; overflow: visible; -webkit-line-clamp: unset; }
 .fractie-toets .toets-naam::before { margin-top: 4px; }
-.toets-naam-tekst { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-width: 0; line-height: 1.2; overflow-wrap: anywhere; }
+.toets-naam-tekst { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-width: 0; line-height: 1.2; overflow-wrap: normal; hyphens: auto; }
 
 /* Gevulde vlakken met witte tekst halen 4,5:1: een iets donkerder rood en groen dan de tally-rand. */
 :root { --ether-vul: #c93a40; --ether-vul-hover: #d6444a; --klaar-vul: #1f7a4f; --klaar-vul-hover: #258a5a; }
@@ -451,3 +451,14 @@ details > summary { cursor: pointer; }
 .tablet .boog-partij:active:not(:disabled) { transform: translate(-50%, -50%) scale(0.97); }
 .tablet .boog-raster .boog-partij:active:not(:disabled) { transform: scale(0.97); }
 :root { --tekst-3: #8e919a; }
+
+/* Take heeft een vaste hoogte, zodat de knoppen eronder nooit verschuiven. */
+.toon { height: 58px; min-height: 0; padding-block: 0; }
+.toon-typt { padding: 1px 6px; font-size: 11.5px; font-weight: 600; color: var(--warn-amber-ink); background: var(--warn-amber); border-radius: 4px; }
+/* De tabletschakelaar is neutraal: kleur blijft voor tally en Take. */
+.tablet-knop[aria-pressed="true"] { color: var(--paper-ink); background: var(--vlak-aan); border-color: var(--rand-sterk); }
+/* "was live" als stempel, zoals Live en Klaar, maar grijs. */
+.stempel-was { color: var(--slate-mute); font-weight: 400; }
+/* Wat je tijdens de uitzending leest, is minstens 12 px. */
+.toets-volg, .strook-chip, .strook-knop, .rit-kop, .zetelbalk-76, .toon-let-op, .boog-naam { font-size: 12px; }
+.coalitie-zijkant .coalitie-nu { align-self: stretch; }

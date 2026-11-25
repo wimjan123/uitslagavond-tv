@@ -54,7 +54,7 @@ export function Stemmingen() {
       <Werkbalk naam="Stemmingen" hint={<Dag dag={s?.stemmingen.dag ?? null} ingelezen={s?.stemmingen.ingelezen ?? null} />}>
         <div className="filters" role="group" aria-label="Welke Stemmingen">
           <button className="filter" aria-pressed={filter === "uitzending"} onClick={() => setKeuze("uitzending")}>
-            Voor de uitzending ({aantalUitzending})
+            Voor de uitzending {aantalUitzending}
           </button>
           <button className="filter" aria-pressed={filter === "alle"} onClick={() => setKeuze("alle")}>
             Alle {lijst.length}

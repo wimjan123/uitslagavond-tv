@@ -129,7 +129,7 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
         <span className="status-cel">
           {status.live && <span className="stempel stempel-live">Live</span>}
           {status.klaar && <span className="stempel stempel-klaar">Klaar</span>}
-          {!status.live && !status.klaar && status.wasLiveOm !== null && <span className="zacht">was live {uurMinuut(status.wasLiveOm)}</span>}
+          {!status.live && !status.klaar && status.wasLiveOm !== null && <span className="stempel stempel-was">was live {uurMinuut(status.wasLiveOm)}</span>}
         </span>
       </td>
       <td className="kol-beeld">
@@ -148,7 +148,7 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
           >
             {sjabloonNaam(p.graphic, s.sjablonen)}
           </button>
-          {p.graphic.sjabloon === "Titelkaart" && <span className="zacht"> {p.graphic.kop}</span>}
+          {p.graphic.sjabloon === "Titelkaart" && <span className="zacht"> · {p.graphic.kop}</span>}
         </div>
       </td>
       <td className="cel-tekst">

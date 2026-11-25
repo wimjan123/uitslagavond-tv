@@ -108,6 +108,7 @@ export function Coalitie() {
           live={inEther}
           liveSet={inBeeld?.cijfers?.set.label ?? inBeeld?.set}
           nu={inEther && s ? telling(zetelsVan(s, set), partijen) : undefined}
+          nuRegel={false}
           leeg="Geen Zetels in deze set: kies een andere set of lees eerst cijfers in."
         />
         <aside className="paneel-detail coalitie-zijkant">
@@ -147,6 +148,8 @@ export function Coalitie() {
               </li>
             ))}
           </ol>
+          {/* De waarschuwing over de cijfers van nu staat bij de knop die er iets aan doet. */}
+          {inEther && s && telling(zetelsVan(s, set), partijen) !== b.totaal && <NuRegel nu={telling(zetelsVan(s, set), partijen)} totaal={b.totaal} />}
           <div className="knoppen">
             <button
               className={inEther ? "knop" : "knop knop-commit"}
@@ -194,6 +197,7 @@ export function CoalitieBoog({
   liveSet,
   nu,
   gebaar = "klik",
+  nuRegel = true,
   maat = BOOG,
 }: {
   bouwer: Bouwer;
@@ -208,6 +212,8 @@ export function CoalitieBoog({
   nu?: number;
   /** "klik" op het dashboard, "tik" op de tablet. */
   gebaar?: "klik" | "tik";
+  /** De amber regel over de cijfers van nu boven de boog; het dashboard zet hem bij de knop. */
+  nuRegel?: boolean;
   maat?: Boogmaat;
 }) {
   const { volgorde, partijen, zetels, totaal } = b;
@@ -221,12 +227,7 @@ export function CoalitieBoog({
           <span className="stempel stempel-live">Live</span> Elke {gebaar} wijzigt de live coalitie{liveSet && <span className="zacht"> · {liveSet}</span>}
         </p>
       )}
-      {live && nu !== undefined && nu !== totaal && (
-        <p className={(nu >= MEERDERHEID) !== (totaal >= MEERDERHEID) ? "coalitie-nu coalitie-omslag" : "coalitie-nu"} role="status">
-          Met de cijfers van nu: <strong>{nu} Zetels</strong>
-          {(nu >= MEERDERHEID) !== (totaal >= MEERDERHEID) && (nu >= MEERDERHEID ? ", wel een meerderheid" : ", geen meerderheid meer")}
-        </p>
-      )}
+      {nuRegel && live && nu !== undefined && nu !== totaal && <NuRegel nu={nu} totaal={totaal} />}
       {volgorde.length === 0 ? (
         <p className="melding">{leeg}</p>
       ) : (
@@ -275,6 +276,17 @@ export function CoalitieBoog({
 
 /** De teller naar 76. Met `oud` staat er wat Live toont met oudere cijfers: dan in amber en zonder de
  * conclusie over een meerderheid, want die kan met de cijfers van nu anders zijn (zie de regel erboven). */
+/** Wat de cijfers van nu zeggen over een live coalitie met oudere cijfers; vol amber als de meerderheid omslaat. */
+function NuRegel({ nu, totaal }: { nu: number; totaal: number }) {
+  const omslag = nu >= MEERDERHEID !== totaal >= MEERDERHEID;
+  return (
+    <p className={omslag ? "coalitie-nu coalitie-omslag" : "coalitie-nu"} role="status">
+      Met de cijfers van nu: <strong>{nu} Zetels</strong>
+      {omslag && (nu >= MEERDERHEID ? ", wel een meerderheid" : ", geen meerderheid meer")}
+    </p>
+  );
+}
+
 function Teller({ totaal, oud = false }: { totaal: number; oud?: boolean }) {
   return (
     <div className={oud ? "boog-midden boog-oud" : "boog-midden"}>

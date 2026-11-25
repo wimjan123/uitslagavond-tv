@@ -170,11 +170,10 @@ function Take() {
         >
           <span className="toon-regel">
             <span>Take</span>
-            {!typen && <kbd>Spatie</kbd>}
+            {typen ? <span className="toon-typt" title="Je typt in een veld: Spatie typt een spatie. Klik op Take werkt wel.">typen</span> : <kbd>Spatie</kbd>}
           </span>
           {oud && <span className="toon-let-op" title="Wat klaarstaat heeft niet de cijfers van nu. N zet de cijfers van nu erin.">{typen ? "oude cijfers" : "oude cijfers (N)"}</span>}
           {!kanToon && verbonden && <span className="toon-reden">{s?.klaar ? "staat al live" : "niets klaar"}</span>}
-          {typen && kanToon && <span className="toon-typen">sneltoetsen uit tijdens typen</span>}
         </button>
       </span>
       <span
