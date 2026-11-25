@@ -98,7 +98,8 @@ export function Camera() {
       onClick={(e) => kies(p.letter, e.shiftKey)}
     >
       <kbd>{toetsVan(p)}</kbd>
-      <span>{p.naam}</span>
+      <span className="standpunt-naam">{p.naam}</span>
+      {rit && "bijschaving" in p && <span className="standpunt-duur">{Math.round(p.bijschaving.duur_s)} s</span>}
     </button>
   );
   return (
@@ -141,7 +142,7 @@ export function Camera() {
         {vastePunten.map((p) => toets(p, false))}
       </div>
       {ritToetsen.length > 0 && (
-        <div className="standpunt-toetsen" role="group" aria-label="Cameraritten">
+        <div className="standpunt-toetsen rit-toetsen" role="group" aria-label="Cameraritten">
           {ritToetsen.map((p) => toets(p, true))}
         </div>
       )}

@@ -67,9 +67,9 @@ export function kopVergelijking(cijfers: Cijfers): string | null {
 }
 
 /** Twee kolommen: de eerste helft links, de rest rechts. */
-export function verdeel<T>(lijst: T[]): [T[], T[]] {
-  const helft = Math.ceil(lijst.length / 2);
-  return [lijst.slice(0, helft), lijst.slice(helft)];
+export function verdeel<T>(lijst: T[], kolommen = 2): T[][] {
+  const per = Math.ceil(lijst.length / kolommen);
+  return Array.from({ length: kolommen }, (_, i) => lijst.slice(i * per, (i + 1) * per));
 }
 
 /**

@@ -1,9 +1,11 @@
 // De vakken van de multiviewer-rij: Voorbeeld, de knoppen om te tonen, de Ether en de camera.
+import { useEffect, useState } from "react";
 import type { ComponentType, ReactNode } from "react";
 import { graphicTekst, nieuwereCijfers, sjabloonNaam, uurMinuut } from "../graphic";
 import { useRegie } from "../regie/regie";
-import { herstel, useHerstel } from "../regie/herstel";
+import { geldigHerstel, herstel, useHerstel } from "../regie/herstel";
 import { TAKE, kan, kanBijwerken, klaarStaatInBeeld, voerUit } from "../regie/take";
+import { doelVan } from "../regie/toetsen";
 import type { BewerktSjabloon } from "../typen/BewerktSjabloon";
 import type { Graphic } from "../typen/Graphic";
 import type { Stand } from "../typen/Stand";
@@ -53,10 +55,10 @@ function Voorbeeld() {
     rechts = (
       <button
         className="strook-knop"
-        title="Er zijn nieuwere cijfers dan in deze Graphic. Ververs zet de cijfers van nu erin; daarna Toon."
-        onClick={() => void regie.stuur({ soort: "WijzigKlaar", id: klaar.id, graphic: klaar.graphic, standpunt: klaar.standpunt }, TAKE)}
+        title="Er zijn nieuwere cijfers dan in deze Graphic. Ververs (N) zet de cijfers van nu erin; daarna Toon."
+        onClick={() => voerUit(regie, "Ververs")}
       >
-        oude cijfers · Ververs
+        oude cijfers · Ververs <kbd>N</kbd>
       </button>
     );
   }
@@ -89,25 +91,42 @@ function Voorbeeld() {
 }
 
 function Ether() {
-  const { stand, beelden } = useRegie();
+  const regie = useRegie();
+  const { stand, beelden, renderers, staat } = regie;
   const zonderBeeld = useZonderBeeld();
   const s = stand?.stand;
   const ether = s?.ether ?? null;
-  const rechts = !ether ? null : s && kanBijwerken(s) ? (
+  // Valt de Renderer van de Ether weg, dan moet dat hier staan: overschakelen naar Reserve begint met zien.
+  const geenEther = staat === "verbonden" && !renderers.includes("Ether");
+  const rechts = geenEther ? (
+    <span className="strook-fout" title="De Renderer met rol Ether is niet verbonden. Schakel op de mixer over naar Reserve.">
+      Ether-Renderer weg
+    </span>
+  ) : !ether ? null : s && kanBijwerken(s) ? (
     <span className="let-op" title="Wat klaarstaat is een nieuwere versie van deze Graphic, of heeft nieuwere cijfers">
       {nieuwereCijfers(s, ether.graphic) ? "oude cijfers" : "nieuwere versie klaar"} · <kbd>B</kbd> werkt bij
     </span>
   ) : s && nieuwereCijfers(s, ether.graphic) ? (
-    <span className="let-op" title="Zet deze Graphic opnieuw klaar met de cijfers van nu, en toon of werk bij">
-      oude cijfers
-    </span>
+    s.klaar ? (
+      <span className="let-op" title="Deze Graphic heeft niet de cijfers van nu. Zet haar opnieuw klaar (cijfers van nu) en toon.">
+        oude cijfers
+      </span>
+    ) : (
+      <button
+        className="strook-knop"
+        title="Zet deze Graphic opnieuw klaar met de cijfers van nu. Daarna Toon zet ze in beeld."
+        onClick={() => void regie.stuur({ soort: "ZetKlaar", graphic: ether.graphic, standpunt: ether.standpunt }, TAKE)}
+      >
+        oude cijfers · zet opnieuw klaar
+      </button>
+    )
   ) : (
     `sinds ${uurMinuut(ether.sinds_ms)}`
   );
   return (
     <Monitor
       label="Ether"
-      toestand={ether ? "ether" : "rust"}
+      toestand={geenEther ? "fout" : ether ? "ether" : "rust"}
       {...regels(ether?.graphic, s?.sjablonen)}
       rechts={rechts}
       beeld={beelden.Ether}
@@ -128,39 +147,47 @@ function Take() {
   const verbonden = regie.staat === "verbonden";
   const melding = regie.melding?.bij === TAKE ? regie.melding.tekst : null;
   const kanToon = verbonden && kan("Toon", s);
+  const oud = kanToon && kan("Ververs", s);
+  const typen = useTypt();
   return (
     <div className="take">
-      <button
-        className="toon"
-        disabled={!kanToon}
-        title={kanToon ? "Zet wat klaarstaat in de Ether (Spatie). Enter toont nooit." : waaromGeenToon(s)}
-        // Enter toont nooit iets, ook niet als deze knop de focus heeft (DESIGN.md, Keyboard).
-        onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
-        onClick={() => voerUit(regie, "Toon")}
-      >
-        <span>Toon</span>
-        <kbd>Spatie</kbd>
-      </button>
-      <button
-        className="knop knop-take"
-        disabled={!verbonden || !kan("Bijwerken", s)}
+      <span className="take-uitleg" title={kanToon ? "Zet wat klaarstaat in de Ether (Spatie). Enter toont nooit." : waaromGeenToon(s)}>
+        <button
+          className={`toon${oud ? " toon-oud" : ""}`}
+          disabled={!kanToon}
+          // Enter toont nooit iets, ook niet als deze knop de focus heeft (DESIGN.md, Keyboard).
+          onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
+          onClick={() => voerUit(regie, "Toon")}
+        >
+          <span className="toon-regel">
+            <span>Toon</span>
+            <kbd>Spatie</kbd>
+          </span>
+          {oud && <span className="toon-let-op">oude cijfers (N)</span>}
+        </button>
+      </span>
+      {typen && (
+        <p className="take-typen" role="status">
+          Je typt in een veld: sneltoetsen staan uit. <kbd>Esc</kbd>
+        </p>
+      )}
+      <span
+        className="take-uitleg"
         title={
           kan("Bijwerken", s)
             ? "Zet de nieuwere versie of de nieuwere cijfers in de Ether, zonder opnieuw op te bouwen"
             : "Kan als wat klaarstaat een nieuwere versie is van de Graphic in de Ether"
         }
-        onClick={() => voerUit(regie, "Bijwerken")}
       >
-        Bijwerken <kbd>B</kbd>
-      </button>
-      <button
-        className="knop knop-take knop-uit"
-        disabled={!verbonden || !kan("UitBeeld", s)}
-        title={s?.ether ? "Haalt de Graphic uit de Ether. Daarna kun je hem 10 seconden terugzetten." : "Er staat niets in de Ether"}
-        onClick={() => voerUit(regie, "UitBeeld")}
-      >
-        Uit beeld <kbd>X</kbd>
-      </button>
+        <button className="knop knop-take" disabled={!verbonden || !kan("Bijwerken", s)} onClick={() => voerUit(regie, "Bijwerken")}>
+          Bijwerken <kbd>B</kbd>
+        </button>
+      </span>
+      <span className="take-uitleg" title={s?.ether ? "Haalt de Graphic uit de Ether. Daarna kun je hem nog terugzetten (Ctrl+Z)." : "Er staat niets in de Ether"}>
+        <button className="knop knop-take knop-uit" disabled={!verbonden || !kan("UitBeeld", s)} onClick={() => voerUit(regie, "UitBeeld")}>
+          Uit beeld <kbd>X</kbd>
+        </button>
+      </span>
       <button
         className="knop knop-take"
         disabled={!verbonden || !kan("KleurUit", s)}
@@ -187,19 +214,45 @@ function Take() {
   );
 }
 
-/** Na Uit beeld of een wisactie: wat er gebeurde en een knop om het terug te zetten. */
+/** Of de focus in een tekstveld staat: dan typen toetsen en werken de sneltoetsen niet. */
+function useTypt(): boolean {
+  const [typt, setTypt] = useState(false);
+  useEffect(() => {
+    const kijk = () => setTypt(doelVan(document.activeElement) === "tekstveld");
+    // Na focusout staat de focus nog even op het oude veld; daarna kijken.
+    const later = () => window.setTimeout(kijk);
+    window.addEventListener("focusin", kijk);
+    window.addEventListener("focusout", later);
+    return () => {
+      window.removeEventListener("focusin", kijk);
+      window.removeEventListener("focusout", later);
+    };
+  }, []);
+  return typt;
+}
+
+/** Na Uit beeld of een wisactie: wat er gebeurde, wat terugkomt, en een knop (Ctrl+Z) om het terug te
+ * zetten. De knop verdwijnt zodra er intussen iets anders gebeurde (zie herstel.ts). */
 function HerstelKnop() {
-  const h = useHerstel();
+  const regie = useRegie();
+  const h = geldigHerstel(useHerstel(), regie.stand?.stand);
+  const [, tik] = useState(0);
+  useEffect(() => {
+    if (!h) return;
+    const t = window.setInterval(() => tik((n) => n + 1), 1000);
+    return () => window.clearInterval(t);
+  }, [h]);
   if (!h) return null;
+  const over = Math.max(0, Math.ceil((h.tot - Date.now()) / 1000));
   return (
     <div className="herstel" role="status">
-      <span className="herstel-tekst" title={h.tekst}>
-        {h.tekst}
+      <span className="herstel-wat" title={`${h.tekst}: ${h.wat}`}>
+        <span className="herstel-tekst">{h.tekst}:</span> {h.wat}
       </span>
-      <button className="knop herstel-knop" onClick={herstel}>
-        {h.knop}
+      <button className="knop herstel-knop" onClick={() => herstel(regie)}>
+        {h.knop} <kbd>Ctrl+Z</kbd>
       </button>
-      <span className="herstel-tijd" style={{ animationDuration: `${Math.max(0, h.tot - Date.now())}ms` }} aria-hidden />
+      <span className="herstel-tijd" style={{ width: `${(over / 20) * 100}%` }} aria-label={`nog ${over} seconden`} />
     </div>
   );
 }

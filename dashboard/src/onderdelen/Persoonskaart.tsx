@@ -170,7 +170,7 @@ export function Persoonskaart({ uitleg }: { uitleg: string }) {
           </select>
         </label>
         <div className="knoppen">
-          <button className="knop knop-hoofd" type="submit" disabled={!verbonden || !graphic}>
+          <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
             Zet klaar
           </button>
           <button className="knop" type="button" disabled={!verbonden || !klaarIsPersoonskaart || !graphic} onClick={wijzig}>

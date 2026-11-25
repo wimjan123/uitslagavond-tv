@@ -1,6 +1,6 @@
 // Toon, Bijwerken, Uit beeld, Kleur uit en Standpunten: dezelfde handelingen voor de knoppen en de sneltoetsen.
-import { nieuwereCijfers, sjabloonId, sjabloonNaam } from "../graphic";
-import { biedHerstel } from "./herstel";
+import { graphicTekst, nieuwereCijfers, sjabloonId, sjabloonNaam } from "../graphic";
+import { biedHerstel, herstel } from "./herstel";
 import { geldendSjabloon, gewijzigdSjabloon } from "../vormgeving/sjablonen";
 import type { Stand } from "../typen/Stand";
 import type { Regie } from "./regie";
@@ -54,6 +54,8 @@ export function kan(actie: TakeActie, s: Stand | undefined): boolean {
     case "SlaOpbouwOver":
       // gelijk aan de Weigering GeenOpbouw; of de Opbouw al klaar is, weet alleen de Renderer
       return s.stoelkleuren.length > 0 && s.kleurovergang.vorm === "Opbouw";
+    case "Ververs":
+      return !!s.klaar && nieuwereCijfers(s, s.klaar.graphic);
   }
 }
 
@@ -70,6 +72,9 @@ export function voerUit(regie: Regie, actie: Actie): void {
     return;
   }
   switch (actie) {
+    case "Herstel":
+      herstel(regie);
+      return;
     case "VrijeCamera":
       if (s) void regie.stuur({ soort: "ZetVrijeCamera", aan: !s.camera.vrij }, CAMERA);
       return;
@@ -96,6 +101,12 @@ export function voerUit(regie: Regie, actie: Actie): void {
     case "SlaOpbouwOver":
       void regie.stuur({ soort: "SlaOpbouwOver" }, TAKE);
       return;
+    case "Ververs":
+      // Een Preset houdt de cijfers van het moment van bewaren; WijzigKlaar zet de cijfers van nu erin.
+      if (s?.klaar && kan("Ververs", s)) {
+        void regie.stuur({ soort: "WijzigKlaar", id: s.klaar.id, graphic: s.klaar.graphic, standpunt: s.klaar.standpunt }, TAKE);
+      }
+      return;
   }
 }
 
@@ -104,22 +115,29 @@ export function kiesStandpunt(regie: Regie, letter: string, knip = false): void 
   void regie.stuur({ soort: "KiesStandpunt", letter, knip }, CAMERA);
 }
 
-/** Haalt de Graphic uit de Ether en biedt een paar seconden "Terug in beeld" aan: dat zet dezelfde
- * Graphic opnieuw klaar en toont haar, en zet daarna terug wat klaarstond. */
+/** Haalt de Graphic uit de Ether en biedt "Terug in beeld" aan. Dat geldt alleen zolang de Ether leeg
+ * is en wat klaarstaat niet veranderde: dan zet het dezelfde Graphic opnieuw klaar, toont haar, en
+ * zet daarna terug wat klaarstond (ook als Toon mislukt). */
 async function uitBeeld(regie: Regie): Promise<void> {
   const s = regie.stand?.stand;
   const ether = s?.ether;
-  const klaar = s?.klaar;
+  const klaar = s?.klaar ?? null;
   const a = await regie.stuur({ soort: "UitBeeld" }, TAKE);
   if (!a.uitgevoerd || !ether || !s) return;
-  biedHerstel(`Uit beeld: ${sjabloonNaam(ether.graphic, s.sjablonen)}`, "Terug in beeld", () => {
-    void (async () => {
-      const k = await regie.stuur({ soort: "ZetKlaar", graphic: ether.graphic, standpunt: ether.standpunt }, TAKE);
-      if (!k.uitgevoerd) return;
-      const t = await regie.stuur({ soort: "Toon" }, TAKE);
-      if (t.uitgevoerd && klaar && klaar.id !== ether.id) {
-        void regie.stuur({ soort: "ZetKlaar", graphic: klaar.graphic, standpunt: klaar.standpunt }, TAKE);
-      }
-    })();
+  const sleutel = (k: Stand["klaar"]) => (k ? `${k.id}:${k.versie}` : "");
+  const voor = sleutel(klaar);
+  biedHerstel({
+    tekst: "Uit beeld",
+    wat: `${sjabloonNaam(ether.graphic, s.sjablonen)} · ${graphicTekst(ether.graphic)}`,
+    knop: "Terug in beeld",
+    geldig: (nu) => !nu.ether && sleutel(nu.klaar) === voor,
+    doe: (r) =>
+      void (async () => {
+        const k = await r.stuur({ soort: "ZetKlaar", graphic: ether.graphic, standpunt: ether.standpunt }, TAKE);
+        if (k.uitgevoerd) await r.stuur({ soort: "Toon", versie: k.volgnummer }, TAKE);
+        if (klaar && klaar.id !== ether.id) {
+          void r.stuur({ soort: "ZetKlaar", graphic: klaar.graphic, standpunt: klaar.standpunt }, TAKE);
+        }
+      })(),
   });
 }

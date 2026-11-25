@@ -254,7 +254,9 @@ function SetInvoer({
   const dicht = set.vergrendeld || regie.staat !== "verbonden";
   // Met de eigen wijzigingen die nog onderweg zijn, zodat snel klikken optelt.
   const alle = rijen(cijfers, set.id, regie.stand?.stand.uitslagindeling).map((r) => metNu(r, zichtbaar(concept, set.id, r.partij.sleutel, r.nu)));
-  const [links, rechts] = verdeel(alle);
+  // Op een laptop of groter drie kolommen, zodat alle Partijen zonder scrollen in beeld staan.
+  const kolommen = useKolommen();
+  const delen = verdeel(alle, kolommen);
   const kop = kopVergelijking(cijfers);
   const t = alle.reduce((n, r) => n + r.nu, 0) + (set.zetels.overig ?? 0);
 
@@ -296,8 +298,8 @@ function SetInvoer({
         </div>
       </div>
       <Zetelbalk rijen={alle} />
-      <div className="partijkolommen">
-        {[links, rechts].map((kolom, k) => (
+      <div className="partijkolommen" style={{ gridTemplateColumns: `repeat(${kolommen}, minmax(0, 1fr))` }}>
+        {delen.map((kolom, k) => (
           <table key={k} className="tabel partijtabel">
             <thead>
               <tr>
@@ -312,7 +314,7 @@ function SetInvoer({
                 <PartijRij
                   key={r.partij.sleutel}
                   rij={r}
-                  volgorde={k * links.length + i}
+                  volgorde={k * delen[0].length + i}
                   dicht={dicht}
                   zet={(n) => zet(r.partij.sleutel, n)}
                 />
@@ -686,4 +688,16 @@ function Tekstveld({ label, waarde, dicht, hint, bewaar }: { label: string; waar
       {hint && <span className="zacht">{hint}</span>}
     </label>
   );
+}
+
+/** Drie kolommen Partijen vanaf 1360 px breed, anders twee. */
+function useKolommen(): number {
+  const meet = () => (window.innerWidth >= 1360 ? 3 : 2);
+  const [n, setN] = useState(meet);
+  useEffect(() => {
+    const kijk = () => setN(meet());
+    window.addEventListener("resize", kijk);
+    return () => window.removeEventListener("resize", kijk);
+  }, []);
+  return n;
 }

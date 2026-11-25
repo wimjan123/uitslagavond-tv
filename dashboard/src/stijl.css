@@ -80,6 +80,18 @@ kbd {
 .knop:hover:not(:disabled) { border-color: var(--slate-mute); }
 .knop:disabled { opacity: 0.4; cursor: default; }
 .knop-hoofd { color: var(--graphite-field); background: var(--paper-ink); border-color: var(--paper-ink); font-weight: 650; }
+/* Klaarzetten is overal groen, want groen betekent in dit dashboard klaar. */
+.knop-commit {
+    font-weight: 650;
+  color: var(--klaar-green-ink);
+  background: var(--klaar-green);
+  border-color: var(--klaar-green);
+}
+.knop-commit:hover:not(:disabled) { border-color: var(--klaar-green-text); }
+.knop-commit:disabled { opacity: 1; color: var(--slate-mute); background: var(--graphite-raised); border-color: var(--graphite-line); }
+.actiebalk .knop-commit { height: 36px; padding: 0 16px; }
+/* Een uitgeschakelde hoofdknop is plat, zodat hij nooit leest als de knop die je moet hebben. */
+.knop-hoofd:disabled { opacity: 1; color: var(--slate-mute); background: var(--graphite-raised); border-color: var(--graphite-line); }
 .knop-stil { background: none; color: var(--slate-mute); }
 .knop-stil:hover:not(:disabled) { color: var(--paper-ink); }
 
@@ -182,6 +194,9 @@ input:focus-visible { outline-offset: 0; }
 .tab:focus-visible { outline-offset: -2px; }
 .status { display: flex; align-items: center; gap: 14px; padding: 0 12px; color: var(--slate-mute); font-size: 12px; }
 .status-punt { display: inline-flex; align-items: center; gap: 6px; }
+.status-fout, .status-let-op { color: var(--paper-ink); font-weight: 600; }
+.status-tekst { font-weight: 500; color: var(--warn-amber); }
+.status-fout .status-tekst { color: var(--ether-red-text); }
 .punt { display: inline-block; width: 7px; height: 7px; border-radius: 50%; }
 .punt-goed { background: var(--klaar-green-text); }
 .punt-let-op { background: var(--warn-amber); }
@@ -189,7 +204,7 @@ input:focus-visible { outline-offset: 0; }
 .punt-onbekend { background: var(--slate-mute); }
 .tekst-let-op { color: var(--warn-amber); }
 .systeem-status { white-space: nowrap; }
-.systeem .blok-breed { max-width: 1100px; }
+.systeem .blok-breed { max-width: none; }
 .klok { color: var(--paper-ink); font-weight: 600; font-size: 13px; }
 
 .storing {
@@ -252,6 +267,9 @@ input:focus-visible { outline-offset: 0; }
 .monitor-klaar .monitor-label { color: var(--klaar-green-text); }
 .monitor-ether .monitor-strook { border-top-color: var(--ether-red); }
 .monitor-ether .monitor-label { color: var(--ether-red-text); }
+.monitor-fout .monitor-strook { border-top-color: var(--ether-red); border-top-style: dashed; }
+.monitor-fout .monitor-label { color: var(--ether-red-text); }
+.strook-fout { padding: 1px 6px; font-weight: 700; color: var(--ether-red-ink); background: var(--ether-red); border-radius: 2px; }
 
 .take { display: flex; flex-direction: column; gap: 6px; }
 .toon {
@@ -272,6 +290,16 @@ input:focus-visible { outline-offset: 0; }
   cursor: pointer;
 }
 .toon:disabled { opacity: 0.4; cursor: default; }
+.toon { flex-direction: column; justify-content: center; align-items: stretch; gap: 4px; width: 100%; }
+.toon-regel { display: flex; align-items: center; justify-content: space-between; }
+/* Wat klaarstaat heeft oude cijfers: dat staat in de knop zelf, onder je vinger. */
+.toon-let-op { padding: 2px 5px; font-size: 10.5px; font-weight: 700; letter-spacing: 0.02em; text-transform: none; text-align: left; color: var(--warn-amber-ink); background: var(--warn-amber); border-radius: 2px; }
+/* Een uitgeschakelde knop geeft zelf geen tooltip: de omhullende span wel. */
+.take-uitleg { display: block; }
+.take-uitleg > button { width: 100%; }
+.take-uitleg > button:disabled { pointer-events: none; }
+.take-typen { padding: 5px 7px; font-size: 11.5px; line-height: 1.3; color: var(--paper-ink); background: var(--selection-fill); border-radius: 2px; }
+.take-typen kbd { margin-left: 2px; }
 .toon:focus-visible { outline-color: var(--paper-ink); }
 .knop-take { height: 32px; justify-content: space-between; }
 /* Uit beeld haalt iets uit de uitzending: een rode rand, zodat hij niet leest als de knoppen ernaast. */
@@ -289,10 +317,11 @@ input:focus-visible { outline-offset: 0; }
   border-radius: 3px;
   overflow: hidden;
 }
-.herstel-tekst { color: var(--paper-ink); font-weight: 600; line-height: 1.3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.herstel-wat { color: var(--paper-ink); font-size: 11.5px; font-weight: 600; line-height: 1.25; overflow: hidden; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; }
+.herstel-tekst { color: var(--warn-amber); font-weight: 700; }
+.herstel-knop kbd { border-color: color-mix(in srgb, currentColor 60%, transparent); }
 .herstel-knop { height: 28px; justify-content: center; color: var(--warn-amber-ink); background: var(--warn-amber); border-color: var(--warn-amber); font-weight: 700; }
-.herstel-tijd { position: absolute; left: 0; bottom: 0; height: 3px; width: 100%; background: var(--warn-amber); transform-origin: left; animation: herstel-tijd linear forwards; }
-@keyframes herstel-tijd { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+.herstel-tijd { position: absolute; left: 0; bottom: 0; height: 3px; background: var(--warn-amber); transition: width 1s linear; }
 .take-melding {
   padding: 6px 8px;
   font-size: 12px;
@@ -427,9 +456,13 @@ input:focus-visible { outline-offset: 0; }
 .standpunt-toets kbd { flex: none; }
 /* In het camerablok: de naam mag over twee regels, zodat Zwenk linkerflank en Zwenk rechterflank verschillen. */
 .camera .standpunt-toets { height: 32px; font-size: 11.5px; line-height: 1.15; }
-.camera .standpunt-toets span { white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
-/* Een Camerarit is een beweging van seconden: een gestippelde rand, zodat hij niet leest als een Standpunt. */
-.standpunt-rit { border-style: dashed; }
+.camera .standpunt-toets .standpunt-naam { flex: 1; white-space: normal; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+/* Cameraritten: een beweging van seconden. Twee kolommen zodat de hele naam past, een lichte gestippelde
+   rand en de duur rechts, zodat ze nooit lezen als een Standpunt. */
+.camera .rit-toetsen { grid-template-columns: repeat(2, minmax(0, 1fr)); margin-top: 2px; }
+.camera .rit-toetsen .standpunt-toets { height: 30px; font-size: 11px; line-height: 1.1; }
+.standpunt-rit { border-style: dashed; border-color: var(--slate-mute); }
+.standpunt-duur { flex: none; font-size: 10.5px; color: var(--slate-mute); font-variant-numeric: tabular-nums; }
 .standpunt-bewaar { justify-content: center; }
 .standpunt-toets:hover:not(:disabled) { border-color: var(--slate-mute); }
 .standpunt-toets:disabled { color: var(--slate-mute); cursor: default; opacity: 0.6; }
@@ -468,7 +501,8 @@ input:focus-visible { outline-offset: 0; }
 /* Slot: een vaste stempel met de toestand, en een knop met wat hij doet. */
 .slotknop { display: inline-flex; align-items: center; gap: 6px; }
 .slotknop .stempel { display: inline-flex; align-items: center; gap: 4px; margin-left: 0; height: 24px; padding: 0 7px; }
-.stempel-slot { color: var(--warn-amber-ink); background: var(--warn-amber); border-color: var(--warn-amber); }
+/* Op slot is een gewone, veilige toestand: rustig staalblauw, geen alarmkleur. */
+.stempel-slot { color: var(--steel-blue); background: var(--selection-fill); border-color: var(--steel-blue); }
 .knop-gevaar:not(:disabled) { color: var(--ether-red-text); border-color: color-mix(in srgb, var(--ether-red) 55%, var(--graphite-line)); }
 .knop-gevaar:hover:not(:disabled) { border-color: var(--ether-red-text); }
 
@@ -478,3 +512,11 @@ input:focus-visible { outline-offset: 0; }
 .maken-schets { display: flex; flex-direction: column; gap: 6px; width: 360px; margin: 12px 14px; }
 .maken-schets .schets { width: 100%; }
 .knop-reden { align-self: center; font-size: 12px; color: var(--warn-amber); }
+.knop-vraag, .knop-vraag:not(:disabled) { color: var(--ether-red-ink); background: var(--ether-red); border-color: var(--ether-red); }
+
+/* Camera: één regel per Standpunt of Camerarit, zodat de hele lijst op een laptop past. */
+.camerawerk .lijst .tabel td { height: 30px; padding-top: 2px; padding-bottom: 2px; }
+.camera-rij { display: flex; align-items: baseline; gap: 8px; min-width: 0; }
+.camera-rij-naam { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.camera-rij-tijd { flex: none; font-size: 11.5px; }
+.camerawerk { grid-template-columns: 300px minmax(0, 1fr) 370px; }

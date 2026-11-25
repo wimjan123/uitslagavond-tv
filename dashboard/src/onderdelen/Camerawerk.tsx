@@ -119,7 +119,7 @@ export function Camerawerk() {
         naam="Camera"
         hint={
           <>
-            <kbd>V</kbd> Vrij · <kbd>O</kbd> Oefenen · <kbd>R</kbd> Opnemen · <kbd>A</kbd> tot <kbd>L</kbd> kiest voor de Ether
+            <kbd>V</kbd> Vrij · <kbd>O</kbd> Oefenen · <kbd>R</kbd> Opnemen · <kbd>A</kbd>–<kbd>L</kbd> en <kbd>Q</kbd>–<kbd>U</kbd> sturen de Ether
           </>
         }
       />
@@ -142,8 +142,12 @@ export function Camerawerk() {
                   >
                     <td className="toets-cel">{x.toets && <kbd>{x.toets}</kbd>}</td>
                     <td>
-                      <div className="titel-cel">{x.naam}</div>
-                      <div className="zacht">{x.tijd}</div>
+                      <div className="camera-rij">
+                        <span className="titel-cel camera-rij-naam" title={x.naam}>
+                          {x.naam}
+                        </span>
+                        <span className="zacht camera-rij-tijd">{x.tijd}</span>
+                      </div>
                     </td>
                     <td className="ether-cel">{x.letter === inEther && <span className="punt punt-ether" title="In de Ether" />}</td>
                   </tr>

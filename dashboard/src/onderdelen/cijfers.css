@@ -71,7 +71,10 @@
 .partijtabel { table-layout: fixed; }
 .partijtabel td { height: 32px; padding-top: 3px; padding-bottom: 3px; }
 .partijtabel .kol-nu { width: 118px; }
-.partijtabel .kol-verschil { width: 84px; }
+.partijtabel .kol-getal { width: 46px; }
+.partijtabel .kol-verschil { width: 72px; }
+.partijtabel th { padding-left: 6px; padding-right: 6px; }
+.partijtabel td { padding-left: 6px; padding-right: 6px; }
 .partij-cel { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .zacht-getal { color: var(--slate-mute); }
 .nieuw { font-weight: 600; }

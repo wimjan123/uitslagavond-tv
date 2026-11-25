@@ -287,6 +287,20 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
     });
   };
   const melding = regie.melding?.bij === BIJ ? regie.melding.tekst : null;
+  // Ctrl+Enter legt vast, ook vanuit het zoekveld van Afwijkende stem.
+  const kanVastleggen = verbonden && !!u.besluit && wacht === null;
+  const legVastRef = useRef(legVast);
+  legVastRef.current = legVast;
+  useEffect(() => {
+    const toets = (e: KeyboardEvent) => {
+      if (e.key === "Enter" && (e.ctrlKey || e.metaKey) && !e.repeat && kanVastleggen) {
+        e.preventDefault();
+        legVastRef.current();
+      }
+    };
+    window.addEventListener("keydown", toets);
+    return () => window.removeEventListener("keydown", toets);
+  }, [kanVastleggen]);
   const zin = voorzitterZin(sg, kamer.fracties, namen);
   const totaal = u.voor + u.tegen + u.open || 150;
   const kop = [stemming.punt.nummer, stemming.punt.indieners].filter(Boolean).join(" · ");
@@ -444,6 +458,29 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
             {melding}
           </p>
         )}
+        <button
+          className="knop knop-gevaar"
+          disabled={dicht || zelfdeStemgedrag(sg, { ...LEEG, hoofdelijk: sg.hoofdelijk })}
+          title="Wist alle stemmen van deze Stemming. Daarna kun je ze nog terugzetten (Ctrl+Z)."
+          onClick={() => {
+            const voor = sg;
+            const leeg = wis(sg);
+            zetel(leeg);
+            biedHerstel({
+              tekst: "Alle stemmen gewist",
+              wat: stemming.punt.titel,
+              knop: "Zet stemmen terug",
+              geldig: (nu) => {
+                const x = nu.stemmingen.lijst.find((y) => y.punt.id === id);
+                return !!x && !x.vergrendeld && zelfdeStemgedrag(x.stemgedrag, leeg);
+              },
+              doe: (r) => void r.stuur({ soort: "ZetStemgedrag", stemming: id, stemgedrag: voor }, BIJ),
+            });
+          }}
+        >
+          Wis alle stemmen
+        </button>
+        <span className="actiebalk-scheiding" aria-hidden />
         <button className="knop" aria-pressed={sg.overige === andere(kant)} disabled={dicht} onClick={() => zetel(overige(sg, kant))}>
           Overige {kant === "Voor" ? "tegen" : "voor"}
         </button>
@@ -453,29 +490,18 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
         <button className="knop" aria-pressed={zoeken} disabled={dicht || kamer.kamerleden.length === 0} onClick={() => setZoeken(!zoeken)}>
           Afwijkende stem
         </button>
-        <button
-          className="knop knop-gevaar"
-          disabled={dicht || zelfdeStemgedrag(sg, { ...LEEG, hoofdelijk: sg.hoofdelijk })}
-          title="Wist alle stemmen van deze Stemming. Daarna kun je ze 10 seconden terugzetten."
-          onClick={() => {
-            const voor = sg;
-            zetel(wis(sg));
-            biedHerstel("Alle stemmen gewist", "Zet stemmen terug", () => zetel(voor));
-          }}
-        >
-          Wis alle stemmen
-        </button>
         <span className="actiebalk-rechts">
           <button className="knop" onClick={volgende}>
             Volgende
           </button>
+          {!u.besluit && <span className="knop-reden">Nog {u.open} Zetels open</span>}
           <button
             className="knop knop-commit"
             disabled={!verbonden || !u.besluit || wacht !== null}
-            title={u.besluit ? undefined : `Nog ${u.open} Zetels open: tik de Fracties of kies Overige`}
+            title={u.besluit ? "Legt de uitslag vast en zet de Graphic klaar (Ctrl+Enter)" : `Nog ${u.open} Zetels open: tik de Fracties of kies Overige`}
             onClick={legVast}
           >
-            Vastleggen en klaarzetten
+            Vastleggen en klaarzetten <kbd>Ctrl+Enter</kbd>
           </button>
         </span>
       </div>

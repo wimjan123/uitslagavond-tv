@@ -65,3 +65,9 @@
 .coalitie-lijst { display: flex; flex-direction: column; gap: 4px; margin: 0; padding: 0; list-style: none; }
 .coalitie-lijst li { display: flex; align-items: center; gap: 8px; }
 .coalitie-lijst li .zacht { margin-left: auto; font-variant-numeric: tabular-nums; }
+
+/* De coalitie staat in de Ether: een rode rand om de boog, want elke tik is meteen live. */
+.coalitie-boog { border: 2px solid transparent; border-radius: 4px; }
+.coalitie-live { border-color: color-mix(in srgb, var(--ether-red) 70%, transparent); }
+.coalitie-live-regel { display: flex; align-items: center; gap: 8px; align-self: flex-start; font-weight: 600; color: var(--ether-red-text); }
+.coalitie-live-regel .stempel { margin-left: 0; }

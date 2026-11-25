@@ -2,7 +2,7 @@
 import type { ReactNode } from "react";
 
 /** De kleur van de lijn boven de labelstrook: groen klaar, rood in de Ether, amber tijdens Oefenen, anders grijs. */
-export type Toestand = "klaar" | "ether" | "oefenen" | "rust";
+export type Toestand = "klaar" | "ether" | "oefenen" | "rust" | "fout";
 
 export function Monitor({
   label,

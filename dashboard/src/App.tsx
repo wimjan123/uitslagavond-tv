@@ -83,7 +83,12 @@ function Schil() {
   useEffect(() => {
     const geenFocus = (e: MouseEvent) => {
       const el = e.target instanceof Element ? e.target.closest("button, [role=tab]") : null;
-      if (el && !(el as HTMLButtonElement).disabled) e.preventDefault();
+      if (!el || (el as HTMLButtonElement).disabled) return;
+      e.preventDefault();
+      // Stond je nog in een veld (zoals een Zetelaantal), dan rondt dat veld eerst af: zo komt de laatste
+      // waarde vóór de klik binnen (Opdrachten gaan op volgorde), en is Spatie daarna weer Toon.
+      const actief = document.activeElement;
+      if (actief instanceof HTMLElement && doelVan(actief) === "tekstveld") actief.blur();
     };
     window.addEventListener("mousedown", geenFocus);
     return () => window.removeEventListener("mousedown", geenFocus);
@@ -95,6 +100,8 @@ function Schil() {
         (e.target as HTMLElement).blur();
         return;
       }
+      // Te smal: het dashboard staat niet in beeld, dus de sneltoetsen ook niet.
+      if (window.matchMedia("(max-width: 899px)").matches) return;
       const actie = actieVoorToets({ key: e.key, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, doel: doelVan(e.target) });
       if (!actie || e.repeat) return;
       e.preventDefault();
@@ -159,12 +166,12 @@ function TabTelling({ id }: { id: string }) {
     <>
       {open > 0 && (
         <span className="tab-telling" title={`${open} Stemmingen voor de uitzending liggen nog niet vast`}>
-          {open}
+          {open} open
         </span>
       )}
       {controle > 0 && (
         <span className="tab-telling tab-telling-let-op" title={`${controle} Stemmingen wijken af van de officiële uitslag`}>
-          {controle}
+          {controle} verschil
         </span>
       )}
     </>
@@ -184,9 +191,10 @@ function Status() {
   return (
     <div className="status">
       {punten.map((p) => (
-        <span key={p.naam} className="status-punt" title={p.status}>
+        <span key={p.naam} className={`status-punt status-${p.toon}`} title={p.status}>
           <span className={`punt punt-${p.toon}`} />
           {p.naam}
+          {p.toon !== "goed" && <span className="status-tekst">{p.status.toLowerCase()}</span>}
         </span>
       ))}
       <time className="klok">

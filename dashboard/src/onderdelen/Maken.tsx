@@ -198,7 +198,7 @@ function Titelkaart() {
         </select>
       </label>
       <div className="knoppen">
-        <button className="knop knop-hoofd" type="submit" disabled={!verbonden || !graphic.kop}>
+        <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic.kop}>
           Zet klaar
         </button>
         <button
@@ -342,7 +342,7 @@ function Zetelverdeling() {
         </select>
       </label>
       <div className="knoppen">
-        <button className="knop knop-hoofd" type="submit" disabled={!verbonden || !graphic}>
+        <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
           Zet klaar
         </button>
         <button className="knop" type="button" disabled={!verbonden || !klaarIsZetelverdeling || !graphic} onClick={wijzig}>
@@ -481,7 +481,7 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
         </select>
       </label>
       <div className="knoppen">
-        <button className="knop knop-hoofd" type="submit" disabled={!verbonden || !graphic}>
+        <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
           Zet klaar
         </button>
         <button className="knop" type="button" disabled={!verbonden || klaar?.graphic.sjabloon !== soort || !graphic} onClick={wijzig}>
@@ -571,7 +571,7 @@ function useCijferformulier() {
           ]}
         />
         <div className="knoppen">
-          <button className="knop knop-hoofd" type="submit" disabled={!verbonden || !graphic}>
+          <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
             Zet klaar
           </button>
           <button className="knop" type="button" disabled={!verbonden || s?.klaar?.graphic.sjabloon !== sjabloon || !graphic} onClick={() => stuur(graphic, true)}>

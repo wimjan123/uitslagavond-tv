@@ -8,6 +8,7 @@ import { LogoTegel } from "../LogoTegel";
 import { biedHerstel } from "../regie/herstel";
 import { useRegie } from "../regie/regie";
 import type { Graphic } from "../typen/Graphic";
+import { TweeKeerKnop } from "./TweeKeerKnop";
 import { TakeHint, Werkbalk } from "./Werkbalk";
 import "./coalitie.css";
 
@@ -37,26 +38,41 @@ export function Coalitie() {
   const kamer = (s?.kamer.fracties.length ?? 0) > 0;
   const sets = [...(s?.cijfers.sets ?? []).map((x) => ({ id: x.id, label: x.label })), ...(kamer ? [{ id: HUIDIGE_KAMER, label: "Huidige Kamer (open data)" }] : [])];
   const inBeeldNu = s ? coalitieInBeeld(s) : null;
-  const set = setKeuze || inBeeldNu?.set || sets[0]?.id || "";
+  // Standaard de set van de coalitie in beeld, anders die van de Graphic in de Ether, anders de nieuwste.
+  const etherSet = s?.ether && "set" in s.ether.graphic ? s.ether.graphic.set : undefined;
+  const set = setKeuze || inBeeldNu?.set || (etherSet && sets.some((x) => x.id === etherSet) ? etherSet : "") || sets[sets.length - 1]?.id || "";
+  const setNaam = sets.find((x) => x.id === set)?.label ?? set;
   // Wat de Coalitiebouwer toont: de coalitie die in beeld of klaar is, met haar eigen cijfers.
   const b = s ? bouwer(s, set, eigen) : LEEG;
   const { inBeeld, partijen, zetels } = b;
   const inEther = !!inBeeld && s?.ether?.graphic === inBeeld;
 
+  /** Zet de Partijen van de coalitie in beeld; in de Ether met herstel, want dat is meteen live. */
+  const zetInBeeld = (nieuw: string[], tekst: string) => {
+    const voor = partijen;
+    void regie.stuur({ soort: "ZetCoalitie", partijen: nieuw }, COALITIE);
+    if (!inEther) return;
+    const zelfde = (a: string[], b: string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+    biedHerstel({
+      tekst,
+      wat: "Coalitie in de Ether",
+      knop: "Zet terug",
+      geldig: (nu) => {
+        const c = coalitieInBeeld(nu);
+        return !!c && zelfde(c.partijen, nieuw);
+      },
+      doe: (r) => void r.stuur({ soort: "ZetCoalitie", partijen: voor }, COALITIE),
+    });
+  };
   const tik = (sleutel: string) => {
     const nieuw = wissel(partijen, sleutel);
-    if (inBeeld) void regie.stuur({ soort: "ZetCoalitie", partijen: nieuw }, COALITIE);
+    const kort = b.volgorde.find((p) => p.sleutel === sleutel)?.kort ?? sleutel;
+    if (inBeeld) zetInBeeld(nieuw, `${kort} ${nieuw.includes(sleutel) ? "erbij" : "eraf"}`);
     else setEigen(nieuw);
   };
   const wis = () => {
-    const voor = partijen;
-    if (inBeeld) {
-      void regie.stuur({ soort: "ZetCoalitie", partijen: [] }, COALITIE);
-      biedHerstel(inEther ? "Coalitie gewist, ook in de Ether" : "Coalitie gewist", "Zet coalitie terug", () => void regie.stuur({ soort: "ZetCoalitie", partijen: voor }, COALITIE));
-    } else {
-      setEigen([]);
-      biedHerstel("Coalitie gewist", "Zet coalitie terug", () => setEigen(voor));
-    }
+    if (inBeeld) zetInBeeld([], "Coalitie gewist");
+    else setEigen([]);
   };
   const zetKlaar = () => {
     const graphic: Graphic = { sjabloon, set, partijen };
@@ -72,6 +88,7 @@ export function Coalitie() {
           bouwer={b}
           uit={!verbonden && !!inBeeld}
           tik={tik}
+          live={inEther}
           leeg="Geen Zetels in deze set: kies een andere set of lees eerst cijfers in."
         />
         <aside className="paneel-detail coalitie-zijkant">
@@ -119,17 +136,20 @@ export function Coalitie() {
             ))}
           </ol>
           <div className="knoppen">
-            <button className="knop knop-hoofd" disabled={!verbonden || !set} onClick={zetKlaar}>
-              Zet klaar als {SJABLONEN.find((x) => x.id === sjabloon)?.naam}
+            <button className="knop knop-commit" disabled={!verbonden || !set || partijen.length === 0} onClick={zetKlaar}>
+              Zet klaar als {SJABLONEN.find((x) => x.id === sjabloon)?.naam} · {setNaam}
             </button>
-            <button
+            {partijen.length === 0 && <span className="knop-reden">Tik eerst Partijen aan</span>}
+            <TweeKeerKnop
               className="knop knop-gevaar"
               disabled={partijen.length === 0 || (!verbonden && !!inBeeld)}
-              title={inEther ? "Haalt alle Partijen uit de coalitie in de Ether. Daarna kun je ze 10 seconden terugzetten." : "Haalt alle Partijen uit de coalitie"}
+              tweeKeer={inEther}
+              title={inEther ? "Haalt alle Partijen uit de coalitie in de Ether. Klik twee keer; daarna kun je ze nog terugzetten." : "Haalt alle Partijen uit de coalitie"}
+              vraag="Klik nog eens: wis uit de Ether"
               onClick={wis}
             >
               {inEther ? "Wis coalitie in de Ether" : "Wis coalitie"}
-            </button>
+            </TweeKeerKnop>
           </div>
           {melding && (
             <p className="melding" role="alert">
@@ -144,12 +164,32 @@ export function Coalitie() {
 
 /** De Partijen op de boog met de teller naar 76 in het midden, en de Zetelbalk eronder. Ook op de
  * tablet van de Presentator, daar groter. */
-export function CoalitieBoog({ bouwer: b, uit, tik, leeg, maat = BOOG }: { bouwer: Bouwer; uit: boolean; tik(sleutel: string): void; leeg: string; maat?: Boogmaat }) {
+export function CoalitieBoog({
+  bouwer: b,
+  uit,
+  tik,
+  leeg,
+  live = false,
+  maat = BOOG,
+}: {
+  bouwer: Bouwer;
+  uit: boolean;
+  tik(sleutel: string): void;
+  leeg: string;
+  /** De coalitie staat in de Ether: elke tik is meteen live. */
+  live?: boolean;
+  maat?: Boogmaat;
+}) {
   const { volgorde, partijen, zetels, totaal } = b;
   const plekken = boog(volgorde.length, maat.straal);
   const gekozenDelen = volgorde.filter((p) => partijen.includes(p.sleutel));
   return (
-    <section className="coalitie-boog" aria-label="Coalitiebouwer">
+    <section className={`coalitie-boog${live ? " coalitie-live" : ""}`} aria-label="Coalitiebouwer">
+      {live && (
+        <p className="coalitie-live-regel">
+          <span className="stempel stempel-live">Live</span> Elke tik werkt meteen bij in de Ether
+        </p>
+      )}
       {volgorde.length === 0 ? (
         <p className="melding">{leeg}</p>
       ) : (

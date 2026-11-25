@@ -155,12 +155,17 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
       <td className="cel-tekst">
         <Gegevens graphic={p.graphic} />
         <div className="zacht een-regel">
-          {oud && (
-            <span className="let-op" title="De cijfers zijn sinds het bewaren veranderd. Zet klaar en kies Ververs onder het Voorbeeld.">
-              oude cijfers ·{" "}
+          {/* Rustig in de lijst: na de eerste nieuwe cijfers geldt het voor bijna elke Preset. De waarschuwing
+              staat in amber op het Voorbeeld en in Toon, waar je beslist. */}
+          {oud ? (
+            <span title="Er zijn sindsdien nieuwere cijfers. Zet klaar en druk N (Ververs) voor de cijfers van nu.">
+              cijfers van {uurMinuut(p.bewaard_ms)}, er zijn nieuwere · door {p.bewaard_door}
             </span>
+          ) : (
+            <>
+              bewaard {uurMinuut(p.bewaard_ms)} door {p.bewaard_door}
+            </>
           )}
-          bewaard {uurMinuut(p.bewaard_ms)} door {p.bewaard_door}
         </div>
       </td>
       <td className="kol-camera" title={standpunt?.naam}>
@@ -169,7 +174,7 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
           {stoel ? (
             <span className="zacht een-regel">Shot op de eigen Stoel</span>
           ) : standpunt ? (
-            <span className="zacht een-regel">
+            <span className="zacht twee-regels">
               {standpunt.soort === "Camerarit" ? `Camerarit ${standpunt.naam}` : standpunt.naam}
             </span>
           ) : (
