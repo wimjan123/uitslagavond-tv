@@ -115,14 +115,7 @@ export function Camerawerk() {
 
   return (
     <>
-      <Werkbalk
-        naam="Camera"
-        hint={
-          <>
-            <kbd>V</kbd> Vrij · <kbd>O</kbd> Oefenen · <kbd>R</kbd> Opnemen · de letter op een Standpunt stuurt de Live-camera, met <kbd>Shift</kbd> knipt hij
-          </>
-        }
-      />
+      <Werkbalk naam="Camera" />
       <div className="werkvlak-inhoud camerawerk">
         <div className="lijst">
           <table className="tabel">

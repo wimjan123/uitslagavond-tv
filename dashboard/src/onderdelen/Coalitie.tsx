@@ -233,7 +233,7 @@ export function CoalitieBoog({
         // Smal (een telefoon): een raster met een eigen tikvlak per Partij, want op een boog zo klein
         // overlappen de tegels en raakt een tik de buurpartij.
         <div className={raster ? "boog boog-raster" : "boog"} style={raster ? undefined : { width: maat.breedte, height: maat.hoogte }}>
-          {raster && <Teller totaal={totaal} />}
+          {raster && <Teller totaal={totaal} oud={live && nu !== undefined && nu !== totaal} />}
           {volgorde.map((p, i) => {
             const gekozen = partijen.includes(p.sleutel);
             return (
@@ -258,7 +258,7 @@ export function CoalitieBoog({
               </button>
             );
           })}
-          {!raster && <Teller totaal={totaal} />}
+          {!raster && <Teller totaal={totaal} oud={live && nu !== undefined && nu !== totaal} />}
         </div>
       )}
       <div className="coalitie-zetelbalk" style={{ width: `min(${maat.breedte}px, 100%)` }} role="img" aria-label={`Zetelbalk: ${totaal} van ${ZETELS} Zetels in de coalitie`}>
@@ -271,11 +271,13 @@ export function CoalitieBoog({
   );
 }
 
-function Teller({ totaal }: { totaal: number }) {
+/** De teller naar 76. Met `oud` staat er wat Live toont met oudere cijfers: dan in amber en zonder de
+ * conclusie over een meerderheid, want die kan met de cijfers van nu anders zijn (zie de regel erboven). */
+function Teller({ totaal, oud = false }: { totaal: number; oud?: boolean }) {
   return (
-    <div className="boog-midden">
-      <span className={totaal >= MEERDERHEID ? "boog-totaal meerderheid" : "boog-totaal"}>{totaal}</span>
-      <span className="zacht">{regel(totaal)}</span>
+    <div className={oud ? "boog-midden boog-oud" : "boog-midden"}>
+      <span className={totaal >= MEERDERHEID && !oud ? "boog-totaal meerderheid" : "boog-totaal"}>{totaal}</span>
+      <span className="zacht">{oud ? "in Live, met oudere cijfers" : regel(totaal)}</span>
     </div>
   );
 }

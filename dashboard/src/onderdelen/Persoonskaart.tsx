@@ -161,7 +161,7 @@ export function Persoonskaart({ uitleg }: { uitleg: string }) {
             Zet klaar
           </button>
           <button className="knop" type="button" disabled={!verbonden || !klaarIsPersoonskaart || !graphic} onClick={wijzig}>
-            Wijzig klaargezette
+            Pas Preview aan
           </button>
         </div>
         {melding && (

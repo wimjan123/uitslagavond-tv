@@ -37,7 +37,7 @@ export function Systeem({ kiesOnderdeel }: WerkvlakProps) {
             <tbody>
               {statusVan(staat, rendererstatus).map((r) => (
                 <tr key={r.naam}>
-                  <td className="titel-cel">{r.label}</td>
+                  <td className="titel-cel" title={r.rol ? `Start met ${r.rol}` : undefined}>{r.label}</td>
                   <td className="zacht">{r.wat}</td>
                   <td>
                     {r.machines.map((m) => (

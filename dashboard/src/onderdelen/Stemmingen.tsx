@@ -440,7 +440,9 @@ function Invoer({ stemming, stand, volgende }: { stemming: Stemming; stand: Stan
                     {volg >= 0 ? `als ${volg + 1}e` : ""}
                   </span>
                   <span className="toets-stem">{st ? st.stem : ""}</span>
-                  <span className="toets-naam">{f.afkorting}</span>
+                  <span className="toets-naam">
+                    <span className="toets-naam-tekst">{f.afkorting}</span>
+                  </span>
                   <span className="toets-zetels">{f.zetels}</span>
                 </button>
               );

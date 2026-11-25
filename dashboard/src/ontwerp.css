@@ -374,13 +374,15 @@ details > summary { cursor: pointer; }
 .stijl-actiebalk { position: sticky; bottom: 0; z-index: 2; background: var(--graphite-ground); border-top: 1px solid var(--rand); }
 
 /* Stemmingen: Voor en Tegen in één blik, ook bij een gedicteerde stemming. */
-.fractie-voor { background: rgb(47 157 104 / 0.2); border-color: rgb(47 157 104 / 0.7); }
-.fractie-tegen { background: rgb(229 72 77 / 0.16); border-color: rgb(229 72 77 / 0.65); }
+.fractie-voor { background: rgb(47 157 104 / 0.14); border-color: rgb(47 157 104 / 0.7); }
+/* Tegen: een rode rand en het woord, zonder rode vulling, zodat vol rood alleen Live en Take blijft. */
+.fractie-tegen { background: var(--vlak); border-color: rgb(229 72 77 / 0.65); }
 .fractie-voor .toets-stem { color: var(--klaar-green-text); }
 .fractie-tegen .toets-stem { color: var(--ether-red-text); }
 .toets-stem { font-size: 12.5px; font-weight: 600; }
-.fractie-toets .toets-naam { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: normal; line-height: 1.2; }
-.fractie-toets .toets-naam::before { display: inline-block; margin-right: 6px; vertical-align: 1px; }
+.fractie-toets .toets-naam { display: flex; align-items: flex-start; gap: 6px; min-width: 0; overflow: visible; -webkit-line-clamp: unset; }
+.fractie-toets .toets-naam::before { margin-top: 4px; }
+.toets-naam-tekst { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-width: 0; line-height: 1.2; overflow-wrap: anywhere; }
 
 /* Gevulde vlakken met witte tekst halen 4,5:1: een iets donkerder rood en groen dan de tally-rand. */
 :root { --ether-vul: #c93a40; --ether-vul-hover: #d6444a; --klaar-vul: #1f7a4f; --klaar-vul-hover: #258a5a; }
@@ -420,3 +422,12 @@ details > summary { cursor: pointer; }
 /* Cijfers: een gewijzigd getal dat nog niet bewaard is. */
 .zetelvak-plek { position: relative; display: inline-block; }
 .zetelvak-hint { position: absolute; top: calc(100% + 4px); right: 0; z-index: 5; display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; font-size: 11.5px; white-space: nowrap; color: var(--paper-ink); background: var(--graphite-raised); border: 1px solid var(--rand-sterk); border-radius: 6px; box-shadow: 0 4px 12px rgb(0 0 0 / 0.45); }
+
+/* De uitkomst van een Stemming: Aangenomen groen, Verworpen neutraal wit (rood is voor Live en Take). */
+.uitkomst-woord.verworpen { color: var(--paper-ink); }
+/* Vormgeving: de laatste velden scrollen voorbij de vaste Opslaan-balk. */
+.stijl-velden { padding-bottom: 56px; }
+/* Live coalitie met oudere cijfers: de teller zelf waarschuwt. */
+.boog-oud .boog-totaal { color: var(--warn-amber); }
+.boog-oud .zacht { color: var(--warn-amber); }
+.tablet .coalitie-live-regel { padding-inline: 12px; }

@@ -194,7 +194,7 @@ function Titelkaart() {
           title={klaarIsTitelkaart ? "Past de Titelkaart in Preview aan; staat die al in Live, dan pas na Update" : "Kan als er een Titelkaart klaarstaat"}
           onClick={wijzig}
         >
-          Wijzig klaargezette
+          Pas Preview aan
         </button>
         <button
           className="knop knop-stil"
@@ -203,7 +203,7 @@ function Titelkaart() {
           title={klaarIsTitelkaart ? "Haalt kop en regel uit de Titelkaart die klaarstaat" : "Kan als er een Titelkaart klaarstaat"}
           onClick={neemOver}
         >
-          Neem over uit Preview
+          Haal uit Preview
         </button>
         {!graphic.kop && <span className="knop-reden">Vul eerst een kop in</span>}
       </div>
@@ -318,7 +318,7 @@ function Zetelverdeling() {
           Zet klaar
         </button>
         <button className="knop" type="button" disabled={!verbonden || !klaarIsZetelverdeling || !graphic} onClick={wijzig}>
-          Wijzig klaargezette
+          Pas Preview aan
         </button>
       </div>
       {inZaal ? (
@@ -448,7 +448,7 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
           Zet klaar
         </button>
         <button className="knop" type="button" disabled={!verbonden || klaar?.graphic.sjabloon !== soort || !graphic} onClick={wijzig}>
-          Wijzig klaargezette
+          Pas Preview aan
         </button>
       </div>
       {melding && (
@@ -534,7 +534,7 @@ function useCijferformulier() {
             Zet klaar
           </button>
           <button className="knop" type="button" disabled={!verbonden || s?.klaar?.graphic.sjabloon !== sjabloon || !graphic} onClick={() => stuur(graphic, true)}>
-            Wijzig klaargezette
+            Pas Preview aan
           </button>
         </div>
         {melding && (

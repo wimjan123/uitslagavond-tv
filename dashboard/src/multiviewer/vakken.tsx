@@ -102,7 +102,7 @@ function Ether() {
   // Valt de Renderer van de Ether weg, dan moet dat hier staan: overschakelen naar Reserve begint met zien.
   const geenEther = staat === "verbonden" && !renderers.includes("Ether");
   const rechts = geenEther ? (
-    <span className="strook-fout" title="De Live-renderer (rol ether) is niet verbonden. Schakel op de mixer over naar Reserve.">
+    <span className="strook-fout" title="De Live-renderer is niet verbonden. Schakel op de mixer over naar Reserve.">
       Live-Renderer weg
     </span>
   ) : !ether ? null : s && kanBijwerken(s) ? (
