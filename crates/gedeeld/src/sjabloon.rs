@@ -1134,6 +1134,9 @@ pub struct Fractielabel {
     /// Licht of donker: leesbaar op `kleur` ([`tekst_op`]).
     pub tekstkleur: Kleur,
     pub logo: Option<String>,
+    /// Bij een verdeelde Fractie: hoeveel Kamerleden aan deze kant stemden. Leeg als de hele
+    /// Fractie hetzelfde stemde.
+    pub aantal: Option<u16>,
 }
 
 /// De namen van één Fractie aan één kant van een Hoofdelijke stemming.
@@ -1766,14 +1769,7 @@ fn inhoud(blok: &Blok, i: &Invulling, cijfers: &Cijfers, stijl: &Stijl, een_rege
             grootte,
             onder_balk,
         } => {
-            let kant = |stem: Stem| -> Vec<Fractielabel> {
-                i.stemming
-                    .iter()
-                    .flat_map(|u| &u.fracties)
-                    .filter(|f| f.stem == stem)
-                    .map(|f| fractielabel(f.kort.as_deref().unwrap_or(&f.afkorting), f.kleur.as_deref(), f.logo.clone(), stijl))
-                    .collect()
-            };
+            let kant = |stem: Stem| i.stemming.as_ref().map_or_else(Vec::new, |u| fracties_aan_kant(u, stem, stijl));
             let (aantal_voor, aantal_tegen) = i.stemming.as_ref().map_or((0, 0), |u| (u.voor, u.tegen));
             Inhoud::Fractielijst {
                 voor: kant(Stem::Voor),
@@ -1841,7 +1837,26 @@ fn fractielabel(kort: &str, kleur: Option<&str>, logo: Option<String>, stijl: &S
         kleur,
         tekstkleur: tekst_op(kleur, stijl.kleur(Stijlkleur::Tekst), stijl.kleur(Stijlkleur::Vlak)),
         logo,
+        aantal: None,
     }
+}
+
+/// De Fracties aan één kant van een Stemming, in de volgorde van de Kamer. Een verdeelde Fractie
+/// staat aan beide kanten, elk met het aantal Kamerleden dat zo stemde: zo ziet de kijker dat
+/// niet de hele Fractie voor of tegen was.
+fn fracties_aan_kant(u: &crate::stemmingen::Stemmingsuitslag, stem: Stem, stijl: &Stijl) -> Vec<Fractielabel> {
+    u.fracties
+        .iter()
+        .filter_map(|f| {
+            let afwijkers = |s: Stem| u.afwijkend.iter().filter(|a| a.fractie == f.afkorting && a.stem == s).count() as u16;
+            let anders = afwijkers(f.stem.andere());
+            let hier = if f.stem == stem { f.zetels.saturating_sub(anders) } else { anders };
+            (hier > 0).then(|| Fractielabel {
+                aantal: (anders > 0).then_some(hier),
+                ..fractielabel(f.kort.as_deref().unwrap_or(&f.afkorting), f.kleur.as_deref(), f.logo.clone(), stijl)
+            })
+        })
+        .collect()
 }
 
 /// De vaste Sjablonen die met de software meekomen.
@@ -2065,8 +2080,8 @@ fn titelkaart() -> Sjabloon {
 
 /// De Zetelverdeling in de Zaal: de Stoelen kleuren in de Uitslagindeling (dat doet de Zaal, niet
 /// een Blok), als Opbouw: één Partij tegelijk, de grootste eerst, met haar label groot op de
-/// vloer. Daarna staan alle Partijen als kaartjes op één rij in het plafond, in dezelfde volgorde
-/// als hun Stoelen van links naar rechts. Linksboven een naambalk met de kicker "ZETELVERDELING"
+/// vloer. Daarna staan alle Partijen als kaartjes in het plafond (meer dan acht: twee rijen), in
+/// dezelfde volgorde als hun Stoelen van links naar rechts. Linksboven een naambalk met de kicker "ZETELVERDELING"
 /// en de naam van de set; rechtsboven het programmalogo. De camera staat stil op Standpunt A, met
 /// de hele halve cirkel in beeld: zo zie je bij elke stap het blok bij het label. De plekken passen
 /// daarbij en bij het eindbeeld van de Onthulling.
@@ -2093,11 +2108,11 @@ fn zetelverdeling() -> Sjabloon {
             },
             programmabug(),
             Blok {
-                plek: plek(96, 236, 1728, 92),
+                plek: plek(96, 236, 1728, 128),
                 soort: Bloksoort::Partijlabels {
                     letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                     naamletter: Letterkeuze::Stijl(Stijlletter::Tekst),
-                    grootte: 21,
+                    grootte: 30,
                     kaartjes: true,
                 },
                 kleur: Kleurkeuze::Stijl(Stijlkleur::Vlak),
@@ -2326,16 +2341,17 @@ fn uitslag_stemming() -> Sjabloon {
 }
 
 /// Een groot paneel voor de Fracties voor en tegen en de Hoofdelijke stemming, met de kop van
-/// de Stemming en daaronder het grote Blok `groot`.
+/// de Stemming en daaronder het grote Blok `groot`. Het paneel is zo breed als het beeld binnen
+/// title safe en begint daarom onder het programmalogo.
 fn groot_stemmingspaneel(id: &str, naam: &str, kicker_tekst: &str, groot: Bloksoort) -> Sjabloon {
-    let (x, y) = (96, 120);
+    let (x, y, hoog) = (96, 196, 814);
     let mut blokken = vec![
-        paneel(plek(x, y, 1728, 890)),
+        paneel(plek(x, y, 1728, hoog)),
     ];
     blokken.extend(stemmingskop(x, y, kicker_tekst));
     blokken.extend([
         Blok {
-            plek: plek(x + 48, y + 186, 1632, 890 - 186 - 40),
+            plek: plek(x + 48, y + 186, 1632, hoog - 186 - 40),
             soort: groot,
             kleur: Kleurkeuze::Stijl(Stijlkleur::Tekst),
             animatie: animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0),

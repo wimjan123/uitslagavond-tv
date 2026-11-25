@@ -18,7 +18,7 @@ const LABEL_TUSSEN: (f32, f32) = (10.0, 12.0);
 /// De geschatte breedte van elk label bij letter `g`: de tekens op 0,6 keer de letter (de
 /// cijferletter van Nunito Sans, gemeten op kapitalen) plus de marge.
 fn geschatte_breedtes(labels: &[Fractielabel], g: f32) -> Vec<f32> {
-    labels.iter().map(|f| f.kort.chars().count() as f32 * 0.6 * g + 28.0).collect()
+    labels.iter().map(|f| naam_met_aantal(f).chars().count() as f32 * 0.6 * g + 28.0).collect()
 }
 
 /// Hoeveel rijen labels van deze breedtes nodig hebben in `ruimte`, van links naar rechts.
@@ -298,7 +298,7 @@ pub fn bouw(
                         Some(beeld) => beeld_deel(commands, vak, beeld, beelden, tegel - 16.0, 80.0, false, dekking, 1.0),
                         None => {
                             commands.entity(vak).insert(gekleurd(kleur(f.kleur), dekking));
-                            let t = tekst_deel(commands, bestanden, vak, &f.kort, letter, g, kleur(f.tekstkleur), Uitlijning::Midden, dekking);
+                            let t = tekst_deel(commands, bestanden, vak, &naam_met_aantal(f), letter, g, kleur(f.tekstkleur), Uitlijning::Midden, dekking);
                             commands.entity(t).insert((
                                 TextLayout::no_wrap(),
                                 Node { flex_shrink: 0.0, ..default() },
@@ -409,9 +409,17 @@ fn label(
             gekleurd(kleur(f.kleur), dekking),
         ))
         .id();
-    let t = tekst_deel(commands, bestanden, vak, &f.kort, letter, grootte.round(), kleur(f.tekstkleur), Uitlijning::Links, dekking);
+    let t = tekst_deel(commands, bestanden, vak, &naam_met_aantal(f), letter, grootte.round(), kleur(f.tekstkleur), Uitlijning::Links, dekking);
     commands.entity(t).insert((TextLayout::no_wrap(), Passend::basis(grootte.round())));
     vak
+}
+
+/// De korte naam, en bij een verdeelde Fractie het aantal Kamerleden aan deze kant erachter.
+fn naam_met_aantal(f: &Fractielabel) -> String {
+    match f.aantal {
+        Some(a) => format!("{}\u{2002}{a}", f.kort),
+        None => f.kort.clone(),
+    }
 }
 
 /// Iets dat in zijn `ruimte` moet passen: past het niet, dan krimpen de letters van alle teksten

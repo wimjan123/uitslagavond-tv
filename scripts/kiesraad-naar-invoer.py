@@ -78,6 +78,27 @@ def stemmen(totaaltelling):
             lijsten[int(a.get("Id"))] = (a.findtext("e:RegisteredName", namespaces=NS), int(s.findtext("e:ValidVotes", namespaces=NS)))
     return naam, datum, lijsten
 
+# Huiskleuren voor de partijen met Zetels in 2025 (plus NSC), gekozen voor de standaard-Stijl
+# (docs/vormgeving.md): herkenbaar en leesbaar op grafiet. De rest krijgt een tijdelijke kleur.
+KLEUR = {
+    "pvv": "#2B63D9",
+    "gl-pvda": "#D0213A",
+    "vvd": "#FF7A1A",
+    "nsc": "#4A6FA5",
+    "d66": "#2DBE4F",
+    "bbb": "#A8C81E",
+    "cda": "#0A8A74",
+    "sp": "#F0412A",
+    "denk": "#22B5C2",
+    "pvdd": "#5E8F23",
+    "fvd": "#A3243A",
+    "sgp": "#E6A11B",
+    "cu": "#1E9BE6",
+    "volt": "#5A2D91",
+    "ja21": "#3A4FB8",
+    "50plus": "#9B2D8F",
+}
+
 
 def main(resultaat, totaaltelling):
     gekozen = zetels(resultaat)
@@ -86,6 +107,7 @@ def main(resultaat, totaaltelling):
     assert set(lijsten) == set(KORT), sorted(lijsten)
     partijen = [
         {"sleutel": KORT[n][0], "naam": lijsten[n][0], "kort": KORT[n][1]}
+        | ({"kleur": KLEUR[KORT[n][0]]} if KORT[n][0] in KLEUR else {})
         for n in sorted(lijsten)
     ]
     invoer = {

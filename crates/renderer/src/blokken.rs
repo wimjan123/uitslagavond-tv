@@ -101,6 +101,11 @@ pub struct Opbouwkaart {
 #[derive(Component, Clone, Copy)]
 pub struct Randkleur(pub Color);
 
+/// Hoeveel kaartjes van Partijlabels op één rij passen voordat ze over twee rijen gaan.
+const KAARTJES_PER_RIJ: usize = 8;
+/// Ruimte tussen de kaartjes, naast en onder elkaar.
+const KAARTJE_TUSSEN: f32 = 8.0;
+
 /// Een tekst die op één regel blijft: de letter krimpt tot hij in `breedte` past.
 #[derive(Component, Clone, Copy)]
 pub struct Krimp {
@@ -978,59 +983,67 @@ pub fn bouw_inhoud(
             naamkleur,
             kaartjes: true,
         } => {
-            // Elke Partij een eigen kaartje, even breed: de Zetels boven de naam, een streep in de
-            // partijkleur onderaan.
+            // Elke Partij een eigen kaartje, even breed, net als het Opbouwlabel: een streep in de
+            // partijkleur links, de Zetels, dan de naam. Meer dan KAARTJES_PER_RIJ Partijen gaan
+            // over twee rijen, de linker helft van de Zaal boven, zodat de naam groot genoeg blijft.
+            let n = labels.len().max(1);
+            let per_rij = if n > KAARTJES_PER_RIJ { n.div_ceil(2) } else { n };
+            let rijen = n.div_ceil(per_rij) as f32;
+            let breed = ((b - KAARTJE_TUSSEN * (per_rij as f32 - 1.0)) / per_rij as f32).floor();
+            let hoog = ((h - KAARTJE_TUSSEN * (rijen - 1.0)) / rijen).floor();
             commands.entity(binnen).insert(Node {
                 flex_direction: FlexDirection::Row,
-                column_gap: Val::Px(8.0),
-                align_items: AlignItems::Stretch,
+                flex_wrap: FlexWrap::Wrap,
+                column_gap: Val::Px(KAARTJE_TUSSEN),
+                row_gap: Val::Px(KAARTJE_TUSSEN),
+                align_content: AlignContent::FlexStart,
                 ..vol
             });
             let (tk, nk) = (kleur(*tekstkleur), kleur(*naamkleur));
             let g = f32::from(*grootte);
-            let vlakkleur = k.with_alpha(0.92);
-            let n = labels.len().max(1) as f32;
-            let tekstbreedte = (b - 8.0 * (n - 1.0)) / n - 12.0;
+            let vlakkleur = k.with_alpha(0.97);
+            let streep = 10.0;
             for l in labels {
                 let kaartje = commands
                     .spawn((
                         ChildOf(binnen),
                         Node {
-                            flex_grow: 1.0,
-                            flex_basis: Val::Px(0.0),
-                            flex_direction: FlexDirection::Column,
+                            width: Val::Px(breed),
+                            height: Val::Px(hoog),
+                            flex_direction: FlexDirection::Row,
                             align_items: AlignItems::Center,
-                            justify_content: JustifyContent::Center,
-                            padding: UiRect::bottom(Val::Px(8.0)),
-                            border_radius: BorderRadius::all(Val::Px(9.0)),
+                            column_gap: Val::Px(14.0),
+                            overflow: Overflow::clip(),
                             ..default()
                         },
                         BackgroundColor(vlakkleur.with_alpha(vlakkleur.alpha() * dekking)),
                         Deel { kleur: vlakkleur },
                     ))
                     .id();
-                let regels = [
-                    l.zetels.map(|z| (z.to_string(), letter, (g * 2.1).round(), tk)),
-                    l.kort.as_deref().map(|t| (t.to_string(), naamletter, g, nk)),
-                ];
-                for (tekst, letter, grootte, kl) in regels.into_iter().flatten() {
-                    let t = tekst_deel(commands, bestanden, kaartje, &tekst, letter, grootte, kl, Uitlijning::Midden, dekking);
-                    commands.entity(t).insert((TextLayout::no_wrap(), Krimp { grootte, breedte: tekstbreedte }));
-                }
                 let pk = kleur(l.kleur);
                 commands.spawn((
                     ChildOf(kaartje),
-                    Node {
-                        position_type: PositionType::Absolute,
-                        left: Val::Px(8.0),
-                        right: Val::Px(8.0),
-                        bottom: Val::Px(3.0),
-                        height: Val::Px(5.0),
-                        ..default()
-                    },
+                    Node { width: Val::Px(streep), height: Val::Percent(100.0), flex_shrink: 0.0, ..default() },
                     BackgroundColor(pk.with_alpha(dekking)),
                     Deel { kleur: pk },
                 ));
+                let cijfer = (g * 1.5).round();
+                // de Zetels in een vaste kolom, zodat de namen onder elkaar beginnen
+                let vak = commands
+                    .spawn((
+                        ChildOf(kaartje),
+                        Node { width: Val::Px(cijfer * 1.25), flex_shrink: 0.0, justify_content: JustifyContent::FlexEnd, ..default() },
+                    ))
+                    .id();
+                if let Some(z) = l.zetels {
+                    let t = tekst_deel(commands, bestanden, vak, &z.to_string(), letter, cijfer, tk, Uitlijning::Rechts, dekking);
+                    commands.entity(t).insert(TextLayout::no_wrap());
+                }
+                if let Some(kort) = l.kort.as_deref() {
+                    let rest = breed - streep - cijfer * 1.25 - 2.0 * 14.0 - 10.0;
+                    let t = tekst_deel(commands, bestanden, kaartje, kort, naamletter, g, nk, Uitlijning::Links, dekking);
+                    commands.entity(t).insert((TextLayout::no_wrap(), Krimp { grootte: g, breedte: rest }));
+                }
             }
         }
         Inhoud::Opbouwlabel {
@@ -1072,7 +1085,6 @@ pub fn bouw_inhoud(
                             flex_direction: FlexDirection::Row,
                             align_items: AlignItems::Center,
                             padding: UiRect::right(Val::Px(50.0)),
-                            border_radius: BorderRadius::all(Val::Px(14.0)),
                             ..default()
                         },
                         BackgroundColor(vlakkleur.with_alpha(vlakkleur.alpha() * dekking)),
@@ -1086,7 +1098,6 @@ pub fn bouw_inhoud(
                         width: Val::Px(18.0),
                         height: Val::Percent(100.0),
                         margin: UiRect::right(Val::Px(34.0)),
-                        border_radius: BorderRadius::all(Val::Px(7.0)),
                         ..default()
                     },
                     BackgroundColor(pk.with_alpha(dekking)),

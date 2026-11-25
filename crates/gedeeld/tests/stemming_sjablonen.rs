@@ -237,10 +237,12 @@ fn de_uitslag_van_een_stemming_vult_balk_uitkomst_en_fracties_voor_en_tegen() {
         _ => None,
     });
     let (voor, tegen) = lijst.expect("een Fractielijst");
-    let kort = |l: &[gedeeld::sjabloon::Fractielabel]| l.iter().map(|f| f.kort.clone()).collect::<Vec<_>>();
-    // in de volgorde van de Kamer: grootste eerst
-    assert_eq!(kort(&voor), ["PVV", "GL-PvdA", "VVD", "D66"]);
-    assert_eq!(kort(&tegen), ["SP"]);
+    let kort = |l: &[gedeeld::sjabloon::Fractielabel]| l.iter().map(|f| (f.kort.clone(), f.aantal)).collect::<Vec<_>>();
+    // in de volgorde van de Kamer: grootste eerst; SP is verdeeld (Eerste stemt voor), dus SP
+    // staat aan beide kanten met het aantal Kamerleden
+    let heel = |k: &str| (k.to_string(), None);
+    assert_eq!(kort(&voor), [heel("PVV"), heel("GL-PvdA"), heel("VVD"), heel("D66"), ("SP".to_string(), Some(1))]);
+    assert_eq!(kort(&tegen), [("SP".to_string(), Some(19))]);
 }
 
 #[test]
