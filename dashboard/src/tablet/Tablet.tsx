@@ -4,7 +4,7 @@
 // als Werkplek van de soort Tablet; de server weigert alles buiten klaarzetten en de Coalitiebouwer.
 import { useCallback, useEffect, useState } from "react";
 import { Aanmelden } from "../App";
-import { bouwer, wissel } from "../coalitie/coalitie";
+import { bouwer, telling, wissel, zetelsVan } from "../coalitie/coalitie";
 import { graphicTekst, nieuwereCijfers, sjabloonNaam, uurMinuut } from "../graphic";
 import { HerstelKnop } from "../multiviewer/vakken";
 import { CoalitieBoog, biedCoalitieHerstel } from "../onderdelen/Coalitie";
@@ -227,6 +227,7 @@ function Coalitiebouwer({ stand: s }: { stand: Stand }) {
         }}
         leeg="Geen Zetels in de set van deze Coalitie."
         live={inEther}
+        nu={inEther && "set" in inBeeld ? telling(zetelsVan(s, inBeeld.set), b.partijen) : undefined}
         gebaar="tik"
         maat={maat}
       />

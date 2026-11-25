@@ -408,3 +408,15 @@ details > summary { cursor: pointer; }
 .herstel { padding: 7px 8px 9px; gap: 5px; }
 .herstel-knop { justify-content: space-between; padding: 0 6px; font-size: 12.5px; }
 .herstel-knop kbd { padding: 0 3px; font-size: 10px; }
+
+/* Tijdens typen gaan de toetsen naar het veld: geen toetskappen in de kolom met Take. */
+.take-typt kbd { display: none; }
+/* Coalitieboog: de korte naam leesbaar, de partijkleur als streep bovenaan. */
+.boog-partij { box-shadow: inset 0 3px 0 var(--partij); padding-top: 9px; }
+.boog-partij[aria-pressed="true"] { box-shadow: inset 0 3px 0 var(--partij), inset 0 -3px 0 var(--partij); }
+.boog-naam { max-width: 100%; overflow: hidden; font-size: 11.5px; font-weight: 600; letter-spacing: -0.01em; white-space: nowrap; text-overflow: ellipsis; color: var(--paper-ink); }
+.tablet .boog-naam { font-size: 14px; }
+.tablet .boog-partij { padding-top: 11px; }
+/* Cijfers: een gewijzigd getal dat nog niet bewaard is. */
+.zetelvak-plek { position: relative; display: inline-block; }
+.zetelvak-hint { position: absolute; top: calc(100% + 4px); right: 0; z-index: 5; display: inline-flex; align-items: center; gap: 4px; padding: 3px 7px; font-size: 11.5px; white-space: nowrap; color: var(--paper-ink); background: var(--graphite-raised); border: 1px solid var(--rand-sterk); border-radius: 6px; box-shadow: 0 4px 12px rgb(0 0 0 / 0.45); }

@@ -151,8 +151,8 @@ function Take() {
   const oud = kanToon && kan("Ververs", s);
   const typen = useTypt();
   return (
-    <div className="take">
-      <span className="take-uitleg" title={kanToon ? (typen ? "Klik zet Preview Live. Spatie typt nu in het veld: druk eerst Esc." : "Take: zet wat in Preview staat Live (Spatie). Enter doet dit nooit.") : waaromGeenToon(s)}>
+    <div className={typen ? "take take-typt" : "take"}>
+      <span className="take-uitleg" title={kanToon ? (typen ? "Klik zet Preview Live. Zolang je in een veld typt, werken de sneltoetsen niet: klik buiten het veld of druk Tab." : "Take: zet wat in Preview staat Live (Spatie). Enter doet dit nooit.") : waaromGeenToon(s)}>
         <button
           className={`toon${oud ? " toon-oud" : ""}`}
           disabled={!kanToon}
@@ -162,11 +162,11 @@ function Take() {
         >
           <span className="toon-regel">
             <span>Take</span>
-            {typen ? <kbd className="kbd-let-op">Esc</kbd> : <kbd>Spatie</kbd>}
+            {!typen && <kbd>Spatie</kbd>}
           </span>
-          {oud && <span className="toon-let-op" title="Wat klaarstaat heeft niet de cijfers van nu. N zet de cijfers van nu erin.">oude cijfers (N)</span>}
+          {oud && <span className="toon-let-op" title="Wat klaarstaat heeft niet de cijfers van nu. N zet de cijfers van nu erin.">{typen ? "oude cijfers" : "oude cijfers (N)"}</span>}
           {!kanToon && verbonden && <span className="toon-reden">{s?.klaar ? "staat al live" : "niets klaar"}</span>}
-          {typen && kanToon && <span className="toon-typen">Esc voor sneltoetsen</span>}
+          {typen && kanToon && <span className="toon-typen">sneltoetsen uit tijdens typen</span>}
         </button>
       </span>
       <span

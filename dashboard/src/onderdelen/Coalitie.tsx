@@ -243,6 +243,7 @@ export function CoalitieBoog({
                 aria-pressed={gekozen}
                 disabled={uit}
                 title={`${p.naam}: ${zetels[p.sleutel]} Zetels`}
+                aria-label={`${p.naam}, ${zetels[p.sleutel]} Zetels`}
                 style={raster ? { "--partij": p.kleur } as CSSProperties : { left: maat.breedte / 2 + plekken[i].x, top: maat.hoogte - 34 + plekken[i].y * maat.plat, "--partij": p.kleur } as CSSProperties}
                 onClick={() => tik(p.sleutel)}
               >
@@ -251,7 +252,8 @@ export function CoalitieBoog({
                     <Vink />
                   </span>
                 )}
-                <LogoTegel partij={p} />
+                {/* De korte naam leesbaar in wit, de partijkleur als streep bovenaan: geen minitekst op kleur. */}
+                <span className="boog-naam">{p.kort}</span>
                 <span className="boog-zetels">{zetels[p.sleutel]}</span>
               </button>
             );
