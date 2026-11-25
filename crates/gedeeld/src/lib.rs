@@ -1182,6 +1182,7 @@ impl Stand {
             .or_else(|| self.camerarit(letter).and_then(Camerarit::beginstand))
             .or_else(|| camera::stoel_uit_sleutel(letter).and_then(camera::shot_op_stoel))
             .or_else(|| camera::aanschuif_uit_sleutel(letter).and_then(|(van, tot)| camera::aanschuif_stand(van, tot)))
+            .or_else(|| (letter == camera::BOVEN_HET_PANEEL).then(camera::boven_het_paneel))
     }
 
     /// Of er een Standpunt, Camerarit of Stoel met deze sleutel is, of Aanschuiven of Camera
@@ -1194,6 +1195,7 @@ impl Stand {
                     && camera::stoel_uit_sleutel(l).is_none()
                     && l != camera::AANSCHUIVEN
                     && l != camera::BLIJF
+                    && l != camera::BOVEN_HET_PANEEL
                     && camera::aanschuif_uit_sleutel(l).is_none() =>
             {
                 Err(Weigering::OnbekendStandpunt(l.into()))

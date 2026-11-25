@@ -67,11 +67,14 @@ const VLOER_OVERGANG: f32 = 1.0;
 ///   Zaal in zonder sprong. Boven de halve cirkel, waar de hanglampen hangen, blijft het plafond
 ///   zoals het was.
 /// - Achter de voorwand van de ruimte (tot [`STUDIO_DIEPTE`]) mag de camera alleen boven
-///   [`STUDIO_VLOER`]: lager staat de echte voorwand in de weg.
+///   [`STUDIO_VLOER`]. Daar ziet hij de voorwand en de nis niet (die horen bij de schil), dus
+///   de vloer ligt zo laag dat een route van Standpunt A naar een Stoel vooraan er niet langs
+///   schampt (ronde 4: met A op 12,5 m achter het midden zakt die route bij de voorwand tot
+///   ongeveer 4,5 m).
 const STUDIO_HELLING_VAN: f32 = 0.0;
-const STUDIO_HOOGTE: f32 = 11.0;
-const STUDIO_DIEPTE: f32 = 10.0;
-const STUDIO_VLOER: f32 = 5.0;
+const STUDIO_HOOGTE: f32 = 14.0;
+const STUDIO_DIEPTE: f32 = 14.0;
+const STUDIO_VLOER: f32 = 4.0;
 
 impl Ruimte {
     /// De ruimte in de Zaal, zoals getekend in Blender.
@@ -567,6 +570,19 @@ impl Doel {
                     overgang: aanschuif_overgang(),
                     na_aankomst: NaAankomst::Stil,
                 }))
+            })
+            .or_else(|| {
+                (letter == gedeeld::camera::BOVEN_HET_PANEEL).then(|| {
+                    Doel::Standpunt(Standpunt {
+                        letter: letter.into(),
+                        naam: "Totaal boven het paneel".into(),
+                        vast: true,
+                        toets: None,
+                        stand: gedeeld::camera::boven_het_paneel(),
+                        overgang: CameraOvergang::default(),
+                        na_aankomst: NaAankomst::Stil,
+                    })
+                })
             })
     }
 
@@ -1111,6 +1127,10 @@ mod tests {
         assert!(a[1] > 5.2 && a[2] > ruimte().voor_diepte, "A staat in de studio: {a:?}");
         let mut doelen: Vec<[f32; 3]> = Standpunt::vaste().iter().map(|s| s.stand.positie).collect();
         doelen.extend(Stoel::alle().filter_map(|s| shot_op_stoel(s).map(|s| s.positie)));
+        // Totaal boven het paneel staat ook in de studio
+        let paneel = gedeeld::camera::boven_het_paneel().positie;
+        assert!(ruimte().bevat(paneel, 0.0), "Totaal boven het paneel in de ruimte: {paneel:?}");
+        doelen.push(paneel);
         for doel in doelen {
             for (van, naar) in [(a, doel), (doel, a)] {
                 let route = Route::boog(van, naar, &ruimte());

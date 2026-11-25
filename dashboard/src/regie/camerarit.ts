@@ -36,7 +36,11 @@ export const AANSCHUIVEN = "aanschuiven";
 export const BLIJF = "blijf";
 export const BLIJF_NAAM = "Camera blijft staan";
 
-/** Alle Standpunten en Cameraritten; met `aanschuiven` ook Aanschuiven, voor een Graphic met een Partij. */
+/** Totaal boven het paneel: alle Stoelen boven een paneel onderin (gelijk aan `camera::BOVEN_HET_PANEEL`). */
+export const BOVEN_HET_PANEEL = "boven-het-paneel";
+export const BOVEN_HET_PANEEL_NAAM = "Totaal boven het paneel";
+
+/** Camera blijft staan, alle Standpunten en Cameraritten, en Totaal boven het paneel; met `aanschuiven` ook Aanschuiven, voor een Graphic met een Partij. */
 export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[], aanschuiven = false): Camerakeus[] {
   const keus = (letter: string, toets: string | null, naam: string, soort: Camerakeus["soort"]): Camerakeus => ({
     letter,
@@ -49,6 +53,7 @@ export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[], aans
     keus(BLIJF, null, BLIJF_NAAM, "Standpunt"),
     ...standpunten.map((p) => keus(p.letter, toetsVan(p), p.naam, "Standpunt")),
     ...ritten.map((r) => keus(r.letter, toetsVan(r), r.naam, "Camerarit")),
+    keus(BOVEN_HET_PANEEL, null, BOVEN_HET_PANEEL_NAAM, "Standpunt"),
     ...(aanschuiven ? [keus(AANSCHUIVEN, null, "Aanschuiven naar de gekozen Partij", "Standpunt")] : []),
   ];
 }

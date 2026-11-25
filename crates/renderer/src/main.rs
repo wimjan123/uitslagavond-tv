@@ -21,6 +21,7 @@ mod blokken;
 mod camera;
 mod graphic;
 mod kleurgolf;
+mod lens;
 mod lichtkaart;
 mod meting;
 mod occlusie;
@@ -29,8 +30,10 @@ mod opname;
 mod schil;
 mod scherm;
 mod stemmingsblokken;
+mod studio;
 mod volging;
 mod voorbeeld;
+mod vrijstaand;
 mod zaal;
 
 #[cfg(test)]

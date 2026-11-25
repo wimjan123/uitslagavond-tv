@@ -11,14 +11,19 @@ const OVERVLOEI: f32 = 0.25;
 
 /// Bij de Opbouw: hoe lang de Stoelen eerst donker worden, als deel van de tijd per Partij.
 const INLEIDING: f32 = 0.5;
-/// Bij de Opbouw: hoe lang een Partij oplicht, als deel van de tijd per Partij.
-const OPLICHTEN: f32 = 0.4;
+/// Bij de Opbouw: hoe lang een Partij erover doet om haar kleur te krijgen, als deel van de tijd
+/// per Partij. Op dat moment is ook haar korte flits op zijn felst.
+const OPLICHTEN: f32 = 0.25;
+/// Bij de Opbouw: hoe snel de flits daarna wegzakt, als deel van de tijd per Partij. Midden in de
+/// stap staat de Partij al in haar eigen, volle kleur (council-ronde 3).
+const FLITS_WEG: f32 = 0.2;
 /// Bij de Opbouw: hoe snel een Partij na haar stap dimt (en haar gloed verliest), en aan het eind
 /// weer opkomt, als deel van de tijd per Partij.
 const NAGLOED: f32 = 0.25;
-/// Bij de Opbouw: hoe ver een Partij na haar stap naar de wachtkleur zakt, zodat alleen de Partij
-/// van het label vol oplicht. Aan het eind komen ze allemaal tegelijk terug.
-pub const DIMMEN: f32 = 0.7;
+/// Bij de Opbouw: hoe ver een Partij na haar stap naar haar gedimde kleur gaat (grijs en donker,
+/// zie `zaal.rs`), zodat alleen de Partij van het label in kleur staat. Aan het eind komen ze
+/// allemaal tegelijk terug.
+pub const DIMMEN: f32 = 1.0;
 
 /// De duur van de overgang in seconden bij deze snelheid van de Stijl (in procent); bij de
 /// Opbouw de tijd per Partij.
@@ -114,19 +119,19 @@ impl Opbouw {
         }
     }
 
-    /// Hoe sterk Stoel `i` op `t` seconden gloeit (0 tot 1): de stap die aan de beurt is, licht
-    /// extra op, zodat je ook bij een donkere partijkleur ziet welk blok bij het label hoort. Na
-    /// zijn stap zakt hij terug naar zijn eigen kleur.
+    /// Hoe sterk Stoel `i` op `t` seconden gloeit (0 tot 1): de stap die aan de beurt is, flitst
+    /// kort op als hij zijn kleur krijgt, zodat je ook bij een donkere partijkleur ziet welk blok
+    /// bij het label hoort. Daarna staat hij in zijn eigen, volle kleur.
     pub fn gloed(&self, i: usize, t: f32) -> f32 {
         let Some(k) = self.stap_van.get(i).copied().flatten() else { return 0.0 };
         let start = self.inleiding() + k as f32 * self.per_stap;
-        let einde = start + self.per_stap;
+        let top = start + OPLICHTEN * self.per_stap;
         if t < start {
             0.0
-        } else if t < einde {
-            zacht(((t - start) / (OPLICHTEN * self.per_stap)).min(1.0))
+        } else if t < top {
+            zacht((t - start) / (OPLICHTEN * self.per_stap))
         } else {
-            1.0 - zacht(((t - einde) / (NAGLOED * self.per_stap)).min(1.0))
+            1.0 - zacht(((t - top) / (FLITS_WEG * self.per_stap)).min(1.0))
         }
     }
 
@@ -205,7 +210,7 @@ mod tests {
         let o = Opbouw::nieuw(&naar, &rang, 1.0);
         assert_eq!(o.stappen, [k(2), k(1), k(3)].map(Option::unwrap));
         assert_eq!(o.stap_van, [Some(1), Some(1), Some(0), Some(0), Some(0), None, Some(2), Some(2)]);
-        assert!((o.duur() - 3.9).abs() < 1e-6, "een halve stap donker, drie stappen en de nagloed");
+        assert!((o.duur() - 3.75).abs() < 1e-6, "een halve stap donker, drie stappen en de nagloed");
     }
 
     #[test]
@@ -228,13 +233,14 @@ mod tests {
     }
 
     #[test]
-    fn de_stap_die_aan_de_beurt_is_gloeit_en_zakt_daarna_terug() {
+    fn de_stap_die_aan_de_beurt_is_flitst_kort_en_staat_midden_in_de_stap_in_zijn_kleur() {
         let o = Opbouw::nieuw(&[k(1), k(2)], &[0, 1], 1.0);
         // stap 0 loopt van 0,5 tot 1,5 seconde
         assert_eq!(o.gloed(0, 0.4), 0.0);
-        assert_eq!(o.gloed(0, 1.0), 1.0);
-        assert!(o.gloed(0, 1.6) > 0.0 && o.gloed(0, 1.6) < 1.0, "na zijn stap zakt hij terug");
-        assert_eq!(o.gloed(0, 1.75), 0.0);
+        assert_eq!(o.gloed(0, 0.75), 1.0, "op zijn felst als hij zijn kleur heeft");
+        assert!(o.gloed(0, 0.85) > 0.0 && o.gloed(0, 0.85) < 1.0, "daarna zakt de flits weg");
+        assert_eq!(o.gloed(0, 1.0), 0.0, "midden in de stap de eigen kleur");
+        assert_eq!(o.deel(0, 1.0), Opbouwdeel::Oplichten(1.0));
         assert_eq!(o.gloed(1, 1.0), 0.0, "de volgende wacht nog");
     }
 

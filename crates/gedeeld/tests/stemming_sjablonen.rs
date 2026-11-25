@@ -195,12 +195,14 @@ fn vul_in(g: &Graphic, stand: &Stand) -> Vec<IngevuldBlok> {
 }
 
 #[test]
-fn de_tekst_op_een_partijkleur_is_licht_of_donker_zoals_in_de_mockup() {
+fn de_tekst_op_een_partijkleur_is_licht_of_donker_naar_haar_helderheid() {
     let (licht, donker) = (Stijl::default().kleuren.tekst, Stijl::default().kleuren.vlak);
-    // de voorbeeldkleuren van docs/vormgeving/5-stemming.jpg en de tekstkleur die daar op staat
+    // de voorbeeldkleuren van docs/vormgeving/5-stemming.jpg en de tekstkleur die daar op staat,
+    // behalve op lichtblauw
     let mockup = [
         ("#2DBE4F", donker), ("#FF7A1A", donker), ("#D0213A", licht), ("#0A8A74", licht),
-        ("#22B5C2", donker), ("#5E8F23", licht), ("#1E9BE6", licht), ("#F0412A", licht),
+        // lichtblauw: wit haalt daar maar 3 keer zoveel licht, donker leest beter (council ronde 4)
+        ("#22B5C2", donker), ("#5E8F23", licht), ("#1E9BE6", donker), ("#F0412A", licht),
         ("#9B2D8F", licht), ("#5A2D91", licht), ("#2B63D9", licht), ("#3A4FB8", licht),
         ("#A3243A", licht), ("#A8C81E", donker), ("#E6A11B", donker),
     ];

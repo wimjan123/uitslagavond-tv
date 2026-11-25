@@ -215,17 +215,21 @@ impl Standpunt {
             // zolang de camera daar staat (`crates/renderer/src/schil.rs`), de server laat hem
             // daar vliegen (de studio in `crates/server/src/camera.rs`).
             //
-            // Van hoog en ver oogt het halfrond minder plat: alle 150 Stoelen staan van x 80 tot
-            // 1840 en van y 368 (de rugleuningen van de achterste rij, net onder de kaartjes van
-            // de Zetelverdeling tot y 360) tot ongeveer 740 (de voorste Stoelen opzij, boven het
-            // Opbouwlabel vanaf y 760). Een rugleuning achterin is 26 in plaats van 18 pixels
-            // breed, en het plafond is uit beeld. De verhouding: de Zetelverdeling houdt de hele
-            // Zaal vrij; de panelen van Zetelbalk (vanaf y 646) en Coalitiebalk (vanaf y 676)
-            // vallen over de voorste Stoelen opzij, want daar telt de balk.
+            // Van hoog en ver, met een lens van 48 graden (council-ronde 3: 58 gaf te veel
+            // lege ruimte rond de banken): alle 150 Stoelen staan van x 39 tot 1881 en van y 433
+            // (de rugleuningen van de achterste rij, 73 px onder de kaartjes van de
+            // Zetelverdeling tot y 360) tot ongeveer 860 (de voorste Stoelen helemaal opzij; in
+            // het midden, waar het Opbouwlabel vanaf y 760 staat, tot y 686). Hoger en steiler
+            // dan in ronde 4 (10,5 m hoog, 12,5 m achter het midden, -28 graden): toen zaten de
+            // kaartjes strak tegen de achterste rij en vulden lege kabinetsbanken het onderste
+            // derde (council-ronde 4). Van hoger oogt het halfrond ronder, dus vult het meer van
+            // de hoogte bij dezelfde breedte. De Stoelen achterin zijn groter dan van dichtbij
+            // met een wijde lens, en het plafond is uit beeld. Sjablonen met een paneel onderin
+            // kiezen [`BOVEN_HET_PANEEL`].
             vast(
                 "A",
                 "Totaal vanaf voorzitter",
-                Camerastand::uit_graden([0.0, 10.0, 9.0], 0.0, -32.0, 58.3),
+                Camerastand::uit_graden([0.0, 13.0, 11.0], 0.0, -31.5, 48.0),
             ),
             vast(
                 "S",
@@ -261,10 +265,25 @@ impl Standpunt {
 /// [`Standpunt::vaste`]. Een Stand van een oudere versie bewaart zijn vaste Standpunten zelf;
 /// staat er een nog op een vroegere standaard, dan krijgt hij die van nu
 /// ([`ververs_vaste_standpunten`]).
-const VORIGE_STANDAARDEN: [(&str, [f32; 3], f32, f32, f32); 2] = [
+const VORIGE_STANDAARDEN: [(&str, [f32; 3], f32, f32, f32); 4] = [
     ("A", [0.0, 4.5, 4.45], 0.0, -23.0, 99.0),
     ("A", [0.0, 4.56, 4.48], 0.0, -25.0, 96.5),
+    ("A", [0.0, 10.0, 9.0], 0.0, -32.0, 58.3),
+    ("A", [0.0, 10.5, 12.5], 0.0, -28.0, 48.0),
 ];
+
+/// Totaal boven het paneel: de sleutel van een vast shot voor Sjablonen met een paneel onderin
+/// (Uitslag van een Stemming vanaf y 532, Zetelbalk en Coalitiebalk vanaf y 646). Zoals Standpunt
+/// A, maar steiler, zodat alle 150 Stoelen boven het paneel staan: van x 46 tot 1874 en van y 130
+/// tot ongeveer 493 (council-ronde 3: de panelen lagen over de Stoelen tot y 740). Bovenin staat
+/// bij die Sjablonen alleen het programmalogo. Je kiest het overal waar je een Standpunt kiest;
+/// de overgang is die van een Standpunt.
+pub const BOVEN_HET_PANEEL: &str = "boven-het-paneel";
+
+/// De stand van [`BOVEN_HET_PANEEL`], in de studio zoals Standpunt A.
+pub fn boven_het_paneel() -> Camerastand {
+    Camerastand::uit_graden([0.0, 10.0, 12.0], 0.0, -39.0, 50.0)
+}
 
 /// Zet elk vast Standpunt dat nog op een vroegere standaard staat op de standaard van nu. Een vast
 /// Standpunt dat de Regie zelf opnieuw opsloeg, blijft zoals het is.
@@ -293,8 +312,9 @@ const SHOT_OPZIJ: f32 = 28.0;
 /// Hoe hoog boven de rugleuning de camera staat, en waar hij naar kijkt (het hoofd van wie er zit).
 const SHOT_HOOGTE: f32 = 0.95;
 const SHOT_HOOFD: f32 = 0.1;
-/// Verticale beeldhoek van het shot, in graden.
-const SHOT_BEELDHOEK: f32 = 34.0;
+/// Verticale beeldhoek van het shot, in graden: krap op de Stoel, met zijn buren half in beeld
+/// (council-ronde 4; met 34 graden was de Stoel klein tussen veel bureaus).
+const SHOT_BEELDHOEK: f32 = 26.0;
 /// Waar de Stoel in beeld komt: links van het midden, want de Persoonskaart staat rechts
 /// (x -1 tot 1 over de breedte; de kaart begint bij 0,21).
 const SHOT_PLEK_X: f32 = -0.42;
