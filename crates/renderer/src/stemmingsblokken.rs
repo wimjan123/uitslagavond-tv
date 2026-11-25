@@ -329,10 +329,12 @@ pub fn bouw(
             let g = f32::from(*grootte);
             commands.entity(binnen).insert(Node { overflow: Overflow::clip(), ..op(0.0, 0.0, Val::Px(b), Val::Px(h)) });
             // Staan er namen, dan zegt een regel onderaan waarom: die stemden anders dan hun Fractie.
+            // Die regel staat onder de kortste kolom, zodat de tabel er geen ruimte voor inlevert.
             let met_namen = voor.iter().chain(tegen.iter()).any(|n| !n.namen.is_empty());
-            let uitleg = if met_namen { UITLEG_HOOG } else { 0.0 };
+            let uitleg = if met_namen && voor.len() == tegen.len() { UITLEG_HOOG } else { 0.0 };
             if met_namen {
-                let regel = commands.spawn((ChildOf(binnen), op(0.0, h - UITLEG_HOOG + 10.0, Val::Px(b), Val::Px(UITLEG_HOOG - 10.0)))).id();
+                let x = if voor.len() > tegen.len() { ((b + 48.0) / 2.0).floor() } else { 0.0 };
+                let regel = commands.spawn((ChildOf(binnen), op(x, h - UITLEG_HOOG + 10.0, Val::Px(b - x), Val::Px(UITLEG_HOOG - 10.0)))).id();
                 let t = tekst_deel(commands, bestanden, regel, "Met naam: stemde anders dan de eigen fractie", naamletter, 30.0, blokkleur.with_alpha(0.75), Uitlijning::Links, dekking);
                 commands.entity(t).insert(TextLayout::no_wrap());
             }
@@ -359,7 +361,7 @@ pub fn bouw(
                         ChildOf(lijst),
                         Node {
                             flex_direction: FlexDirection::Column,
-                            row_gap: Val::Px(6.0),
+                            row_gap: Val::Px(4.0),
                             width: Val::Px(kolombreed),
                             flex_shrink: 0.0,
                             ..default()
@@ -406,7 +408,7 @@ pub fn bouw(
                             ChildOf(regel),
                             Node {
                                 min_width: Val::Px((kolombreed * 0.4).round()),
-                                padding: UiRect::new(Val::Px(12.0 + STREEP), Val::Px(12.0), Val::Px(2.0), Val::Px(2.0)),
+                                padding: UiRect::new(Val::Px(12.0 + STREEP), Val::Px(12.0), Val::Px(0.0), Val::Px(0.0)),
                                 justify_content: JustifyContent::SpaceBetween,
                                 column_gap: Val::Px(12.0),
                                 flex_shrink: 0.0,
@@ -488,11 +490,12 @@ fn streep(commands: &mut Commands, vak: Entity, kl: Color, dekking: f32) {
     ));
 }
 
-/// De korte naam met het aantal Kamerleden dat aan deze kant stemde erachter.
+/// De korte naam, en bij een verdeelde Fractie het aantal Kamerleden aan deze kant erachter. Onder
+/// de balk is geen ruimte voor een aantal bij elke Fractie: de balk zelf geeft de totalen.
 fn naam_met_aantal(f: &Fractielabel) -> String {
-    match f.stemmen {
-        0 => f.kort.clone(),
-        n => format!("{}\u{2002}{n}", f.kort),
+    match f.aantal {
+        Some(n) => format!("{}\u{2002}{n}", f.kort),
+        None => f.kort.clone(),
     }
 }
 
