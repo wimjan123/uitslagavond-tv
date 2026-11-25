@@ -13,6 +13,7 @@
 //! De map van `--zaal` maakt `zaal/maak.sh`; zonder `--zaal` is er geen Zaal in beeld.
 //! De rol Voorbeeld draait altijd zonder venster en stuurt kleine beelden naar het dashboard.
 
+mod afwerking;
 mod animatie;
 mod beeld;
 mod bestanden;
