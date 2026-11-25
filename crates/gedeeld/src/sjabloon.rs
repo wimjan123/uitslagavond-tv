@@ -2642,7 +2642,8 @@ fn winst_en_verlies() -> Sjabloon {
         // het paneel beslaat het grootste deel van het beeld: de Zaal ernaast donker en onscherp
         achtergrond: Achtergrond::ZaalDonker,
         stoelen: Stoelen::Gegevens,
-        standpunt: None,
+        // Bovenaf, zoals Uitslag per Partij en de Stemmingen (council-ronde 7)
+        standpunt: Some("G".into()),
         blokken: vec![
             // 30 px onder het programmalogo, dat er vrij boven staat (council ronde 6)
             paneel(plek(96, 150, 1728, 860)),
