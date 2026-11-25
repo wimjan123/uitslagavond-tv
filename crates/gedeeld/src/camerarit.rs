@@ -88,11 +88,17 @@ pub struct Camerarit {
     /// De sleutel: "R1", "R2" en verder. Verandert nooit; zo kiest een Graphic of Preset hem.
     pub letter: String,
     pub naam: String,
-    /// J, K of L, gedeeld met de eigen Standpunten, of geen.
+    /// J, K of L, gedeeld met de eigen Standpunten, of geen. Een vaste Camerarit heeft zijn
+    /// sleutel als toets (Q, W, E, T, Y of U).
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub toets: Option<String>,
+    /// Een vaste Camerarit komt mee met het systeem ([`crate::vaste_ritten`]): je kunt hem
+    /// bijschaven en hernoemen, niet wissen of opnieuw opnemen.
+    #[serde(default)]
+    pub vast: bool,
     /// 100 standen per seconde: x, y, z, draai, helling en beeldhoek, zoals [`Camerastand`].
+    /// Leeg bij een vaste Camerarit: die opname rekent de software uit ([`Camerarit::punten`]).
     #[ts(type = "Array<[number, number, number, number, number, number]>")]
     pub opname: Vec<[f32; 6]>,
     pub bijschaving: Bijschaving,
@@ -131,14 +137,27 @@ fn kortste_hoek(d: f32) -> f32 {
 }
 
 impl Camerarit {
+    /// De opname: bij een vaste Camerarit die van de software, anders die uit de Stand.
+    pub fn punten(&self) -> &[[f32; 6]] {
+        match self.vast.then(|| crate::vaste_ritten::opname_van(&self.letter)).flatten() {
+            Some(p) => p,
+            None => &self.opname,
+        }
+    }
+
+    /// De toets op het toetsenbord: de sleutel van een vaste Camerarit, J, K of L, of geen.
+    pub fn sneltoets(&self) -> Option<&str> {
+        if self.vast { Some(&self.letter) } else { self.toets.as_deref() }
+    }
+
     /// Hoe lang de opname is, in seconden.
     pub fn opname_s(&self) -> f32 {
-        self.opname.len().saturating_sub(1) as f32 / TIKKEN_PER_SECONDE as f32
+        self.punten().len().saturating_sub(1) as f32 / TIKKEN_PER_SECONDE as f32
     }
 
     /// Het stuk van de opname dat overblijft na begin en eind eraf, als indexen (tot en met).
     fn stuk(&self) -> (usize, usize) {
-        let n = self.opname.len();
+        let n = self.punten().len();
         if n < 2 {
             return (0, n.saturating_sub(1));
         }
@@ -156,7 +175,7 @@ impl Camerarit {
 
     /// Waar de rit begint. Gladmaken laat begin en eind staan, dus dat is de opname na begin eraf.
     pub fn beginstand(&self) -> Option<Camerastand> {
-        self.opname.get(self.stuk().0).map(als_stand)
+        self.punten().get(self.stuk().0).map(als_stand)
     }
 
     /// Hoe lang het stuk is dat overblijft, in seconden.
@@ -175,7 +194,7 @@ impl Camerarit {
     /// Of de rit kan herhalen, en anders waarom niet.
     pub fn kan_herhalen(&self) -> Result<(), String> {
         let (b, e) = self.stuk();
-        let (Some(a), Some(z)) = (self.opname.get(b), self.opname.get(e)) else {
+        let (Some(a), Some(z)) = (self.punten().get(b), self.punten().get(e)) else {
             return Err("er is geen opname".into());
         };
         let afstand = ((a[0] - z[0]).powi(2) + (a[1] - z[1]).powi(2) + (a[2] - z[2]).powi(2)).sqrt();
@@ -198,14 +217,14 @@ impl Camerarit {
     /// Wat de camera afspeelt: een stand per tik, van het beginpunt tot het eindpunt.
     pub fn baan(&self) -> Ritbaan {
         let (b, e) = self.stuk();
-        let Some(eerste) = self.opname.get(b) else {
+        let Some(eerste) = self.punten().get(b) else {
             let s = Camerastand { positie: [0.0; 3], draai: 0.0, helling: 0.0, beeldhoek: 1.0 };
             return Ritbaan { standen: vec![s], herhalen: false, plek: vec![0.0] };
         };
         // de draai doorlopend, zodat middelen over -pi en pi heen goed gaat
         let mut stuk: Vec<[f32; 6]> = Vec::with_capacity(e - b + 1);
         let mut draai = eerste[3];
-        for p in &self.opname[b..=e] {
+        for p in &self.punten()[b..=e] {
             if let Some(vorige) = stuk.last() {
                 draai = vorige[3] + kortste_hoek(p[3] - vorige[3]);
             }
@@ -273,7 +292,7 @@ fn komma(v: f32) -> String {
 impl Camerarit {
     /// Hoe de Regie de Camerarit herkent, zoals "Camerarit K (Langs de banken)".
     pub(crate) fn kenmerk(&self) -> String {
-        format!("Camerarit {} ({})", self.toets.as_deref().unwrap_or(&self.letter), self.naam)
+        format!("Camerarit {} ({})", self.sneltoets().unwrap_or(&self.letter), self.naam)
     }
 
     /// Of zoveel eraf knippen kan: er moet [`RIT_MIN_S`] overblijven.
@@ -326,6 +345,9 @@ impl Stand {
             if let Some(l) = voor.filter(|l| self.camerarit(l).is_none()) {
                 return Err(Weigering::OnbekendStandpunt(l.into()));
             }
+            if let Some(l) = voor.filter(|l| self.camerarit(l).is_some_and(|r| r.vast)) {
+                return Err(Weigering::VasteCamerarit(l.into()));
+            }
             self.camera.opname = Some(Opname { voor: voor.map(Into::into), sinds: h.volgnummer });
             self.camera.proef = None;
             return Ok(());
@@ -352,7 +374,8 @@ impl Stand {
                 let bezet = |l: &str| self.cameraritten.iter().any(|r| r.letter == l);
                 let letter = (1..).map(|n| format!("R{n}")).find(|l| !bezet(l)).expect("oneindig");
                 let naam_bezet = |n: &str| self.cameraritten.iter().any(|r| r.naam == n);
-                let naam = (self.cameraritten.len() + 1..)
+                let eigen = self.cameraritten.iter().filter(|r| !r.vast).count();
+                let naam = (eigen + 1..)
                     .map(|n| format!("Camerarit {n}"))
                     .find(|n| !naam_bezet(n))
                     .expect("oneindig");
@@ -361,6 +384,7 @@ impl Stand {
                     letter: letter.clone(),
                     naam,
                     toets,
+                    vast: false,
                     opname,
                     bijschaving: Bijschaving::nieuw(lengte),
                 });
@@ -414,6 +438,30 @@ impl Stand {
         if self.camera.opname.is_none() {
             self.camera.proef = Some(Proef { letter: letter.into(), sinds: h.volgnummer });
         }
+    }
+
+    pub(crate) fn herstel_camerarit(&mut self, letter: &str, h: &Herkomst) -> Result<(), Weigering> {
+        let standaard = crate::vaste_ritten::standaard_van(letter)
+            .ok_or_else(|| Weigering::OnbekendStandpunt(letter.into()))?;
+        match self.cameraritten.iter_mut().find(|r| r.letter == letter) {
+            Some(r) => *r = standaard,
+            None => {
+                let plek = self.cameraritten.iter().take_while(|r| r.vast).count();
+                self.cameraritten.insert(plek, standaard);
+            }
+        }
+        self.speel_af(letter, h);
+        Ok(())
+    }
+
+    /// Zet de vaste Cameraritten die er niet zijn (een Stand van een oudere versie) vooraan, op
+    /// volgorde. Een eigen Camerarit blijft zoals hij is.
+    pub fn vul_vaste_ritten_aan(&mut self) {
+        let mut vaste = crate::vaste_ritten::vaste();
+        vaste.retain(|v| self.camerarit(&v.letter).is_none());
+        let plek = self.cameraritten.iter().take_while(|r| r.vast).count();
+        self.cameraritten.splice(plek..plek, vaste);
+        self.cameraritten.sort_by_key(|r| !r.vast);
     }
 
     pub(crate) fn bijschaaf_camerarit(&mut self, letter: &str, b: Bijschaving, h: &Herkomst) -> Result<(), Weigering> {

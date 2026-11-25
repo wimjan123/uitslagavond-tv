@@ -137,7 +137,7 @@ async fn de_server_neemt_tijdens_oefenen_100_standen_per_seconde_op_en_bewaart_d
     uitgevoerd(&server, Opdracht::ZetOpnemen { aan: false, voor: None, opname: None }).await;
     let ms = begin.elapsed().as_millis() as usize;
     let s = stand(&server).await.stand;
-    let rit = s.cameraritten.first().expect("een Camerarit");
+    let rit = s.cameraritten.iter().find(|r| !r.vast).expect("een eigen Camerarit");
     // 100 per seconde: in ruim 300 ms ongeveer 30, met een paar tikken speling
     assert!((25..=ms / 10 + 5).contains(&rit.opname.len()), "{} standen in {ms} ms", rit.opname.len());
     assert_eq!(rit.toets.as_deref(), Some("J"));

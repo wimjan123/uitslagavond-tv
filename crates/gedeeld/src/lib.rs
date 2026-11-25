@@ -22,6 +22,7 @@ pub mod sjabloon;
 mod tablet;
 pub mod stemmingen;
 pub mod uitslagindeling;
+pub mod vaste_ritten;
 pub mod zaalindeling;
 pub mod zaalkaart;
 pub mod zetelbalk;
@@ -83,8 +84,9 @@ pub struct Stand {
     /// De Standpunten, eerst de zes vaste.
     #[serde(default = "Standpunt::vaste")]
     pub standpunten: Vec<Standpunt>,
-    /// De Cameraritten, op volgorde van opnemen.
-    #[serde(default)]
+    /// De Cameraritten: eerst de zes vaste ([`vaste_ritten`]), dan de eigen op volgorde van
+    /// opnemen.
+    #[serde(default = "vaste_ritten::vaste")]
     pub cameraritten: Vec<Camerarit>,
     /// Waar de Regie de camera van de Ether heen stuurde. De server rekent de beweging uit.
     #[serde(default)]
@@ -129,7 +131,7 @@ impl Default for Stand {
             kamer: Kamer::default(),
             stijl: sjabloon::Stijl::default(),
             standpunten: Standpunt::vaste(),
-            cameraritten: Vec::new(),
+            cameraritten: vaste_ritten::vaste(),
             camera: Camerakeuze::default(),
             stemmingen: Stemmingen::default(),
             presets: Vec::new(),
@@ -299,6 +301,9 @@ pub enum Opdracht {
     ZetStandpuntOvergang { letter: String, overgang: CameraOvergang, na_aankomst: NaAankomst },
     /// Zet de schuifjes van een Camerarit. Speelt af in het Voorbeeld.
     BijschaafCamerarit { letter: String, bijschaving: Bijschaving },
+    /// Zet een vaste Camerarit terug naar zijn standaard: naam en schuifjes. Speelt af in het
+    /// Voorbeeld.
+    HerstelCamerarit { letter: String },
     /// Bewaart een nieuw eigen Standpunt. Zonder `stand` vult de server in waar de camera van de
     /// Ether nu staat.
     BewaarStandpunt {
@@ -493,6 +498,8 @@ pub enum Weigering {
     OnbekendStandpunt(String),
     #[error("Standpunt {0} is vast")]
     VastStandpunt(String),
+    #[error("Camerarit {0} is vast: bijschaven en hernoemen kan, wissen of opnieuw opnemen niet")]
+    VasteCamerarit(String),
     #[error("{standpunt} wordt gebruikt door {waar}")]
     StandpuntInGebruik { standpunt: String, waar: String },
     #[error("de naam van een Standpunt is leeg")]
@@ -663,7 +670,13 @@ impl Stand {
             }
             Opdracht::KiesStandpunt { letter, knip } => {
                 self.controleer_standpunt(Some(letter))?;
-                self.kies_standpunt(letter, *knip, h);
+                // Aanschuiven gaat naar de Partij van de Graphic in de Ether
+                let letter = match (letter.as_str(), &self.ether) {
+                    (camera::AANSCHUIVEN, Some(e)) => e.graphic.standpunt_bij(Some(camera::AANSCHUIVEN)).into_owned(),
+                    (camera::AANSCHUIVEN, None) => return Err(Weigering::NietsInBeeld),
+                    _ => letter.clone(),
+                };
+                self.kies_standpunt(&letter, *knip, h);
             }
             Opdracht::ZetVrijeCamera { aan } => self.zet_vrije_camera(*aan)?,
             Opdracht::ZetOefenen { aan } => self.zet_oefenen(*aan)?,
@@ -674,6 +687,7 @@ impl Stand {
             Opdracht::ZetStandpuntOvergang { letter, overgang, na_aankomst } => {
                 self.zet_standpunt_overgang(letter, *overgang, *na_aankomst, h)?
             }
+            Opdracht::HerstelCamerarit { letter } => self.herstel_camerarit(letter, h)?,
             Opdracht::BijschaafCamerarit { letter, bijschaving } => {
                 self.bijschaaf_camerarit(letter, *bijschaving, h)?
             }
@@ -1102,6 +1116,7 @@ impl Stand {
             .map(|s| s.stand)
             .or_else(|| self.camerarit(letter).and_then(Camerarit::beginstand))
             .or_else(|| camera::stoel_uit_sleutel(letter).and_then(camera::shot_op_stoel))
+            .or_else(|| camera::aanschuif_uit_sleutel(letter).and_then(|(van, tot)| camera::aanschuif_stand(van, tot)))
     }
 
     /// Of er een Standpunt, Camerarit of Stoel met deze sleutel is (geen sleutel mag ook).
@@ -1110,7 +1125,9 @@ impl Stand {
             Some(l)
                 if self.standpunt(l).is_none()
                     && self.camerarit(l).is_none()
-                    && camera::stoel_uit_sleutel(l).is_none() =>
+                    && camera::stoel_uit_sleutel(l).is_none()
+                    && l != camera::AANSCHUIVEN
+                    && camera::aanschuif_uit_sleutel(l).is_none() =>
             {
                 Err(Weigering::OnbekendStandpunt(l.into()))
             }

@@ -146,8 +146,8 @@ fn een_preset_bewaart_zijn_standpunt_en_weigert_er_een_dat_niet_bestaat() {
     p.doe(Opdracht::BewaarPreset { graphic: titelkaart("Flank"), standpunt: Some("D".into()) }).unwrap();
     p.doe(Opdracht::BewaarPreset { graphic: titelkaart("Standaard"), standpunt: None }).unwrap();
     assert_eq!(
-        p.doe(Opdracht::BewaarPreset { graphic: titelkaart("Nergens"), standpunt: Some("Q".into()) }),
-        Err(Weigering::OnbekendStandpunt("Q".into()))
+        p.doe(Opdracht::BewaarPreset { graphic: titelkaart("Nergens"), standpunt: Some("P".into()) }),
+        Err(Weigering::OnbekendStandpunt("P".into()))
     );
     assert_eq!(p.doe(Opdracht::BewaarPreset { graphic: titelkaart(""), standpunt: None }), Err(Weigering::KopLeeg));
 

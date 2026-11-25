@@ -87,11 +87,12 @@ export function standaardStandpunt(g: Graphic): string {
     case "TweeSets":
     case "UitslagPerPartij":
     case "WinstEnVerlies":
-    case "PartijUitgelicht":
     case "Coalitie":
     case "Coalitiebalk":
     case "Eigen":
       return "A";
+    case "PartijUitgelicht":
+      return "aanschuiven";
     case "Persoonskaart": {
       const stoel = g.gegevens?.stoel;
       return stoel ? `stoel-${stoel.vak}-${stoel.rij}-${stoel.nummer}` : "S";

@@ -3,6 +3,7 @@
 // hier staat alleen wat het dashboard nodig heeft om hem te tekenen en te beschrijven.
 import type { Camerarit } from "../typen/Camerarit";
 import type { Standpunt } from "../typen/Standpunt";
+import { RITSTAP, STANDAARD_RITTEN, VASTE_OPNAMES } from "../typen/vasteRitten.ts";
 
 /** Gelijk aan TIKKEN_PER_SECONDE, HERHAAL_AFSTAND, HERHAAL_HOEK, RIT_MIN_S en DUUR_FACTOR in crates/gedeeld. */
 export const TIKKEN = 100;
@@ -14,7 +15,7 @@ export const DUUR_FACTOR = 4;
 /** Iets wat je kiest waar je een camera kiest: een Standpunt of een Camerarit. */
 export interface Camerakeus {
   letter: string;
-  /** A tot H, J, K of L, of geen. */
+  /** A tot H, Q tot U, J, K of L, of geen. */
   toets: string | null;
   naam: string;
   /** Zoals de Regie het in een keuzelijst ziet: "J · Close-up", of alleen de naam zonder toets. */
@@ -22,12 +23,16 @@ export interface Camerakeus {
   soort: "Standpunt" | "Camerarit";
 }
 
-/** De toets van een Standpunt of Camerarit: de letter van een vast Standpunt, J, K of L, of geen. */
+/** De toets van een Standpunt of Camerarit: de letter van een vast Standpunt of een vaste Camerarit, J, K of L, of geen. */
 export function toetsVan(p: { letter: string; toets?: string; vast?: boolean }): string | null {
   return p.vast ? p.letter : (p.toets ?? null);
 }
 
-export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[]): Camerakeus[] {
+/** Aanschuiven: langzaam naar het blok van de gekozen Partij (gelijk aan `camera::AANSCHUIVEN`). */
+export const AANSCHUIVEN = "aanschuiven";
+
+/** Alle Standpunten en Cameraritten; met `aanschuiven` ook Aanschuiven, voor een Graphic met een Partij. */
+export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[], aanschuiven = false): Camerakeus[] {
   const keus = (letter: string, toets: string | null, naam: string, soort: Camerakeus["soort"]): Camerakeus => ({
     letter,
     toets,
@@ -38,12 +43,43 @@ export function cameraKeuzes(standpunten: Standpunt[], ritten: Camerarit[]): Cam
   return [
     ...standpunten.map((p) => keus(p.letter, toetsVan(p), p.naam, "Standpunt")),
     ...ritten.map((r) => keus(r.letter, toetsVan(r), r.naam, "Camerarit")),
+    ...(aanschuiven ? [keus(AANSCHUIVEN, null, "Aanschuiven naar de gekozen Partij", "Standpunt")] : []),
   ];
+}
+
+type Punt = [number, number, number, number, number, number];
+const uitgerekend = new Map<string, Punt[]>();
+
+/** De opname (100 standen per seconde): bij een vaste Camerarit uit de software, met de standen
+ * tussen twee bewaarde recht aangevuld (gelijk aan `Camerarit::punten`, op een millimeter na). */
+export function punten(r: Camerarit): Punt[] {
+  const dun = r.vast ? VASTE_OPNAMES[r.letter] : undefined;
+  if (!dun) return r.opname;
+  let vol = uitgerekend.get(r.letter);
+  if (!vol) {
+    vol = [];
+    for (let i = 0; i < dun.length - 1; i++)
+      for (let k = 0; k < RITSTAP; k++) vol.push(dun[i].map((v, j) => v + ((dun[i + 1][j] - v) * k) / RITSTAP) as Punt);
+    vol.push(dun[dun.length - 1]);
+    uitgerekend.set(r.letter, vol);
+  }
+  return vol;
+}
+
+/** De standaard van een vaste Camerarit, of `null`. */
+export function standaardRit(letter: string): Camerarit | null {
+  return STANDAARD_RITTEN.find((s) => s.letter === letter) ?? null;
+}
+
+/** Of een vaste Camerarit anders is dan zijn standaard (naam of schuifjes). */
+export function ritAangepast(r: Camerarit): boolean {
+  const s = standaardRit(r.letter);
+  return !!s && (s.naam !== r.naam || JSON.stringify(s.bijschaving) !== JSON.stringify(r.bijschaving));
 }
 
 /** Het begin en eind (indexen, tot en met) van wat er na afknippen overblijft (gelijk aan `Camerarit::stuk`). */
 function stuk(r: Camerarit): [number, number] {
-  const n = r.opname.length;
+  const n = punten(r).length;
   if (n < 2) return [0, Math.max(n - 1, 0)];
   const tik = (s: number) => Math.round(Math.max(s, 0) * TIKKEN);
   const min = Math.min(Math.floor(RIT_MIN_S * TIKKEN), n - 1);
@@ -58,7 +94,7 @@ function stuk(r: Camerarit): [number, number] {
 
 /** Hoe lang de opname is, in seconden. */
 export function opnameS(r: Camerarit): number {
-  return Math.max(r.opname.length - 1, 0) / TIKKEN;
+  return Math.max(punten(r).length - 1, 0) / TIKKEN;
 }
 
 /** Hoe lang het stuk is dat na afknippen overblijft, in seconden. */
@@ -72,8 +108,9 @@ const kortsteHoek = (d: number) => ((((d + Math.PI) % (2 * Math.PI)) + 2 * Math.
 /** Waarom de rit niet kan herhalen, of `null` als het kan (gelijk aan `Camerarit::kan_herhalen`). */
 export function kanHerhalen(r: Camerarit): string | null {
   const [b, e] = stuk(r);
-  const a = r.opname[b];
-  const z = r.opname[e];
+  const p = punten(r);
+  const a = p[b];
+  const z = p[e];
   if (!a || !z) return "er is geen opname";
   const afstand = Math.hypot(a[0] - z[0], a[1] - z[1], a[2] - z[2]);
   const hoek =
@@ -84,13 +121,14 @@ export function kanHerhalen(r: Camerarit): string | null {
   return redenen.length ? `begin en eind ${redenen.join(" en ")}` : null;
 }
 
-/** De route van bovenaf als [x, z], van begin eraf tot eind eraf, met hooguit `punten` + 1 punten. */
-export function routeVan(r: Camerarit, punten = 60): [number, number][] {
+/** De route van bovenaf als [x, z], van begin eraf tot eind eraf, met hooguit `aantal` + 1 punten. */
+export function routeVan(r: Camerarit, aantal = 60): [number, number][] {
   const [b, e] = stuk(r);
-  const stap = Math.max(1, Math.ceil((e - b) / punten));
+  const stap = Math.max(1, Math.ceil((e - b) / aantal));
   const route: [number, number][] = [];
-  for (let i = b; i < e; i += stap) route.push([r.opname[i][0], r.opname[i][2]]);
-  if (r.opname[e]) route.push([r.opname[e][0], r.opname[e][2]]);
+  const p = punten(r);
+  for (let i = b; i < e; i += stap) route.push([p[i][0], p[i][2]]);
+  if (p[e]) route.push([p[e][0], p[e][2]]);
   return route;
 }
 

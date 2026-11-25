@@ -15,7 +15,8 @@ use std::sync::{Arc, LazyLock};
 use gedeeld::Stand;
 use gedeeld::camera::{
     CameraOvergang, Camerabeeld, Camerakeuze, Camerapunt, Camerastand, NaAankomst, OvergangSoort,
-    SCHUIVEN_S, Standpunt, TIKKEN_PER_SECONDE, shot_op_stoel, stoel_uit_sleutel,
+    SCHUIVEN_S, Standpunt, TIKKEN_PER_SECONDE, aanschuif_overgang, aanschuif_stand, aanschuif_uit_sleutel,
+    shot_op_stoel, stoel_uit_sleutel,
 };
 use gedeeld::camerarit::{Camerarit, OPNAME_MAX_S, RitBegin, Ritbaan, als_opnamepunt};
 use serde::Deserialize;
@@ -509,6 +510,19 @@ impl Doel {
                     toets: None,
                     stand: shot_op_stoel(stoel)?,
                     overgang: CameraOvergang::default(),
+                    na_aankomst: NaAankomst::Stil,
+                }))
+            })
+            .or_else(|| {
+                // Aanschuiven: langzaam naar het blok van een Partij, en daarna stil
+                let (van, tot) = aanschuif_uit_sleutel(letter)?;
+                Some(Doel::Standpunt(Standpunt {
+                    letter: letter.into(),
+                    naam: "Aanschuiven".into(),
+                    vast: true,
+                    toets: None,
+                    stand: aanschuif_stand(van, tot)?,
+                    overgang: aanschuif_overgang(),
                     na_aankomst: NaAankomst::Stil,
                 }))
             })
@@ -1278,7 +1292,7 @@ mod tests {
             volgnummer: 1,
             tijd_ms: 0,
         };
-        assert!(stand.voer_uit(&kies("Q", false), &h).is_err());
+        assert!(stand.voer_uit(&kies("P", false), &h).is_err());
         let graphic = Graphic::Titelkaart {
             kop: "Voorbeeldgegevens".into(),
             regel: String::new(),
@@ -1288,7 +1302,7 @@ mod tests {
                 .voer_uit(
                     &Opdracht::ZetKlaar {
                         graphic,
-                        standpunt: Some("Q".into())
+                        standpunt: Some("P".into())
                     },
                     &h
                 )
@@ -1673,6 +1687,47 @@ mod tests {
     }
 
     #[test]
+    fn aanschuiven_eindigt_voor_elk_blok_in_de_ruimte_en_kijkt_naar_het_blok() {
+        let r = ruimte();
+        let volgorde = gedeeld::uitslagindeling::stoelen_van_links_naar_rechts();
+        for van in 0..150 {
+            for tot in van..150 {
+                let s = aanschuif_stand(van, tot).unwrap();
+                assert!(r.bevat(s.positie, 0.1), "{van}-{tot}: {:?} buiten de ruimte", s.positie);
+                // het midden van het blok staat in beeld
+                let n = (tot - van + 1) as f32;
+                let m: [f32; 3] = std::array::from_fn(|k| volgorde[van..=tot].iter().map(|&i| STOELPLEKKEN[i][k]).sum::<f32>() / n);
+                let d = sub(m, s.positie);
+                let draai = (-d[0]).atan2(-d[2]);
+                let verschil = (draai - s.draai + std::f32::consts::PI).rem_euclid(std::f32::consts::TAU) - std::f32::consts::PI;
+                assert!(verschil.abs() < 0.05, "{van}-{tot}: kijkt {verschil} rad naast het blok");
+            }
+        }
+    }
+
+    #[test]
+    fn aanschuiven_duurt_acht_seconden() {
+        let mut stand = Stand::default();
+        let mut v = 0;
+        let sleutel = gedeeld::camera::aanschuifsleutel(40, 65);
+        let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
+        doe(&mut stand, &mut v, kies(&sleutel, false));
+        regie.volg(&stand, 0);
+        let doel = aanschuif_stand(40, 65).unwrap();
+        assert!(len(sub(regie.beeld(4 * T).ether.stand.positie, doel.positie)) > 0.1, "na 4 s nog onderweg");
+        assert!(len(sub(regie.beeld(8 * T + 2).ether.stand.positie, doel.positie)) < 1e-3, "na 8 s aangekomen");
+    }
+
+    #[test]
+    fn elke_vaste_camerarit_blijft_in_de_ruimte() {
+        let r = ruimte();
+        for rit in gedeeld::vaste_ritten::vaste() {
+            let buiten: Vec<usize> = rit.punten().iter().enumerate().filter(|(_, p)| !r.bevat([p[0], p[1], p[2]], 0.1)).map(|(i, _)| i).collect();
+            assert!(buiten.is_empty(), "{}: {} standen buiten de ruimte, de eerste op tik {:?}", rit.naam, buiten.len(), buiten.first());
+        }
+    }
+
+    #[test]
     fn herhalen_begint_opnieuw_zonder_knip() {
         let mut stand = Stand::default();
         let mut v = 0;
@@ -1686,8 +1741,9 @@ mod tests {
         doe(&mut stand, &mut v, Opdracht::ZetOefenen { aan: true });
         doe(&mut stand, &mut v, Opdracht::ZetOpnemen { aan: true, voor: None, opname: None });
         doe(&mut stand, &mut v, Opdracht::ZetOpnemen { aan: false, voor: None, opname: Some(rond) });
-        let r = stand.cameraritten[0].letter.clone();
-        let mut b = stand.cameraritten[0].bijschaving;
+        let eigen = stand.cameraritten.iter().find(|r| !r.vast).unwrap();
+        let r = eigen.letter.clone();
+        let mut b = eigen.bijschaving;
         b.eind = gedeeld::camerarit::RitEind::Herhalen;
         b.begin = gedeeld::camerarit::RitBegin::Knippen;
         doe(&mut stand, &mut v, Opdracht::BijschaafCamerarit { letter: r.clone(), bijschaving: b });
@@ -1727,7 +1783,7 @@ mod tests {
         let b = regie.beeld(tik);
         assert!(ongeveer(b.voorbeeld.stand, standpunt(&stand, "A")));
         let eind = gedeeld::camerarit::als_stand(opname.last().unwrap());
-        let r = &stand.cameraritten[0];
+        let r = stand.cameraritten.iter().find(|r| !r.vast).unwrap();
         let klaar = tik + 2 * T + (r.duur_s() * T as f32) as u64;
         assert!(len(sub(regie.beeld(klaar + 1).voorbeeld.stand.positie, eind.positie)) < 0.02);
         assert!(regie.beeld(tik + 3 * T).voorbeeld_rit.is_some(), "de groene streep op de balk");

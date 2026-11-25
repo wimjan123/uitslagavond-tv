@@ -260,6 +260,72 @@ const SHOT_BEELDHOEK: f32 = 34.0;
 /// (x -1 tot 1 over de breedte; de kaart begint bij 0,21).
 const SHOT_PLEK_X: f32 = -0.42;
 
+/// Aanschuiven: de keuze in een Sjabloon, Graphic of Preset. Bij het tonen wordt dat de sleutel
+/// van het blok van de gekozen Partij ([`aanschuifsleutel`]); zonder Partij het Standpunt van de
+/// soort Graphic.
+pub const AANSCHUIVEN: &str = "aanschuiven";
+
+/// Zo lang duurt Aanschuiven, in seconden bij snelheid 100.
+pub const AANSCHUIVEN_S: f32 = 8.0;
+
+/// De overgang van Aanschuiven: langzaam en zacht.
+pub fn aanschuif_overgang() -> CameraOvergang {
+    CameraOvergang { duur_s: AANSCHUIVEN_S, ..CameraOvergang::default() }
+}
+
+/// De sleutel van Aanschuiven naar de Stoelen op plaats `van` tot en met `tot` van links naar
+/// rechts ([`crate::uitslagindeling::stoelen_van_links_naar_rechts`]), zoals "aanschuiven-40-65".
+pub fn aanschuifsleutel(van: usize, tot: usize) -> String {
+    format!("{AANSCHUIVEN}-{van}-{tot}")
+}
+
+/// De plaatsen van links naar rechts bij een sleutel van [`aanschuifsleutel`].
+pub fn aanschuif_uit_sleutel(sleutel: &str) -> Option<(usize, usize)> {
+    let (van, tot) = sleutel.strip_prefix(AANSCHUIVEN)?.strip_prefix('-')?.split_once('-')?;
+    let (van, tot) = (van.parse().ok()?, tot.parse().ok()?);
+    (van <= tot && tot < crate::AANTAL_STOELEN).then_some((van, tot))
+}
+
+/// Waar Aanschuiven eindigt: schuin van voren op het blok, vanaf de kant van de Voorzitter, zo ver
+/// dat het hele blok in beeld past, en hoog genoeg om over de banken ervoor te kijken.
+pub fn aanschuif_stand(van: usize, tot: usize) -> Option<Camerastand> {
+    use crate::zaalkaart::STOELPLEKKEN;
+    let volgorde = crate::uitslagindeling::stoelen_van_links_naar_rechts();
+    let plekken: Vec<[f32; 3]> = volgorde.get(van..=tot)?.iter().map(|&i| STOELPLEKKEN[i]).collect();
+    let n = plekken.len() as f32;
+    let midden: [f32; 3] = std::array::from_fn(|k| plekken.iter().map(|p| p[k]).sum::<f32>() / n);
+    let breed = plekken
+        .iter()
+        .map(|p| (p[0] - midden[0]).hypot(p[2] - midden[2]))
+        .fold(0.0_f32, f32::max)
+        .max(0.8);
+    // van het blok naar de Voorzitter, en zo ver dat het blok de helft van de breedte vult
+    let naar = [AANSCHUIF_VANAF[0] - midden[0], AANSCHUIF_VANAF[1] - midden[2]];
+    let lengte = naar[0].hypot(naar[1]).max(1e-3);
+    let beeldhoek = AANSCHUIF_BEELDHOEK.to_radians();
+    let horizontaal = 2.0 * ((beeldhoek / 2.0).tan() * 16.0 / 9.0).atan();
+    let afstand = (breed / (horizontaal / 2.0 * AANSCHUIF_VULLING).tan()).clamp(2.5, lengte * 0.85);
+    let positie = [
+        midden[0] + naar[0] / lengte * afstand,
+        (midden[1] + 1.2 + 0.18 * afstand).clamp(2.0, 4.2),
+        midden[2] + naar[1] / lengte * afstand,
+    ];
+    let d = [midden[0] - positie[0], midden[1] + 0.2 - positie[1], midden[2] - positie[2]];
+    Some(Camerastand {
+        positie,
+        draai: (-d[0]).atan2(-d[2]),
+        helling: d[1].atan2(d[0].hypot(d[2])),
+        beeldhoek,
+    })
+}
+
+/// Vanaf dit punt (x, z) kijkt Aanschuiven naar een blok: voor de Voorzitter, in het midden.
+const AANSCHUIF_VANAF: [f32; 2] = [0.0, 1.5];
+/// De verticale beeldhoek van Aanschuiven, in graden.
+const AANSCHUIF_BEELDHOEK: f32 = 40.0;
+/// Welk deel van de breedte van het beeld het blok vult.
+const AANSCHUIF_VULLING: f32 = 0.5;
+
 /// De sleutel waarmee een Graphic de camera naar het shot van een Stoel stuurt, zoals
 /// "stoel-3-2-1". Die kies je overal waar je een Standpunt kiest; de overgang is die van een
 /// Standpunt ([`CameraOvergang::default`]).
@@ -449,14 +515,18 @@ impl Stand {
 
     /// Geeft een eigen Standpunt of een Camerarit een toets; wie hem had, raakt hem kwijt.
     pub(crate) fn zet_standpunt_toets(&mut self, letter: &str, toets: Option<&str>) -> Result<(), Weigering> {
-        if self.camerarit(letter).is_none() {
-            self.eigen_standpunt_mut(letter)?;
+        match self.camerarit(letter) {
+            Some(r) if r.vast => return Err(Weigering::VasteCamerarit(letter.into())),
+            Some(_) => {}
+            None => {
+                self.eigen_standpunt_mut(letter)?;
+            }
         }
         if let Some(t) = toets.filter(|t| !EIGEN_TOETSEN.contains(t)) {
             return Err(Weigering::OnbekendeToets(t.into()));
         }
         let eigen = self.standpunten.iter_mut().filter(|s| !s.vast).map(|s| (&s.letter, &mut s.toets));
-        let ritten = self.cameraritten.iter_mut().map(|r| (&r.letter, &mut r.toets));
+        let ritten = self.cameraritten.iter_mut().filter(|r| !r.vast).map(|r| (&r.letter, &mut r.toets));
         for (l, t) in eigen.chain(ritten) {
             if l == letter {
                 *t = toets.map(Into::into);
@@ -470,6 +540,7 @@ impl Stand {
     /// Wist een eigen Standpunt of een Camerarit, als niets het gebruikt.
     pub(crate) fn wis_standpunt(&mut self, letter: &str) -> Result<(), Weigering> {
         let kenmerk = match self.camerarit(letter) {
+            Some(r) if r.vast => return Err(Weigering::VasteCamerarit(letter.into())),
             Some(r) => r.kenmerk(),
             None => self.eigen_standpunt_mut(letter)?.kenmerk(),
         };

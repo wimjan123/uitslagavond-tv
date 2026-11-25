@@ -62,7 +62,8 @@ stemmingen: Stemmingen,
  */
 standpunten: Array<Standpunt>, 
 /**
- * De Cameraritten, op volgorde van opnemen.
+ * De Cameraritten: eerst de zes vaste ([`vaste_ritten`]), dan de eigen op volgorde van
+ * opnemen.
  */
 cameraritten: Array<Camerarit>, 
 /**
