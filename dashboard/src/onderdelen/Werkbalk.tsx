@@ -15,7 +15,7 @@ export function Werkbalk({ naam, children, hint }: { naam: string; children?: Re
 export function TakeHint() {
   return (
     <>
-      <kbd>Spatie</kbd> toont · <kbd>B</kbd> werkt bij · <kbd>X</kbd> haalt uit beeld · <kbd>Z</kbd> kleur uit
+      <kbd>Spatie</kbd> toont · <kbd>B</kbd> werkt bij · <kbd>X</kbd> haalt uit beeld · <kbd>Z</kbd> kleur uit · <kbd>C</kbd> slaat Opbouw over
     </>
   );
 }
