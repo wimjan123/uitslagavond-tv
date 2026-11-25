@@ -476,12 +476,13 @@ impl Golf {
                         if f >= 1.0 && g <= 0.0 && d <= 0.0 {
                             return Stoelstand::Klaar;
                         }
-                        // eerst de kleur, dan gedimd naar de wachtkleur, dan de gloed van de stap
+                        // eerst de kleur, dan gedimd naar grijs, dan de flits van de stap
+                        let gedimd = naar.map_or(lineair(None), gedimd_leer);
                         let leer = lineair(wacht)
                             .mix(&lineair(naar), f)
-                            .mix(&lineair(wacht), d)
+                            .mix(&gedimd, d)
                             .mix(&lineair(Some(Kleur { r: 255, g: 255, b: 255 })), GLOED_LICHT * g);
-                        let eigen = naar.filter(|k| *k != GRIJS).map_or(LinearRgba::BLACK, als_stof);
+                        let eigen = naar.filter(|k| *k != GRIJS).map_or(LinearRgba::BLACK, gekalibreerd);
                         let straling = LinearRgba::BLACK.mix(&straalt(naar), f) * (1.0 - d) + eigen * (GLOED_STRAALT * g);
                         Stoelstand::Onderweg(leer, straling)
                     }
@@ -513,32 +514,109 @@ pub struct Opbouwstand {
 }
 
 /// Een Stoel die niet meedoet ([`GRIJS`] in de Stand: geen Partij, niet uitgelicht, geen stem)
-/// is in de Zaal donker neutraal en straalt niet, zodat de gekleurde Stoelen eruit springen. Het
-/// grijs zelf blijft voor de Graphics.
-const STOEL_UIT: Kleur = Kleur { r: 0x30, g: 0x32, b: 0x36 };
+/// is in de Zaal donkergrijs en straalt niet, zodat de gekleurde Stoelen eruit springen. Niet
+/// zwart: dat las als "daar zit niemand" (council-ronde 3). Het grijs zelf blijft voor de Graphics.
+const STOEL_UIT: Kleur = Kleur { r: 0x4c, g: 0x4f, b: 0x55 };
 
-/// Hoeveel van de verzadiging van een partijkleur het leer houdt: stof in een zaal is minder fel
-/// dan een kleur op een scherm. De huiskleur blijft herkenbaar.
-const STOF_VERZADIGING: f32 = 0.72;
-
-/// Een partijkleur als stof (lineair): dezelfde tint en helderheid, minder verzadigd.
-fn als_stof(k: Kleur) -> LinearRgba {
-    let c = LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b));
-    let l = helderheid(c);
-    let v = |x: f32| l + (x - l) * STOF_VERZADIGING;
-    LinearRgba::rgb(v(c.red), v(c.green), v(c.blue))
+/// Hoe een partijkleur leer wordt, zodat de Stoel in beeld de kleur van de Partij heeft en niet
+/// een zalmkleurige of bleke variant ervan (council-ronde 3). Het gebakken licht, de belichting en
+/// de toonweergave maken een kleur donkerder en grijzer, en een lichte kleur meer dan een donkere.
+/// Het leer krijgt hem daarom lichter en voller mee, naar de lichtheid L van de kleur (Oklab, 0
+/// tot 1): de lichtheid keer `licht + licht_l * L`, de kleurigheid keer `kleur + kleur_l * L +
+/// kleur_c * C`. Gemeten op de render van Standpunt A met 24 kleuren verspreid over alle Stoelen,
+/// ook de achterste rij; per kleur een paar keer bijgesteld tot het beeld klopte, en daar deze
+/// rechte lijn door gelegd (`scripts/kleurmeting/`, council-ronde 4).
+#[derive(Clone, Copy, Debug)]
+struct Kalibratie {
+    licht: f32,
+    licht_l: f32,
+    kleur: f32,
+    kleur_l: f32,
+    kleur_c: f32,
+    /// Het leer: de gekalibreerde kleur keer dit. De leertextuur zelf is licht (0,7 tot 1).
+    albedo: f32,
+    /// Hoe fel het leer altijd in zijn eigen kleur straalt, bovenop het licht uit de bak: zo houdt
+    /// het zijn kleur ook waar de bak donker is.
+    straalt: f32,
 }
 
-/// De kleur van het leer bij een kleur uit de Stand (lineair). De leertextuur heeft ruimte voor
-/// een factor 2 (webexport.K bij het model); de helft brengt hem terug op de kleur zelf.
+const KALIBRATIE: Kalibratie =
+    Kalibratie { licht: 0.87, licht_l: 0.88, kleur: 0.2, kleur_l: 3.1, kleur_c: -1.5, albedo: 0.6, straalt: 0.15 };
+
+fn kalibratie() -> Kalibratie {
+    static K: std::sync::OnceLock<Kalibratie> = std::sync::OnceLock::new();
+    *K.get_or_init(|| {
+        let Ok(t) = std::env::var("UITSLAGAVOND_KAL") else { return KALIBRATIE };
+        let v: Vec<f32> = t.split(',').filter_map(|x| x.trim().parse().ok()).collect();
+        if v.len() != 7 {
+            return KALIBRATIE;
+        }
+        Kalibratie { licht: v[0], licht_l: v[1], kleur: v[2], kleur_l: v[3], kleur_c: v[4], albedo: v[5], straalt: v[6] }
+    })
+}
+
+/// Een kleur met zijn lichtheid en kleurigheid (Oklab) keer deze factoren, lineair. Een kanaal
+/// onder nul wordt nul; boven 1 mag, want het leer krijgt maar een deel ervan.
+fn in_oklab(k: Kleur, licht: f32, kleur: f32) -> LinearRgba {
+    let mut c = Oklcha::from(Srgba::rgb_u8(k.r, k.g, k.b));
+    c.lightness *= licht;
+    c.chroma *= kleur;
+    let l = LinearRgba::from(c);
+    LinearRgba::rgb(l.red.max(0.0), l.green.max(0.0), l.blue.max(0.0))
+}
+
+/// De factoren op lichtheid en kleurigheid voor deze kleur, zie [`Kalibratie`].
+fn factoren(k: Kleur) -> (f32, f32) {
+    let kal = kalibratie();
+    let c = Oklcha::from(Srgba::rgb_u8(k.r, k.g, k.b));
+    (kal.licht + kal.licht_l * c.lightness, (kal.kleur + kal.kleur_l * c.lightness + kal.kleur_c * c.chroma).max(1.0))
+}
+
+/// Een partijkleur zoals het leer hem meekrijgt (lineair), zie [`Kalibratie`].
+fn gekalibreerd(k: Kleur) -> LinearRgba {
+    if let Ok(t) = std::env::var("UITSLAGAVOND_KAL_PER") {
+        let naam = format!("{:02x}{:02x}{:02x}", k.r, k.g, k.b);
+        for d in t.split(';') {
+            let v: Vec<&str> = d.split(':').collect();
+            if v.len() == 3 && v[0].eq_ignore_ascii_case(&naam) {
+                return in_oklab(k, v[1].parse().unwrap_or(1.0), v[2].parse().unwrap_or(1.0));
+            }
+        }
+    }
+    let (licht, kleur) = factoren(k);
+    in_oklab(k, licht, kleur)
+}
+
+/// De kleur van het leer bij een kleur uit de Stand (lineair).
 fn leer_in_de_zaal(k: Kleur) -> LinearRgba {
-    let k = if k == GRIJS { STOEL_UIT } else { k };
-    als_stof(k) * 0.5
+    if k == GRIJS {
+        return in_oklab(STOEL_UIT, 1.0, 1.0) * kalibratie().albedo;
+    }
+    gekalibreerd(k) * kalibratie().albedo
 }
 
-/// Hoe fel het leer bij Kleurkracht 100 straalt in zijn eigen kleur, bovenop het licht uit de bak:
-/// zo blijft de kleur vol, ook waar de bak donker is. Laag, anders leest de stof als plastic dat
-/// zelf licht geeft.
+/// Hoe het leer straalt bij een kleur uit de Stand en deze Kleurkracht (0 tot 1). Een Stoel die
+/// niet meedoet straalt niet.
+fn straling_van(k: Kleur, kracht: f32) -> LinearRgba {
+    if k == GRIJS {
+        return LinearRgba::BLACK;
+    }
+    gekalibreerd(k) * (kalibratie().straalt + kracht * KLEUR_STRAALT)
+}
+
+/// Bij de Opbouw: een Partij na haar stap wordt grijs en donker, met nog een kwart van haar kleur
+/// (council-ronde 3: met de tint erin waren kleine stappen als JA21 en BBB niet te vinden).
+const GEDIMD_KLEUR: f32 = 0.25;
+const GEDIMD_LICHT: f32 = 0.62;
+
+/// Het leer van een gedimde Partij in de Opbouw (lineair).
+fn gedimd_leer(k: Kleur) -> LinearRgba {
+    let (licht, kleur) = factoren(k);
+    in_oklab(k, licht * GEDIMD_LICHT, kleur * GEDIMD_KLEUR) * kalibratie().albedo
+}
+
+/// Hoe fel het leer bij Kleurkracht 100 extra straalt in zijn eigen kleur. Laag, anders leest
+/// de stof als plastic dat zelf licht geeft.
 const KLEUR_STRAALT: f32 = 0.12;
 /// Bij de Opbouw: hoeveel de Partij die aan de beurt is naar wit opschuift, en hoe fel ze extra
 /// straalt in haar eigen kleur.
@@ -597,10 +675,7 @@ fn kleur_stoelen(
     // Het leer straalt zacht in zijn eigen kleur, naar de Kleurkracht; het eigen leer en een
     // Stoel die niet meedoet niet.
     let kracht = kleurkracht(&standen);
-    let straalt = |k: Option<Kleur>| match k {
-        Some(k) if k != GRIJS => als_stof(k) * (kracht * KLEUR_STRAALT),
-        _ => LinearRgba::BLACK,
-    };
+    let straalt = |k: Option<Kleur>| k.map_or(LinearRgba::BLACK, |k| straling_van(k, kracht));
     if kracht != golf.kracht {
         // een andere Kleurkracht: de materialen per kleur stralen anders
         for (kleur, h) in &pm.per_kleur {
@@ -1081,8 +1156,8 @@ fn partijkleur(stand: &gedeeld::Stand, graphic: &gedeeld::Graphic) -> Option<Kle
 fn uitgelicht(leer: LinearRgba, partij: Option<Kleur>, sterkte: f32) -> (LinearRgba, LinearRgba) {
     let naar = partij.map_or(leer, leer_in_de_zaal);
     let kleur = leer.mix(&naar, sterkte);
-    // het leer is de helft van de kleur zelf (zie leer_in_de_zaal)
-    (kleur, (naar * 2.0).with_alpha(1.0) * (UITGELICHT_STRAALT * sterkte))
+    let eigen = partij.map_or(leer * (1.0 / kalibratie().albedo), gekalibreerd);
+    (kleur, eigen.with_alpha(1.0) * (UITGELICHT_STRAALT * sterkte))
 }
 
 /// Laat de Stoel van de Graphic oplichten: in de Ether en de Reserve die in de Ether, in het
