@@ -39,6 +39,14 @@ const STOEL_WAPEN: &str = "stoel_wapen";
 const WAPEN_STRAALT: LinearRgba = LinearRgba::rgb(0.22, 0.22, 0.21);
 /// Het groene bordje van de nooduitgang: in het model zo fel dat het in een close-up de aandacht
 /// trekt (council-ronde 3), en met een groene gloed bij de deur (ronde 4). Dit deel van zijn licht blijft over.
+/// Materialen die uit het vaste deel van het model weg moeten. `middenvak_alu` is in `Zaal_Vast`
+/// alleen een voetplaat van 61 cm op de vloer tussen de binnenste poten van de voorzittersbank
+/// (x -0,56 tot 0,05). Hij las in de wijde shots als een wit streepje onder de katheder
+/// (council-ronde 7), met gebakken licht en ook met alleen live licht. Waar hij lag, is de vloer
+/// zwart gebakken: er blijft een smalle donkere streep, zoals de donkere voeten onder de
+/// buitenste poten. Die voeten zijn losse onderdelen en blijven.
+const ZAAL_WEG: [&str; 1] = ["middenvak_alu"];
+
 const NOODUITGANG: &str = "nooduitgang";
 const NOODUITGANG_LICHT: f32 = 0.03;
 
@@ -362,6 +370,7 @@ fn laad(
               kinderen: Query<&Children>,
               namen: Query<&Name>,
               meshes: Query<(), With<Mesh3d>>,
+              materiaalnamen: Query<&GltfMaterialName>,
               mut geladen: ResMut<ModelGeladen>| {
             let mut gebakken = 0;
             let mut stoelen = 0;
@@ -372,6 +381,10 @@ fn laad(
                     as usize;
                 if namen.get(e).is_ok_and(|n| n.as_str() == "Zaal_Vast") {
                     for d in kinderen.iter_descendants(e).chain([e]) {
+                        if materiaalnamen.get(d).is_ok_and(|m| ZAAL_WEG.contains(&m.0.as_str())) {
+                            commands.entity(d).despawn();
+                            continue;
+                        }
                         if meshes.contains(d) {
                             commands.entity(d).insert((
                                 Lightmap {
@@ -764,10 +777,12 @@ fn straling_bij(k: Kleur, kracht: f32, nabij: f32) -> LinearRgba {
 /// in de Zaal en kwam JA21-blauw er nauwelijks bovenuit (ronde 6). Nu is het grijs voor elke Partij
 /// even licht (Oklab-lichtheid [`GEDIMD_L`], ongeveer 60 procent van de actieve Partij), met
 /// [`GEDIMD_ZWEEM`] van haar kleurigheid, nooit meer dan [`GEDIMD_HOOGSTE_C`]: met een zweem tot
-/// 0,03 lazen de gedimde Partijen als pastelkleuren (ronde 5).
-const GEDIMD_L: f32 = 0.42;
-const GEDIMD_ZWEEM: f32 = 0.1;
-const GEDIMD_HOOGSTE_C: f32 = 0.006;
+/// 0,03 lazen de gedimde Partijen als pastelkleuren (ronde 5). Met lichtheid 0,42 en bijna geen
+/// kleur waren "al geweest" (RGB 22, 25, 26) en leeg (24, 33, 42) na compressie niet uit elkaar te
+/// houden (ronde 7): nu iets lichter, met een spoor van de eigen kleur.
+const GEDIMD_L: f32 = 0.52;
+const GEDIMD_ZWEEM: f32 = 0.2;
+const GEDIMD_HOOGSTE_C: f32 = 0.02;
 /// De lege Stoelen in de Opbouw: donker blauwgrijs leer, duidelijk donkerder dan "al geweest".
 /// Met de wachtkleur uit de Stand (#303030, nog donkerder gemaakt) stonden ze als zwarte gaten in
 /// de banken (council-ronde 5). De wachtkleur zelf blijft voor de Graphics.
@@ -1007,8 +1022,14 @@ fn kleur_stoelen(
 /// Het extra licht op de top van de flits (1 is twee keer zo licht) en wat daarna blijft.
 const OPBOUWLICHT_TOP: f32 = 6.5;
 const OPBOUWLICHT_BLIJFT: f32 = 0.85;
-/// Zo ver buiten de buitenste Stoel van het blok reikt de kring, in meter; de rand loopt zacht af.
-const OPBOUWLICHT_RAND: f32 = 2.0;
+/// Rond de voet van elke Stoel van het blok is de vloer tot zoveel meter vol licht, en bij zoveel
+/// meter is het licht weg. Zo ligt het licht dicht om de Stoelen en wijst het naar het blok; een
+/// kring tot 2 m buiten de buitenste Stoel was breder dan het blok, en het open pad ernaast werd
+/// het lichtste vlak in beeld (council-ronde 7).
+const OPBOUWLICHT_BINNEN: f32 = 0.35;
+const OPBOUWLICHT_BUITEN: f32 = 1.0;
+/// De voet van een Stoel: zoveel meter voor de rugleuning, naar het midden van de Zaal.
+const STOELVOET_VOOR: f32 = 0.3;
 /// Hoeveel van de partijkleur in het licht zit; de rest is warm wit.
 const OPBOUWLICHT_KLEUR: f32 = 0.25;
 
@@ -1023,16 +1044,17 @@ pub fn opbouwlicht_sterkte(t: f32, per_stap: f32) -> f32 {
     op * zakt * uit
 }
 
-/// Het midden van de vloer onder een blok Stoelen en de straal van de kring.
-fn opbouwlicht_plek(stoelen: &[usize]) -> Option<(Vec3, f32)> {
-    let plekken: Vec<Vec3> = stoelen.iter().filter_map(|&i| gedeeld::zaalkaart::STOELPLEKKEN.get(i)).map(|p| Vec3::from(*p)).collect();
-    if plekken.is_empty() {
-        return None;
-    }
-    let midden = plekken.iter().copied().sum::<Vec3>() / plekken.len() as f32;
-    let straal = plekken.iter().map(|p| p.with_y(0.0).distance(midden.with_y(0.0))).fold(0.0, f32::max) + OPBOUWLICHT_RAND;
-    // de bovenkant van de rugleuning staat 0,8 m boven de vloer van zijn rij
-    Some((midden - Vec3::Y * 0.8, straal))
+/// De voeten van een blok Stoelen op de vloer van hun rij.
+fn stoelvoeten(stoelen: &[usize]) -> Vec<Vec3> {
+    stoelen
+        .iter()
+        .filter_map(|&i| gedeeld::zaalkaart::STOELPLEKKEN.get(i))
+        .map(|p| {
+            let p = Vec3::from(*p);
+            // de bovenkant van de rugleuning staat 0,8 m boven de vloer van zijn rij
+            p - p.with_y(0.0).normalize_or_zero() * STOELVOET_VOOR - Vec3::Y * 0.8
+        })
+        .collect()
 }
 
 /// De kleur van een licht met wat van deze kleur erin, even helder als warm wit.
@@ -1045,14 +1067,19 @@ fn licht_met(kleur: Kleur, deel: f32) -> LinearRgba {
 
 fn verlicht_de_opbouw(golf: Res<Golf>, mut vloer: ResMut<crate::occlusie::Vloerlicht>) {
     let stap = (golf.bezig && golf.vorm == Overgangsvorm::Opbouw).then(|| golf.opbouw.stap(golf.tijd)).flatten();
-    let kring = stap.and_then(|(k, t)| {
+    let blok = stap.and_then(|(k, t)| {
         let blok: Vec<usize> = (0..golf.opbouw.stap_van.len()).filter(|&i| golf.opbouw.stap_van[i] == Some(k)).collect();
-        let (midden, straal) = opbouwlicht_plek(&blok)?;
+        let voeten = stoelvoeten(&blok);
         let sterkte = OPBOUWLICHT_TOP * opbouwlicht_sterkte(t, golf.opbouw.per_stap);
-        Some(crate::occlusie::Lichtkring { midden, straal, licht: licht_met(golf.opbouw.stappen[k], OPBOUWLICHT_KLEUR) * sterkte })
+        (!voeten.is_empty()).then(|| crate::occlusie::Bloklicht {
+            voeten,
+            binnen: OPBOUWLICHT_BINNEN,
+            buiten: OPBOUWLICHT_BUITEN,
+            licht: licht_met(golf.opbouw.stappen[k], OPBOUWLICHT_KLEUR) * sterkte,
+        })
     });
-    if vloer.kringen[0] != kring {
-        vloer.kringen[0] = kring;
+    if vloer.blok != blok {
+        vloer.blok = blok;
     }
 }
 
@@ -1509,12 +1536,12 @@ struct LijnBij76 {
 }
 
 /// De lijn bij 76 is licht op de vloer ([`crate::occlusie::Vloerlicht`]): een smalle felle kern
-/// van zoveel meter breed met zoveel extra licht, in een brede zachte lichtstrook. Als lijn van
-/// licht over de vloer valt hij alleen op de treden en niet op de stootborden ertussen, dus hij
-/// ligt plat. Een effen streep van 10 cm die ook over de stootborden liep, las vanaf Standpunt A
-/// als een rechtopstaande staaf (council-ronde 6).
+/// van zoveel meter breed met zoveel extra licht, in een brede zachte lichtstrook. Een effen
+/// streep van 10 cm las vanaf Standpunt A als een rechtopstaande staaf (council-ronde 6); licht
+/// alleen op de treden las als losse roze stukken tussen de bureaus (ronde 7). Nu valt het licht
+/// ook op de stootborden (`occlusie.wgsl`), zodat de lijn één gloed is, met een rustiger kern.
 const LIJN_76_BREEDTE: f32 = 0.14;
-const LIJN_76_KERN: f32 = 4.5;
+const LIJN_76_KERN: f32 = 3.0;
 /// De lichtstrook om de lijn: zo breed (meter, met een zachte rand) en zoveel extra licht, met
 /// zoveel van Accent erin (de rest warm wit).
 const LIJN_76_GLOED_BREEDTE: f32 = 1.8;
@@ -1536,18 +1563,20 @@ const LIJN_76_NA_STIL: f32 = 0.25;
 /// schuiven na aankomst.
 const STIL_M_PER_S: f32 = 0.15;
 const STIL_RAD_PER_S: f32 = 0.05;
-/// Hoe fel het getal straalt in Accent: iets boven de drempel van de gloed, zodat het leest als licht.
-const LIJN_76_LICHT: f32 = 2.1;
-/// Het getal heeft de tint van Accent, maar minstens deze lichtheid en hoogstens deze kleurigheid
-/// (Oklch): Accent zelf stond met 1,36:1 tegen het tapijt (council-ronde 5), zo licht haalt het
-/// 3:1 en blijft het roze in plaats van wit.
-const LIJN_76_L: f32 = 0.86;
-const LIJN_76_C: f32 = 0.11;
-/// De donkere rand om het getal: zo dicht, zodat het ook tegen een lichte plek in het tapijt los
-/// staat.
-const LIJN_76_RAND_DEKKING: f32 = 0.7;
-/// De rand om de letters van het getal, in pixels van [`getal_76_beeld`] (letters van 192 px).
-const GETAL_76_RAND_PX: i64 = 12;
+/// Het getal is licht dat op de vloer valt: het tapijt eronder blijft zichtbaar en er komt zoveel
+/// Accent bij (lineair, keer de dekking). Een vlak getal in licht pastelroze (lichtheid 0,86) met
+/// een dikke donkere rand las als een sticker, in een ander roze dan Accent in de Graphics
+/// (council-ronde 7). Dit licht komt minder ver boven het tapijt uit dan dat getal en haalt nog
+/// 3:1 tegen het tapijt.
+const GETAL_76_LICHT: f32 = 3.2;
+/// De tint van Accent, met hoogstens deze lichtheid (Oklch): de kleur van het licht, niet van een
+/// vlak, dus niet lichter gemaakt.
+const LIJN_76_L: f32 = 0.7;
+/// De zachte rand van de cijfers en de gloed eromheen, in pixels van [`getal_76_beeld`] (letters
+/// van 192 px): de standaardafwijking van de vervaging, en hoeveel van de gloed er blijft.
+const GETAL_76_ZACHT_PX: f32 = 2.5;
+const GETAL_76_GLOED_PX: f32 = 16.0;
+const GETAL_76_GLOED: f32 = 0.2;
 
 /// Het punt op `deel` (0 tot 1) van de lengte van de lijn.
 fn langs_de_lijn(lijn: &[Vec3], deel: f32) -> Vec3 {
@@ -1567,9 +1596,36 @@ fn lijn_76_punten() -> Vec<Vec3> {
     gedeeld::uitslagindeling::lijn_bij_76().into_iter().map(Vec3::from).collect()
 }
 
-/// Het getal 76 als beeld: witte letters met een donkere rand van [`GETAL_76_RAND_PX`], met de
-/// dekking in de alfa.
-fn getal_76_beeld() -> Image {
+/// Een vervaging met een Gauss-kern van `sigma` pixels over een beeld van `b` breed, in twee
+/// richtingen na elkaar.
+fn vervaag(beeld: &[f32], b: usize, sigma: f32) -> Vec<f32> {
+    let h = beeld.len() / b;
+    let r = (sigma * 3.0).ceil() as i64;
+    let kern: Vec<f32> = (-r..=r).map(|i| (-(i * i) as f32 / (2.0 * sigma * sigma)).exp()).collect();
+    let som: f32 = kern.iter().sum();
+    let stap = |bron: &[f32], dx: i64, dy: i64| -> Vec<f32> {
+        (0..b * h)
+            .map(|i| {
+                let (x, y) = ((i % b) as i64, (i / b) as i64);
+                kern.iter()
+                    .enumerate()
+                    .map(|(k, w)| {
+                        let d = k as i64 - r;
+                        let (px, py) = (x + d * dx, y + d * dy);
+                        if (0..b as i64).contains(&px) && (0..h as i64).contains(&py) { w * bron[py as usize * b + px as usize] } else { 0.0 }
+                    })
+                    .sum::<f32>()
+                    / som
+            })
+            .collect()
+    };
+    stap(&stap(beeld, 1, 0), 0, 1)
+}
+
+/// Het getal 76 als beeld: witte cijfers met een zachte rand en een zachte gloed eromheen, met de
+/// dekking in de alfa, en welk deel van de hoogte van het beeld de cijfers zelf zijn. Op de vloer
+/// telt het licht op bij het tapijt (zie [`GETAL_76_LICHT`]).
+fn getal_76_beeld() -> (Image, f32) {
     use ab_glyph::{Font, FontRef, PxScale, ScaleFont, point};
     use bevy::asset::RenderAssetUsages;
     use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
@@ -1577,7 +1633,7 @@ fn getal_76_beeld() -> Image {
         .expect("NunitoSans ExtraBold");
     let schaal = PxScale::from(192.0);
     let geschaald = letter.as_scaled(schaal);
-    let rand = 8.0 + GETAL_76_RAND_PX as f32;
+    let rand = (GETAL_76_GLOED_PX * 2.5).ceil();
     let mut x = rand;
     let mut tekens = Vec::new();
     for c in "76".chars() {
@@ -1599,58 +1655,41 @@ fn getal_76_beeld() -> Image {
             });
         }
     }
-    // de rand: de letters dikker gemaakt met een schijf van GETAL_76_RAND_PX
-    let r = GETAL_76_RAND_PX;
-    let schijf: Vec<(i64, i64)> = (-r..=r).flat_map(|dy| (-r..=r).map(move |dx| (dx, dy))).filter(|(dx, dy)| dx * dx + dy * dy <= r * r).collect();
-    let mut dik = vec![0.0_f32; b * h];
-    for (i, a) in alfa.iter().enumerate().filter(|(_, a)| **a > 0.0) {
-        let (x, y) = ((i % b) as i64, (i / b) as i64);
-        for (dx, dy) in &schijf {
-            let (px, py) = (x + dx, y + dy);
-            if (0..b as i64).contains(&px) && (0..h as i64).contains(&py) {
-                let d = &mut dik[py as usize * b + px as usize];
-                *d = d.max(*a);
-            }
-        }
-    }
-    // alleen de letters met hun rand: zo is de hoogte van het vlak de hoogte van de cijfers
-    let gevuld: Vec<(usize, usize)> = (0..b * h).filter(|&i| dik[i] > 0.0).map(|i| (i % b, i / b)).collect();
+    let zacht = vervaag(&alfa, b, GETAL_76_ZACHT_PX);
+    let gloed = vervaag(&alfa, b, GETAL_76_GLOED_PX);
+    let dekking: Vec<f32> = zacht.iter().zip(&gloed).map(|(z, g)| (z + g * GETAL_76_GLOED).min(1.0)).collect();
+    // alleen het getal met zijn gloed: zo is de hoogte van het vlak de hoogte van de cijfers
+    let gevuld: Vec<(usize, usize)> = (0..b * h).filter(|&i| alfa[i] > 0.0).map(|i| (i % b, i / b)).collect();
     let (x0, x1) = (gevuld.iter().map(|p| p.0).min().unwrap_or(0), gevuld.iter().map(|p| p.0).max().unwrap_or(b - 1));
     let (y0, y1) = (gevuld.iter().map(|p| p.1).min().unwrap_or(0), gevuld.iter().map(|p| p.1).max().unwrap_or(h - 1));
-    let (x0, y0, x1, y1) = (x0.saturating_sub(2), y0.saturating_sub(2), (x1 + 2).min(b - 1), (y1 + 2).min(h - 1));
-    let binnen = |i: &usize| (x0..=x1).contains(&(i % b)) && (y0..=y1).contains(&(i / b));
-    let (alfa, dik): (Vec<f32>, Vec<f32>) = (0..b * h).filter(binnen).map(|i| (alfa[i], dik[i])).unzip();
-    let (b, h) = (x1 - x0 + 1, y1 - y0 + 1);
-    let data = alfa
-        .iter()
-        .zip(&dik)
-        .flat_map(|(a, d)| {
-            let a = a.clamp(0.0, 1.0);
-            // wit waar de letter is, zwart in de rand; de dekking van beide samen
-            let dekking = a + (1.0 - a) * d * LIJN_76_RAND_DEKKING;
-            let wit = if dekking > 0.0 { a / dekking } else { 0.0 };
-            let c = (wit.powf(1.0 / 2.2) * 255.0).round() as u8;
-            [c, c, c, (dekking.clamp(0.0, 1.0) * 255.0).round() as u8]
-        })
+    let marge = (GETAL_76_GLOED_PX * 2.0) as usize;
+    let (x0, y0, x1, y1) = (x0.saturating_sub(marge), y0.saturating_sub(marge), (x1 + marge).min(b - 1), (y1 + marge).min(h - 1));
+    let data = (y0..=y1)
+        .flat_map(|y| (x0..=x1).map(move |x| y * b + x))
+        .flat_map(|i| [255, 255, 255, (dekking[i].clamp(0.0, 1.0) * 255.0).round() as u8])
         .collect();
-    Image::new(
-        Extent3d { width: b as u32, height: h as u32, depth_or_array_layers: 1 },
+    let cijfers = (y1 - y0 + 1 - 2 * marge) as f32 / (y1 - y0 + 1) as f32;
+    let beeld = Image::new(
+        Extent3d { width: (x1 - x0 + 1) as u32, height: (y1 - y0 + 1) as u32, depth_or_array_layers: 1 },
         TextureDimension::D2,
         data,
         TextureFormat::Rgba8UnormSrgb,
         RenderAssetUsages::RENDER_WORLD,
-    )
+    );
+    (beeld, cijfers)
 }
 
 /// Het vlak voor het getal 76: plat op de vloer voor de katheder, in de richting van de lijn, te
 /// lezen vanaf de kant van de Voorzitter (de bovenkant van het getal wijst langs de lijn naar
 /// achteren).
-fn getal_76_vlak(lijn: &[Vec3], verhouding: f32) -> Mesh {
+fn getal_76_vlak(lijn: &[Vec3], verhouding: f32, cijfers: f32) -> Mesh {
     use bevy::asset::RenderAssetUsages;
     use bevy::mesh::{Indices, PrimitiveTopology};
     let langs = (lijn[1] - lijn[0]).with_y(0.0).normalize_or(Vec3::NEG_Z);
     let rechts = langs.cross(Vec3::Y);
-    let (h, b) = (GETAL_76_HOOGTE, GETAL_76_HOOGTE * verhouding * GETAL_76_BREED);
+    // de cijfers zijn GETAL_76_HOOGTE lang, de gloed eromheen komt erbij
+    let h = GETAL_76_HOOGTE / cijfers.max(0.1);
+    let b = h * verhouding * GETAL_76_BREED;
     let midden = langs * GETAL_76_AFSTAND + Vec3::Y * 0.012;
     let hoek = |x: f32, y: f32| (midden + rechts * (x * b / 2.0) + langs * (y * h / 2.0)).to_array();
     Mesh::new(PrimitiveTopology::TriangleList, RenderAssetUsages::default())
@@ -1670,16 +1709,17 @@ fn zet_lijn_bij_76(
     mut materialen: ResMut<Assets<StandardMaterial>>,
     mut beelden: ResMut<Assets<Image>>,
 ) {
-    let beeld = getal_76_beeld();
+    let (beeld, cijfers) = getal_76_beeld();
     let verhouding = beeld.width() as f32 / beeld.height() as f32;
     commands.spawn((
         Getal76,
-        Mesh3d(meshes.add(getal_76_vlak(&lijn_76_punten(), verhouding))),
+        Mesh3d(meshes.add(getal_76_vlak(&lijn_76_punten(), verhouding, cijfers))),
         MeshMaterial3d(materialen.add(StandardMaterial {
             base_color: Color::WHITE.with_alpha(0.0),
             base_color_texture: Some(beelden.add(beeld)),
             unlit: true,
-            alpha_mode: AlphaMode::Blend,
+            // licht dat bij het tapijt optelt, geen vlak eroverheen
+            alpha_mode: AlphaMode::Add,
             double_sided: true,
             cull_mode: None,
             ..default()
@@ -1696,13 +1736,13 @@ fn lijn_76_bij(graphic: Option<&gedeeld::Graphic>) -> bool {
     matches!(graphic, Some(gedeeld::Graphic::Coalitie { .. }))
 }
 
-/// De kleur van lijn en getal (lineair, boven 1 voor de gloed) bij deze kleur Accent.
+/// Het licht van het getal (lineair) bij deze kleur Accent: de tint en kleurigheid van Accent,
+/// hoogstens [`LIJN_76_L`] licht, keer [`GETAL_76_LICHT`].
 fn lijn_76_kleur(accent: Kleur) -> LinearRgba {
     let mut c = Oklcha::from(Srgba::rgb_u8(accent.r, accent.g, accent.b));
-    c.lightness = c.lightness.max(LIJN_76_L);
-    c.chroma = c.chroma.min(LIJN_76_C);
+    c.lightness = c.lightness.min(LIJN_76_L);
     let l = LinearRgba::from(c);
-    LinearRgba::rgb(l.red.max(0.0), l.green.max(0.0), l.blue.max(0.0)) * LIJN_76_LICHT
+    LinearRgba::rgb(l.red.max(0.0), l.green.max(0.0), l.blue.max(0.0)) * GETAL_76_LICHT
 }
 
 /// Of de camera tussen twee beelden stilstond (of heel langzaam schoof).
@@ -1830,9 +1870,25 @@ fn uitgelicht(leer: LinearRgba, straalt: LinearRgba, partij: Option<Kleur>, krac
     let eigen = partij.map_or(leer * (1.0 / kalibratie().albedo), |k| gekalibreerd(k, nabij)).with_alpha(1.0);
     let kal = kalibratie();
     let gewoon = partij.map_or(eigen * (kal.straalt * (1.0 - (1.0 - kal.nabij_straalt) * nabij)), |k| straling_bij(k, kracht, nabij));
-    let naar = partij.map_or(leer, |k| leer_bij(k, nabij));
+    let naar = partij.map_or(leer, |k| gedempt(leer_bij(k, nabij)));
     let straling = if straalt == LinearRgba::BLACK { gewoon } else { gewoon + eigen * UITGELICHT_EXTRA };
+    let straling = if partij.is_some() { gedempt(straling) } else { straling };
     (leer.mix(&naar, sterkte), straalt.mix(&straling, sterkte))
+}
+
+/// In het shot van de Persoonskaart is de Stoel achtergrond bij het portret: zijn leer is zoveel
+/// minder licht en minder kleurig (Oklch). Met de volle partijkleur was een felblauwe PVV-Stoel
+/// groter en feller dan het portret (council-ronde 7).
+const PERSOON_LICHT: f32 = 0.8;
+const PERSOON_KLEUR: f32 = 0.65;
+
+/// Een kleur van het leer gedempt voor de Persoonskaart, zie [`PERSOON_LICHT`].
+fn gedempt(k: LinearRgba) -> LinearRgba {
+    let mut c = Oklcha::from(k);
+    c.lightness *= PERSOON_LICHT;
+    c.chroma *= PERSOON_KLEUR;
+    let l = LinearRgba::from(c);
+    LinearRgba::rgb(l.red.max(0.0), l.green.max(0.0), l.blue.max(0.0)).with_alpha(k.alpha)
 }
 
 /// Laat de Stoel van de Graphic oplichten: in de Ether en de Reserve die in de Ether, in het
@@ -2604,7 +2660,7 @@ mod tests {
     }
 
     #[test]
-    fn de_lichtkring_flitst_met_de_stap_blijft_branden_en_ligt_op_de_vloer_onder_het_blok() {
+    fn het_bloklicht_flitst_met_de_stap_blijft_branden_en_ligt_rond_de_voeten_van_het_blok() {
         let per_stap = 1.5;
         assert_eq!(opbouwlicht_sterkte(0.0, per_stap), 0.0, "begint uit");
         let top = (0..30).map(|i| opbouwlicht_sterkte(i as f32 * 0.05, per_stap)).fold(0.0, f32::max);
@@ -2612,15 +2668,19 @@ mod tests {
         let midden = opbouwlicht_sterkte(0.9, per_stap);
         assert!((midden - OPBOUWLICHT_BLIJFT).abs() < 0.05, "blijft branden: {midden}");
         assert!(opbouwlicht_sterkte(per_stap, per_stap) < 1e-3, "uit voor de volgende stap");
-        // een klein blok van vier: een kleine kring op de vloer eronder
+        // een blok van vier: een voet per Stoel, op de vloer net voor de Stoel, naar het midden
         let vier: Vec<usize> = stoelen_van_links_naar_rechts().into_iter().take(4).collect();
-        let (plek, straal) = opbouwlicht_plek(&vier).unwrap();
-        let midden = vier.iter().map(|&i| Vec3::from(gedeeld::zaalkaart::STOELPLEKKEN[i])).sum::<Vec3>() / 4.0;
-        assert!(plek.with_y(0.0).distance(midden.with_y(0.0)) < 1e-3, "recht onder het blok");
-        assert!(plek.y < midden.y - 0.5 && plek.y > -0.5, "op de vloer: {}", plek.y);
-        assert!(straal < 4.5, "klein: {straal}");
-        let alle: Vec<usize> = (0..AANTAL_STOELEN).collect();
-        assert!(opbouwlicht_plek(&alle).unwrap().1 > straal);
+        let voeten = stoelvoeten(&vier);
+        assert_eq!(voeten.len(), 4);
+        for (v, &i) in voeten.iter().zip(&vier) {
+            let stoel = Vec3::from(gedeeld::zaalkaart::STOELPLEKKEN[i]);
+            let opzij = v.with_y(0.0).distance(stoel.with_y(0.0));
+            assert!((opzij - STOELVOET_VOOR).abs() < 1e-3, "net voor de Stoel: {opzij}");
+            assert!(v.with_y(0.0).length() < stoel.with_y(0.0).length(), "naar het midden");
+            assert!(v.y < stoel.y - 0.5 && v.y > -0.5, "op de vloer: {}", v.y);
+        }
+        // het licht reikt maar zo ver buiten de voeten dat het pad naast het blok donker blijft
+        assert!(OPBOUWLICHT_BUITEN <= 1.0 && OPBOUWLICHT_BINNEN < OPBOUWLICHT_BUITEN);
     }
 
     #[test]
@@ -2660,7 +2720,7 @@ mod tests {
     }
 
     #[test]
-    fn tijdens_de_opbouw_ligt_de_lichtkring_onder_de_partij_van_de_stap_en_daarna_niet() {
+    fn tijdens_de_opbouw_ligt_het_bloklicht_rond_de_partij_van_de_stap_en_daarna_niet() {
         let (mut app, _) = zaal_zonder_gpu();
         app.update();
         // VOORBEELDGEGEVENS: 100 Stoelen rood links, 50 blauw rechts
@@ -2677,15 +2737,16 @@ mod tests {
         }
         app.world_mut().resource_mut::<Standen>().huidig = Some(GenummerdeStand { volgnummer: 2, stand: nieuw });
         app.update();
-        assert!(app.world().resource::<crate::occlusie::Vloerlicht>().kringen[0].is_none(), "in de inleiding nog niet");
+        assert!(app.world().resource::<crate::occlusie::Vloerlicht>().blok.is_none(), "in de inleiding nog niet");
         // na de inleiding en een stukje van de eerste stap: rood licht op
         wacht(&mut app, 1.3);
-        let kring = app.world().resource::<crate::occlusie::Vloerlicht>().kringen[0].expect("een kring");
-        let (midden, _) = opbouwlicht_plek(&volgorde[..100]).unwrap();
-        assert!(kring.midden.distance(midden) < 1e-3, "onder het rode blok");
-        assert!(kring.licht.red > kring.licht.blue, "met wat van de partijkleur");
+        let blok = app.world().resource::<crate::occlusie::Vloerlicht>().blok.clone().expect("licht op het blok");
+        let mut rood_blok = volgorde[..100].to_vec();
+        rood_blok.sort();
+        assert_eq!(blok.voeten, stoelvoeten(&rood_blok), "rond de voeten van het rode blok");
+        assert!(blok.licht.red > blok.licht.blue, "met wat van de partijkleur");
         wacht(&mut app, 6.0);
-        assert!(app.world().resource::<crate::occlusie::Vloerlicht>().kringen[0].is_none(), "na de Opbouw uit");
+        assert!(app.world().resource::<crate::occlusie::Vloerlicht>().blok.is_none(), "na de Opbouw uit");
     }
 
     #[test]
@@ -2729,7 +2790,10 @@ mod tests {
         zet_persoonskaart_van(&mut app, 1, Some(stoel), vec!["#1f4fd6".parse().unwrap(); 150], Some("#007c5e"));
         wacht(&mut app, 1.0);
         let groen: Kleur = "#007c5e".parse().unwrap();
-        assert!(ongeveer(leerkleuren(&mut app)[i], Srgba::from(leer_in_de_zaal(groen))), "het leer is groen");
+        // gedempt, zodat het portret het eerste leespunt blijft
+        let verwacht = gedempt(leer_in_de_zaal(groen));
+        assert!(ongeveer(leerkleuren(&mut app)[i], Srgba::from(verwacht)), "het leer is groen");
+        assert!(helderheid(verwacht) < helderheid(leer_in_de_zaal(groen)), "en minder licht dan gewoon");
         let mut q = app.world_mut().query::<(&StoelLeer, &MeshMaterial3d<StandardMaterial>)>();
         let h = q.iter(app.world()).find(|(s, _)| s.index == i).unwrap().1.0.clone();
         let e = app.world().resource::<Assets<StandardMaterial>>().get(&h).unwrap().emissive;
@@ -2754,19 +2818,22 @@ mod tests {
     }
 
     #[test]
-    fn de_lijn_bij_76_staat_alleen_bij_de_coalitie_en_is_licht_roze() {
+    fn de_lijn_bij_76_staat_alleen_bij_de_coalitie_in_de_tint_van_accent() {
         let partijen = vec!["d66".to_string(), "cda".to_string()];
         let coalitie = gedeeld::Graphic::Coalitie { set: "tk2025".into(), partijen: partijen.clone(), cijfers: None };
         let balk = gedeeld::Graphic::Coalitiebalk { set: "tk2025".into(), partijen, cijfers: None };
         assert!(lijn_76_bij(Some(&coalitie)));
         assert!(!lijn_76_bij(Some(&balk)), "de Coalitiebalk heeft 76 al in de balk");
         assert!(!lijn_76_bij(None));
-        // VOORBEELDGEGEVENS: een rode Accent; de lijn is veel lichter en houdt zijn tint
+        // VOORBEELDGEGEVENS: een rode Accent; het getal houdt tint en kleurigheid, geen pastel
         let accent = Kleur { r: 0xe8, g: 0x2e, b: 0x5c };
-        let lijn = Oklcha::from(lijn_76_kleur(accent) * (1.0 / LIJN_76_LICHT));
+        let getal = Oklcha::from(lijn_76_kleur(accent) * (1.0 / GETAL_76_LICHT));
         let eigen = Oklcha::from(Srgba::rgb_u8(accent.r, accent.g, accent.b));
-        assert!(lijn.lightness >= LIJN_76_L - 0.01, "{lijn:?}");
-        assert!((lijn.hue - eigen.hue).abs() < 3.0 && lijn.chroma > 0.05, "roze, niet wit: {lijn:?} {eigen:?}");
+        assert!(getal.lightness <= LIJN_76_L + 0.01, "{getal:?}");
+        assert!((getal.hue - eigen.hue).abs() < 3.0 && (getal.chroma - eigen.chroma).abs() < 0.02, "Accent, niet pastel: {getal:?} {eigen:?}");
+        // een lichte Accent wordt niet lichter dan het licht mag zijn
+        let licht = Oklcha::from(lijn_76_kleur(Kleur { r: 0xff, g: 0xc0, b: 0xd0 }) * (1.0 / GETAL_76_LICHT));
+        assert!(licht.lightness <= LIJN_76_L + 0.01, "{licht:?}");
     }
 
     #[test]

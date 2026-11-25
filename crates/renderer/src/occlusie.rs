@@ -1,6 +1,7 @@
 //! Occlusie uit de diepte: een stap na het tekenen van de Zaal die hoeken, plooien en de vloer
 //! naast bureaus en banken iets donkerder maakt (zie `occlusie.wgsl`). Dezelfde stap legt ook het
-//! licht op de vloer ([`Vloerlicht`]): de lichtkring onder een blok Stoelen en de lichtstrook bij 76.
+//! licht op de vloer ([`Vloerlicht`]): het licht rond de voeten van een blok Stoelen, de lichtplek
+//! van de Titelkaart en de lichtstrook bij 76.
 //!
 //! Het licht van de Zaal is gebakken, en Bevy's eigen SSAO werkt niet op gebakken licht: die dekt
 //! alleen het omgevingslicht af. Deze stap werkt op het hele beeld vóór de toonweergave, dus ook op
@@ -60,7 +61,16 @@ pub struct Occlusie {
     strook_van: Vec4,
     strook_naar: Vec4,
     strook_licht: Vec4,
+    /// Het bloklicht: het extra licht (rgb) en het aantal voeten (w), de binnen- en buitenstraal
+    /// (x, y), en de voeten in de ruimte van de camera.
+    blok_licht: Vec4,
+    blok_straal: Vec4,
+    blok: [Vec4; BLOK_MAX],
 }
+
+/// Zoveel Stoelen kan het bloklicht hoogstens volgen; een groter blok krijgt een gelijk verdeeld
+/// deel van zijn Stoelen, met een grotere straal.
+pub const BLOK_MAX: usize = 48;
 
 impl Occlusie {
     pub fn new(straal: f32, sterkte: f32) -> Self {
@@ -82,6 +92,9 @@ impl Occlusie {
             strook_van: Vec4::ZERO,
             strook_naar: Vec4::ZERO,
             strook_licht: Vec4::ZERO,
+            blok_licht: Vec4::ZERO,
+            blok_straal: Vec4::ZERO,
+            blok: [Vec4::ZERO; BLOK_MAX],
         }
     }
 }
@@ -91,10 +104,23 @@ impl Occlusie {
 /// maakte ook de rugleuningen en de randen van de bureaus zo licht dat de partijkleur verbleekte
 /// (council-ronde 6); dit licht valt alleen op de vloer (tapijt en treden, niet op bureaus en
 /// zittingen) en verandert de kleur van wat er ligt niet.
-#[derive(Resource, Clone, Copy, Debug, Default, PartialEq)]
+#[derive(Resource, Clone, Debug, Default, PartialEq)]
 pub struct Vloerlicht {
     pub kringen: [Option<Lichtkring>; 2],
     pub strook: Option<Lichtstrook>,
+    pub blok: Option<Bloklicht>,
+}
+
+/// Licht op de vloer rond de voeten van een blok Stoelen: rond elke voet een zachte schijf, die tot
+/// `binnen` meter vol is en bij `buiten` meter op nul staat. Zo volgt het licht de vorm van het
+/// blok. Eén kring om het hele blok was breder dan het blok en lichtte het pad ernaast het felst op
+/// (council-ronde 7).
+#[derive(Clone, Debug, PartialEq)]
+pub struct Bloklicht {
+    pub voeten: Vec<Vec3>,
+    pub binnen: f32,
+    pub buiten: f32,
+    pub licht: LinearRgba,
 }
 
 /// Een lichtkring op de vloer: rond `midden` (horizontaal gemeten) tot `straal` meter, zacht
@@ -172,7 +198,26 @@ fn volg_de_camera(mut q: Query<(&Projection, &GlobalTransform, &mut Occlusie)>, 
         if oud != nieuw {
             (o.omhoog, o.oorsprong, o.kring_a, o.kring_a_licht, o.kring_b, o.kring_b_licht, o.strook_van, o.strook_naar, o.strook_licht) = nieuw;
         }
+        let (licht, straal, voeten) = blok_in_de_camera(vloerlicht.blok.as_ref(), &plek.to_matrix().inverse());
+        if (o.blok_licht, o.blok_straal, o.blok) != (licht, straal, voeten) {
+            (o.blok_licht, o.blok_straal, o.blok) = (licht, straal, voeten);
+        }
     }
+}
+
+/// Het bloklicht in de ruimte van een camera: licht met het aantal voeten, de stralen, de voeten.
+fn blok_in_de_camera(b: Option<&Bloklicht>, naar_camera: &Mat4) -> (Vec4, Vec4, [Vec4; BLOK_MAX]) {
+    let mut voeten = [Vec4::ZERO; BLOK_MAX];
+    let Some(b) = b.filter(|b| !b.voeten.is_empty() && b.buiten > 0.0) else {
+        return (Vec4::ZERO, Vec4::ZERO, voeten);
+    };
+    let n = b.voeten.len().min(BLOK_MAX);
+    // een groot blok: een gelijk verdeeld deel van de voeten, met de straal naar hun afstand
+    let groter = (b.voeten.len() as f32 / n as f32).sqrt();
+    for (i, v) in voeten.iter_mut().take(n).enumerate() {
+        *v = naar_camera.transform_point3(b.voeten[i * b.voeten.len() / n]).extend(1.0);
+    }
+    (licht4(b.licht).with_w(n as f32), Vec4::new(b.binnen * groter, b.buiten * groter, 0.0, 0.0), voeten)
 }
 
 type Vloerwaarden = (Vec4, Vec4, Vec4, Vec4, Vec4, Vec4, Vec4, Vec4, Vec4);

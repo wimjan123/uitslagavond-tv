@@ -29,6 +29,11 @@ struct Instellingen {
     strook_van: vec4<f32>,
     strook_naar: vec4<f32>,
     strook_licht: vec4<f32>,
+    // bloklicht: extra licht (rgb) en het aantal voeten (w), binnen- en buitenstraal (x, y), en
+    // de voeten van de Stoelen
+    blok_licht: vec4<f32>,
+    blok_straal: vec4<f32>,
+    blok: array<vec4<f32>, 48>,
 }
 
 @group(0) @binding(0) var bron: texture_2d<f32>;
@@ -38,6 +43,11 @@ struct Instellingen {
 
 const AANTAL: i32 = 16;
 const GULDEN_HOEK: f32 = 2.39996323;
+// zoveel van de lichtstrook valt op een stootbord (een vlak dat opzij kijkt), en zoveel licht komt
+// er daar bovenop: het stootbord is veel donkerder dan het tapijt, dus alleen lichter maken liet
+// donkere strepen in de lijn
+const STOOTBORD: f32 = 0.85;
+const STOOTBORD_EIGEN: f32 = 0.04;
 
 // De plek in de ruimte van de camera bij een pixel; z negatief, voor de camera.
 fn plek(px: vec2<i32>, maat: vec2<f32>) -> vec3<f32> {
@@ -63,6 +73,28 @@ fn op_de_vloer(p: vec3<f32>) -> f32 {
     let rij = clamp(ceil((r - 5.81) / 1.325), 0.0, 5.0);
     let boven = dot(v, s.omhoog.xyz) - 0.119 * rij;
     return 1.0 - smoothstep(0.06, 0.16, abs(boven));
+}
+
+// Op de treden of het stootbord ertussen: de lichtstrook bij 76 loopt over de stootborden door, zodat
+// hij één gloed is en geen losse stukken tussen de bureaus (council-ronde 7).
+fn op_de_treden(p: vec3<f32>) -> f32 {
+    let v = p - s.oorsprong.xyz;
+    let r = length(vlak(v));
+    let rij = clamp(ceil((r - 5.81) / 1.325), 0.0, 5.0);
+    let boven = dot(v, s.omhoog.xyz) - 0.119 * rij;
+    // van de trede van de rij ervoor (0,119 lager) tot net boven de eigen trede
+    let buiten = max(boven - 0.02, -0.119 - boven);
+    return 1.0 - smoothstep(0.04, 0.12, buiten);
+}
+
+// Hoeveel van het bloklicht op punt p valt: een zachte schijf rond de dichtstbijzijnde voet.
+fn bloklicht(p: vec3<f32>) -> f32 {
+    let n = i32(s.blok_licht.w);
+    var dichtst = 1e6;
+    for (var i = 0; i < n; i++) {
+        dichtst = min(dichtst, length(vlak(p - s.blok[i].xyz)));
+    }
+    return 1.0 - smoothstep(s.blok_straal.x, s.blok_straal.y, dichtst);
 }
 
 // Hoeveel van een lichtkring op punt p valt: 1 in het midden, zacht naar 0 aan de rand.
@@ -124,13 +156,23 @@ fn fragment(@builtin(position) positie: vec4<f32>, @location(0) uv: vec2<f32>) -
     let boven = smoothstep(0.55, 0.9, dot(n, s.omhoog.xyz));
     var licht = vec3<f32>(0.0);
     if (boven > 0.0) {
-        licht = s.kring_a_licht.rgb * kring(p, s.kring_a) + s.kring_b_licht.rgb * kring(p, s.kring_b)
-            + s.strook_licht.rgb * strook(p);
+        licht = s.kring_a_licht.rgb * kring(p, s.kring_a) + s.kring_b_licht.rgb * kring(p, s.kring_b);
+        if (s.blok_licht.w > 0.0) {
+            licht += s.blok_licht.rgb * bloklicht(p);
+        }
         licht *= boven * op_de_vloer(p);
+    }
+    // de lichtstrook ook op de stootborden: die kijken opzij, naar de camera
+    if (s.strook_van.w > 0.0) {
+        licht += s.strook_licht.rgb * strook(p) * op_de_treden(p) * max(boven, STOOTBORD);
+    }
+    var eigen = vec3<f32>(0.0);
+    if (s.strook_van.w > 0.0 && boven < 1.0) {
+        eigen = s.strook_licht.rgb * strook(p) * op_de_treden(p) * (1.0 - boven) * STOOTBORD_EIGEN;
     }
     // de voorgrond donkerder (de Persoonskaart): het bureau vooraan trekt dan niet het oog
     let voor = s.voorgrond_donker * (1.0 - smoothstep(0.6, 0.92, -p.z / max(s.voorgrond, 1e-3)));
-    let verlicht = kleur.rgb * (1.0 + licht) * (1.0 - voor);
+    let verlicht = kleur.rgb * (1.0 + licht) * (1.0 - voor) + eigen;
     if (s.sterkte <= 0.0) {
         return vec4<f32>(verlicht, kleur.a);
     }

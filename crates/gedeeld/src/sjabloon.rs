@@ -2596,7 +2596,10 @@ fn uitslag_per_partij() -> Sjabloon {
         // het paneel beslaat het grootste deel van het beeld: de Zaal ernaast donker en onscherp
         achtergrond: Achtergrond::ZaalDonker,
         stoelen: Stoelen::Gegevens,
-        standpunt: None,
+        // Bovenaf, zoals de Stemmingen achter hun grote paneel: vanaf Totaal (A) stonden naast het
+        // paneel alleen de donkere studio en tribune, en die werden achter Zaal donker zwart
+        // (council-ronde 7)
+        standpunt: Some("G".into()),
         blokken: vec![
             // 30 px onder het programmalogo, dat er vrij boven staat (council ronde 6)
             paneel(plek(96, 150, 1728, 860)),
