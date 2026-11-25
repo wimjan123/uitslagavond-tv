@@ -5,8 +5,9 @@
 //! Alleen bijna-wit en grijsloos licht dat vanaf de bovenrand of de zijranden (bovenste 80
 //! procent) aan elkaar vastzit hoort bij de achtergrond: een wit overhemd onderaan, wit haar of de
 //! ogen zitten daar niet aan vast of zijn niet zo wit. Een foto met een donkere achtergrond blijft
-//! zoals hij is. De rand van het masker wordt één pixel opgerekt en zacht gemaakt, zodat er geen
-//! witte zoom om het haar blijft.
+//! zoals hij is. Ook de lichte zoom langs de achtergrond gaat weg, de rand van het masker wordt
+//! één pixel opgerekt en zacht gemaakt, half doorzichtige randpixels worden donkerder, en de
+//! zijkanten van de foto lopen zacht weg: zo blijft er geen lichte rand om haar en schouders.
 
 use std::collections::VecDeque;
 
@@ -19,6 +20,12 @@ const WIT: u8 = 222;
 const GRIJSLOOS: u8 = 22;
 /// Tot zoveel van de hoogte zoekt het masker langs de zijranden naar achtergrond.
 const ZIJ_TOT: f32 = 0.8;
+/// De zoom langs de achtergrond: zo licht en grijsloos.
+const ZOOM_LICHT: u8 = 175;
+const ZOOM_GRIJSLOOS: u8 = 32;
+/// Aan de linker- en rechterkant van de foto vloeit hij over zoveel van zijn breedte weg, zodat
+/// de schouders niet in een rechte lijn ophouden.
+const ZIJ_VERLOOP: f32 = 0.07;
 /// Is meer dan dit deel achtergrond, dan klopt er iets niet en blijft de foto zoals hij is.
 const HOOGSTENS: f32 = 0.85;
 
@@ -53,6 +60,29 @@ pub fn achtergrond(foto: &RgbImage) -> Vec<bool> {
             }
         }
     }
+    // De zoom: de lichte, half witte pixels direct langs de achtergrond (waar haar of schouder
+    // in het wit overloopt) horen er ook bij, anders blijft er een lichte rand om het portret
+    // (council ronde 5). Twee pixels diep, en alleen licht en grijsloos.
+    let zoom = |x: usize, y: usize| {
+        let p = foto.get_pixel(x as u32, y as u32).0;
+        let (lo, hi) = (p.iter().min().copied().unwrap_or(0), p.iter().max().copied().unwrap_or(0));
+        lo > ZOOM_LICHT && hi - lo < ZOOM_GRIJSLOOS
+    };
+    for _ in 0..2 {
+        let vorig = bg.clone();
+        for y in 0..h {
+            for x in 0..w {
+                if vorig[y * w + x] || !zoom(x, y) {
+                    continue;
+                }
+                let raakt = (x > 0 && vorig[y * w + x - 1])
+                    || (x + 1 < w && vorig[y * w + x + 1])
+                    || (y > 0 && vorig[(y - 1) * w + x])
+                    || (y + 1 < h && vorig[(y + 1) * w + x]);
+                bg[y * w + x] = raakt;
+            }
+        }
+    }
     bg
 }
 
@@ -82,10 +112,25 @@ pub fn maak_vrijstaand(foto: &RgbImage) -> RgbaImage {
         for (d, a) in dekking.iter_mut().zip(zacht) {
             *d = ((1.0 - a) * 255.0).round().clamp(0.0, 255.0) as u8;
         }
+        // de zijkanten zacht laten weglopen
+        let rand = (w as f32 * ZIJ_VERLOOP).max(1.0);
+        for y in 0..h {
+            for x in 0..w {
+                let t = ((x.min(w - 1 - x) as f32) / rand).min(1.0);
+                let f = t * t * (3.0 - 2.0 * t);
+                let d = &mut dekking[y * w + x];
+                *d = (f32::from(*d) * f).round() as u8;
+            }
+        }
     }
     RgbaImage::from_fn(w as u32, h as u32, |x, y| {
         let p = foto.get_pixel(x, y).0;
-        image::Rgba([p[0], p[1], p[2], dekking[y as usize * w + x as usize]])
+        let d = dekking[y as usize * w + x as usize];
+        // Een half doorzichtige randpixel heeft nog wat wit van de achtergrond in zich: maak hem
+        // donkerder naarmate hij doorzichtiger is, zodat hij op het donkere paneel niet oplicht.
+        let f = 0.5 + 0.5 * f32::from(d) / 255.0;
+        let donker = |c: u8| (f32::from(c) * f).round() as u8;
+        image::Rgba([donker(p[0]), donker(p[1]), donker(p[2]), d])
     })
 }
 
@@ -147,6 +192,28 @@ mod tests {
         // helemaal wit: geen portret, niets weg
         let wit = RgbImage::from_pixel(30, 30, image::Rgb([255, 255, 255]));
         assert!(maak_vrijstaand(&wit).pixels().all(|p| p.0[3] == 255));
+    }
+
+    #[test]
+    fn de_lichte_zoom_om_het_hoofd_gaat_mee_met_de_achtergrond() {
+        // een hoofd met een rand van een pixel lichtgrijs, zoals haar dat in het wit overloopt
+        let foto = RgbImage::from_fn(40, 50, |x, y| {
+            let hoofd = (10..30).contains(&x) && y >= 10;
+            let rand = hoofd && (x == 10 || x == 29 || y == 10);
+            if rand {
+                image::Rgb([205, 203, 200])
+            } else if hoofd {
+                image::Rgb([90, 70, 60])
+            } else {
+                image::Rgb([250, 250, 250])
+            }
+        });
+        let uit = maak_vrijstaand(&foto);
+        assert!(uit.get_pixel(20, 10).0[3] < 128, "de lichte rand bovenop het hoofd is half weg");
+        assert_eq!(uit.get_pixel(20, 25).0[3], 255, "het gezicht blijft");
+        // een randpixel die half doorzichtig is, is donkerder dan in de foto
+        let p = uit.get_pixel(20, 11).0;
+        assert!(p[3] < 255 && p[0] < 90, "{p:?}");
     }
 
     #[test]
