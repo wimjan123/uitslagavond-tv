@@ -1495,7 +1495,8 @@ pub(crate) fn beeld_of_wacht(
 }
 
 /// Welk deel van een portretfoto, van boven af, in het fotovlak past: de rest valt onder het vlak.
-const PORTRET_ZICHTBAAR: f32 = 0.85;
+/// Driekwart: hoofd en schouders groot, zoals een nieuwsportret (council ronde 6).
+const PORTRET_ZICHTBAAR: f32 = 0.75;
 
 /// Een beeld in `ouder`: passend (logo's) of vullend en bijgesneden (foto's).
 #[allow(clippy::too_many_arguments)]

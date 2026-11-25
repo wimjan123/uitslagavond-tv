@@ -1148,6 +1148,9 @@ pub struct Fractielabel {
     pub aantal: Option<u16>,
     /// Hoeveel Kamerleden van de Fractie aan deze kant stemden (0 buiten een Stemming).
     pub stemmen: u16,
+    /// Hoeveel Zetels de Fractie heeft (0 buiten een Stemming): bij een verdeelde Fractie staat
+    /// "25 van 26", zodat het aantal niet leest als haar Zetels (council ronde 6).
+    pub zetels: u16,
 }
 
 /// De namen van één Fractie aan één kant van een Hoofdelijke stemming.
@@ -1866,6 +1869,7 @@ fn fractielabel(kort: &str, kleur: Option<&str>, logo: Option<String>, stijl: &S
         logo,
         aantal: None,
         stemmen: 0,
+        zetels: 0,
     }
 }
 
@@ -1888,6 +1892,7 @@ fn fracties_aan_kant(u: &crate::stemmingen::Stemmingsuitslag, stem: Stem, stijl:
             (hier > 0).then(|| Fractielabel {
                 aantal: (anders > 0).then_some(hier),
                 stemmen: hier,
+                zetels: f.zetels,
                 ..fractielabel(f.kort.as_deref().unwrap_or(&f.afkorting), f.kleur.as_deref(), f.logo.clone(), stijl)
             })
         })
@@ -2194,8 +2199,8 @@ fn persoonskaart() -> Sjabloon {
     let veld = |v: &str| Tekstbron::Veld(v.into());
     let mut blokken = vec![
         // 0: het zijpaneel, effen (de Zaal schijnt er niet doorheen), een verloop van Achtergrond
-        // naar Vlak over de hele hoogte: achter de schouders van het portret blijft het iets
-        // lichter dan een donker pak (council ronde 5)
+        // naar Vlak dat precies op de bovenkant van het onderste vlak (y 640) Vlak is: geen naad
+        // (council ronde 6)
         Blok {
             plek: plek(1166, 0, 754, 1080),
             soort: vlak_met(
@@ -2205,7 +2210,7 @@ fn persoonskaart() -> Sjabloon {
                     naar_dekking: 100,
                     richting: 180,
                     van: 0,
-                    tot: 100,
+                    tot: 59,
                 }),
                 0,
                 None,
@@ -2214,10 +2219,10 @@ fn persoonskaart() -> Sjabloon {
             kleur: Kleurkeuze::Stijl(Stijlkleur::Achtergrond),
             animatie: open(0),
         },
-        // 1: onderaan Vlak op 96 procent
+        // 1: onderaan Vlak
         Blok {
             plek: plek(1166, 640, 754, 440),
-            soort: vlak(96),
+            soort: vlak(100),
             kleur: Kleurkeuze::Stijl(Stijlkleur::Vlak),
             animatie: open(0),
         },
@@ -2228,7 +2233,7 @@ fn persoonskaart() -> Sjabloon {
         // foto staat met een rechte onderkant op het onderste vlak (y 640), zoals achter een
         // desk, in plaats van weg te vloeien (council ronde 5).
         Blok {
-            plek: plek(1214, 150, 610, 490),
+            plek: plek(1214, 130, 610, 510),
             soort: Bloksoort::FotoKamerlid {
                 hoek: 0,
                 letter: Letterkeuze::Stijl(Stijlletter::Kop),
@@ -2290,6 +2295,26 @@ fn persoonskaart() -> Sjabloon {
             Stijlkleur::Tekst,
             false,
         ),
+        // de onderkant van het portret zakt in de laatste 36 px zacht in het onderste vlak, zodat
+        // hij er niet op geplakt staat en ook niet als een geest wegvloeit (council ronde 5 en 6)
+        Blok {
+            plek: plek(1166, 604, 754, 36),
+            soort: vlak_met(
+                0,
+                Some(Verloop {
+                    naar: Kleurkeuze::Stijl(Stijlkleur::Vlak),
+                    naar_dekking: 100,
+                    richting: 180,
+                    van: 0,
+                    tot: 100,
+                }),
+                0,
+                None,
+                None,
+            ),
+            kleur: Kleurkeuze::Stijl(Stijlkleur::Vlak),
+            animatie: animatie(Erin::Vervagen, Eruit::Vervagen, 260),
+        },
         // het programmalogo
         programmabug(),
     ]);
@@ -2562,7 +2587,7 @@ fn twee_sets() -> Sjabloon {
 /// kicker "ZETELS PER PARTIJ", de naam van de set als kop, een witte lijn en de Uitslaggrafiek.
 /// De Stoelen kleuren zoals bij de Zetelverdeling.
 fn uitslag_per_partij() -> Sjabloon {
-    let [streepje, kicker_tekst] = kicker(148, 160, 900, Tekstbron::Vast("ZETELS PER PARTIJ".into()));
+    let [streepje, kicker_tekst] = kicker(148, 190, 900, Tekstbron::Vast("ZETELS PER PARTIJ".into()));
     Sjabloon {
         id: UITSLAG_PER_PARTIJ.into(),
         naam: "Uitslag per Partij".into(),
@@ -2573,19 +2598,20 @@ fn uitslag_per_partij() -> Sjabloon {
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken: vec![
-            paneel(plek(96, 120, 1728, 890)),
+            // 30 px onder het programmalogo, dat er vrij boven staat (council ronde 6)
+            paneel(plek(96, 150, 1728, 860)),
             streepje,
             kicker_tekst,
-            paneeltekst(plek(148, 196, 820, 108), Tekstbron::Setnaam, Stijlletter::Kop, 92, Stijlkleur::Hoofd, Uitlijning::Links),
-            meerderheid(plek(1172, 254, 600, 42)),
+            paneeltekst(plek(148, 226, 820, 108), Tekstbron::Setnaam, Stijlletter::Kop, 92, Stijlkleur::Hoofd, Uitlijning::Links),
+            meerderheid(plek(1172, 284, 600, 42)),
             Blok {
-                plek: plek(148, 314, 1624, 2),
+                plek: plek(148, 344, 1624, 2),
                 soort: Bloksoort::Lijn { dekking: 55 },
                 kleur: Kleurkeuze::Stijl(Stijlkleur::Tekst),
                 animatie: animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0),
             },
             Blok {
-                plek: plek(96, 330, 1676, 672),
+                plek: plek(96, 360, 1676, 642),
                 soort: Bloksoort::Uitslaggrafiek {
                     letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                     naamletter: Letterkeuze::Stijl(Stijlletter::Tekst),
@@ -2604,7 +2630,7 @@ fn uitslag_per_partij() -> Sjabloon {
 /// tegenover" en de vergelijkingsset, een witte lijn en de Winst-en-verliesgrafiek. De Stoelen
 /// kleuren zoals bij de Zetelverdeling.
 fn winst_en_verlies() -> Sjabloon {
-    let [streepje, kicker_tekst] = kicker(148, 160, 900, Tekstbron::Vast("WINST EN VERLIES".into()));
+    let [streepje, kicker_tekst] = kicker(148, 190, 900, Tekstbron::Vast("WINST EN VERLIES".into()));
     Sjabloon {
         id: WINST_EN_VERLIES.into(),
         naam: "Winst en verlies".into(),
@@ -2615,19 +2641,20 @@ fn winst_en_verlies() -> Sjabloon {
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken: vec![
-            paneel(plek(96, 120, 1728, 890)),
+            // 30 px onder het programmalogo, dat er vrij boven staat (council ronde 6)
+            paneel(plek(96, 150, 1728, 860)),
             streepje,
             kicker_tekst,
-            paneeltekst(plek(148, 196, 820, 108), Tekstbron::Setnaam, Stijlletter::Kop, 92, Stijlkleur::Hoofd, Uitlijning::Links),
-            paneeltekst(plek(1172, 254, 600, 42), Tekstbron::ZetelsTegenover, Stijlletter::Tekst, 30, Stijlkleur::Hoofd, Uitlijning::Rechts),
+            paneeltekst(plek(148, 226, 820, 108), Tekstbron::Setnaam, Stijlletter::Kop, 92, Stijlkleur::Hoofd, Uitlijning::Links),
+            paneeltekst(plek(1172, 284, 600, 42), Tekstbron::ZetelsTegenover, Stijlletter::Tekst, 30, Stijlkleur::Hoofd, Uitlijning::Rechts),
             Blok {
-                plek: plek(148, 314, 1624, 2),
+                plek: plek(148, 344, 1624, 2),
                 soort: Bloksoort::Lijn { dekking: 55 },
                 kleur: Kleurkeuze::Stijl(Stijlkleur::Tekst),
                 animatie: animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0),
             },
             Blok {
-                plek: plek(148, 330, 1624, 672),
+                plek: plek(148, 360, 1624, 642),
                 soort: Bloksoort::WinstEnVerliesgrafiek {
                     letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                     naamletter: Letterkeuze::Stijl(Stijlletter::Tekst),

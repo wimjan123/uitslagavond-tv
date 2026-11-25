@@ -544,6 +544,7 @@ fn streep(commands: &mut Commands, vak: Entity, kl: Color, dekking: f32) {
 /// de balk is geen ruimte voor een aantal bij elke Fractie: de balk zelf geeft de totalen.
 fn naam_met_aantal(f: &Fractielabel) -> String {
     match f.aantal {
+        Some(n) if f.zetels > 0 => format!("{}\u{2002}{n} van {}", f.kort, f.zetels),
         Some(n) => format!("{}\u{2002}{n}", f.kort),
         None => f.kort.clone(),
     }
