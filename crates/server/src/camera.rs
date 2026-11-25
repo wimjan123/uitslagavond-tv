@@ -70,7 +70,7 @@ const VLOER_OVERGANG: f32 = 1.0;
 ///   [`STUDIO_VLOER`]: lager staat de echte voorwand in de weg.
 const STUDIO_HELLING_VAN: f32 = 0.0;
 const STUDIO_HOOGTE: f32 = 11.0;
-const STUDIO_DIEPTE: f32 = 10.0;
+const STUDIO_DIEPTE: f32 = 14.0;
 const STUDIO_VLOER: f32 = 5.0;
 
 impl Ruimte {
@@ -567,6 +567,19 @@ impl Doel {
                     overgang: aanschuif_overgang(),
                     na_aankomst: NaAankomst::Stil,
                 }))
+            })
+            .or_else(|| {
+                (letter == gedeeld::camera::BOVEN_HET_PANEEL).then(|| {
+                    Doel::Standpunt(Standpunt {
+                        letter: letter.into(),
+                        naam: "Totaal boven het paneel".into(),
+                        vast: true,
+                        toets: None,
+                        stand: gedeeld::camera::boven_het_paneel(),
+                        overgang: CameraOvergang::default(),
+                        na_aankomst: NaAankomst::Stil,
+                    })
+                })
             })
     }
 

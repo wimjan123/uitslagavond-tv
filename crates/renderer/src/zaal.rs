@@ -33,6 +33,14 @@ const SPOTKOM: &str = "daklicht_spotkom";
 const SPOT_STRAALT: LinearRgba = LinearRgba::rgb(14.0, 13.0, 11.2);
 /// Het materiaal van het leer van een Stoel: dat deel krijgt de kleur uit de Stand.
 const STOEL_LEER: &str = "stoel_leer";
+/// Het wapen op de rugleuning: een eigen laag over het leer, die nooit de kleur van de Stoel
+/// krijgt en niet meedimt. Het straalt zacht wit, zodat het op elke kleur licht en scherp leest.
+const STOEL_WAPEN: &str = "stoel_wapen";
+const WAPEN_STRAALT: LinearRgba = LinearRgba::rgb(0.22, 0.22, 0.21);
+/// Het groene bordje van de nooduitgang: in het model zo fel dat het in een close-up de aandacht
+/// trekt (council-ronde 3). Dit deel van zijn licht blijft over.
+const NOODUITGANG: &str = "nooduitgang";
+const NOODUITGANG_LICHT: f32 = 0.2;
 
 pub struct ZaalPlugin {
     /// Map met de bestanden uit `zaal/maak.sh`; `None` voor een Renderer zonder Zaal.
@@ -57,7 +65,7 @@ impl Plugin for ZaalPlugin {
                     .after(Afgewerkt),
             );
         if let Some(map) = &self.map {
-            app.add_plugins((OmgevingPlugin, AfwerkingPlugin, crate::occlusie::OcclusiePlugin, crate::schil::SchilPlugin))
+            app.add_plugins((OmgevingPlugin, AfwerkingPlugin, crate::occlusie::OcclusiePlugin, crate::schil::SchilPlugin, crate::studio::StudioPlugin))
                 .insert_resource(ZaalMap(map.clone()))
                 .init_resource::<ModelGeladen>()
                 .insert_resource(GlobalAmbientLight {
@@ -814,6 +822,11 @@ struct Zaaldimmer {
     van: f32,
     naar: f32,
     nu: f32,
+    /// Hoe ver het leer buiten de 150 Stoelen (de kabinetsbank) naar donker neutraal is: 1
+    /// zolang de Stoelen gekleurd zijn, zodat het blauw daar niet leest als PVV of JA21.
+    neutraal_van: f32,
+    neutraal_naar: f32,
+    neutraal: f32,
     tijd: f32,
     duur: f32,
     begonnen: bool,
@@ -832,6 +845,9 @@ impl Default for Zaaldimmer {
             van: 1.0,
             naar: 1.0,
             nu: 1.0,
+            neutraal_van: 0.0,
+            neutraal_naar: 0.0,
+            neutraal: 0.0,
             tijd: 0.0,
             duur: 1.0,
             begonnen: false,
@@ -841,6 +857,10 @@ impl Default for Zaaldimmer {
         }
     }
 }
+
+/// Het leer van de kabinetsbank zolang de Stoelen gekleurd zijn: grijs, met dit deel van zijn
+/// helderheid.
+const KABINET_GRIJS: f32 = 0.8;
 
 /// Hoe licht de rest van de Zaal moet zijn bij deze Stand.
 fn zaallicht(gekleurd: bool, kracht: f32) -> f32 {
@@ -871,29 +891,41 @@ fn dim_zaal(
     if standen.is_changed() {
         let gekleurd = standen.huidig.as_ref().is_some_and(|s| !s.stand.stoelkleuren.is_empty());
         let doel = zaallicht(gekleurd, kleurkracht(&standen));
+        let neutraal = if gekleurd { 1.0 } else { 0.0 };
         if !d.begonnen {
             (d.van, d.naar, d.nu) = (doel, doel, doel);
+            (d.neutraal_van, d.neutraal_naar, d.neutraal) = (neutraal, neutraal, neutraal);
             d.begonnen = standen.huidig.is_some();
-        } else if doel != d.naar {
-            d.van = d.nu;
-            d.naar = doel;
+        } else if doel != d.naar || neutraal != d.neutraal_naar {
+            (d.van, d.neutraal_van) = (d.nu, d.neutraal);
+            (d.naar, d.neutraal_naar) = (doel, neutraal);
             d.tijd = 0.0;
             d.duur = kleurovergang(&standen).1;
         }
     }
-    let vorig = d.nu;
-    if d.nu != d.naar {
+    let vorig = (d.nu, d.neutraal);
+    if d.nu != d.naar || d.neutraal != d.neutraal_naar {
         d.tijd += tijd.delta_secs();
         let f = kleurgolf::zacht((d.tijd / d.duur.max(1e-3)).clamp(0.0, 1.0));
-        d.nu = if f >= 1.0 { d.naar } else { d.van + (d.naar - d.van) * f };
+        if f >= 1.0 {
+            (d.nu, d.neutraal) = (d.naar, d.neutraal_naar);
+        } else {
+            d.nu = d.van + (d.naar - d.van) * f;
+            d.neutraal = d.neutraal_van + (d.neutraal_naar - d.neutraal_van) * f;
+        }
     }
-    if d.nu == vorig && nieuw.is_empty() && licht.p4().is_empty() && !d.onaf {
+    if (d.nu, d.neutraal) == vorig && nieuw.is_empty() && licht.p4().is_empty() && !d.onaf {
         return;
     }
-    let nu = d.nu;
+    let (nu, neutraal) = (d.nu, d.neutraal);
+    let ander_leer = d.ander_leer.as_ref().map(|h| h.id());
     d.onaf = false;
 
     for (e, naam, mut materiaal) in &mut delen {
+        if naam.0 == STOEL_WAPEN {
+            // het wapen dimt niet mee: anders wordt het op een gekleurde Stoel een donkere vlek
+            continue;
+        }
         if naam.0 == STOEL_LEER {
             let kamerstoel = ouders
                 .iter_ancestors(e)
@@ -933,7 +965,12 @@ fn dim_zaal(
         if let Some(mut m) = materialen.get_mut(id) {
             // de doorzichtigheid laat stel_materialen_bij staan (glas)
             let alpha = m.base_color.alpha();
-            let k = LinearRgba::new(kleur.red * nu, kleur.green * nu, kleur.blue * nu, alpha);
+            let mut k = LinearRgba::new(kleur.red * nu, kleur.green * nu, kleur.blue * nu, alpha);
+            if Some(id) == ander_leer {
+                // de kabinetsbank: naar grijs met dezelfde helderheid
+                let grijs = helderheid(k) * KABINET_GRIJS;
+                k = k.mix(&LinearRgba::new(grijs, grijs, grijs, alpha), neutraal);
+            }
             if LinearRgba::from(m.base_color) != k {
                 m.base_color = k.into();
             }
@@ -1282,7 +1319,8 @@ fn neutraal_hout(oud: LinearRgba, rand: bool) -> LinearRgba {
 /// kleur krijgen en de Zaal dimt (die nemen de bijgestelde kleur als hun eigen):
 /// - hout ([`HOUT`], [`HOUTRAND`]) naar neutraal beuken;
 /// - het leer van de Stoelen ([`STOEL_LEER`]) naar matte stof, zonder de ruwheidstextuur die het
-///   liet glanzen als plastic.
+///   liet glanzen als plastic;
+/// - het wapen ([`STOEL_WAPEN`]) zacht stralend, en de nooduitgang ([`NOODUITGANG`]) gedempt.
 fn stel_stof_en_hout_bij(
     nieuw: Query<(&GltfMaterialName, &MeshMaterial3d<StandardMaterial>), Added<GltfMaterialName>>,
     mut materialen: ResMut<Assets<StandardMaterial>>,
@@ -1291,7 +1329,8 @@ fn stel_stof_en_hout_bij(
     for (naam, materiaal) in &nieuw {
         let naam = naam.0.as_str();
         let (hout, rand, leer) = (HOUT.contains(&naam), HOUTRAND.contains(&naam), naam == STOEL_LEER);
-        if !(hout || rand || leer) || !gedaan.insert(materiaal.0.id()) {
+        let (wapen, nood) = (naam == STOEL_WAPEN, naam == NOODUITGANG);
+        if !(hout || rand || leer || wapen || nood) || !gedaan.insert(materiaal.0.id()) {
             continue;
         }
         let Some(mut m) = materialen.get_mut(&materiaal.0) else {
@@ -1299,7 +1338,11 @@ fn stel_stof_en_hout_bij(
             warn!("materiaal {naam} nog niet geladen: niet bijgesteld");
             continue;
         };
-        if leer {
+        if wapen {
+            m.emissive = WAPEN_STRAALT;
+        } else if nood {
+            m.emissive = m.emissive * NOODUITGANG_LICHT;
+        } else if leer {
             m.metallic_roughness_texture = None;
             m.perceptual_roughness = STOF_RUWHEID;
             m.metallic = 0.0;

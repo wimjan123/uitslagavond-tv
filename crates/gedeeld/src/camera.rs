@@ -215,17 +215,17 @@ impl Standpunt {
             // zolang de camera daar staat (`crates/renderer/src/schil.rs`), de server laat hem
             // daar vliegen (de studio in `crates/server/src/camera.rs`).
             //
-            // Van hoog en ver oogt het halfrond minder plat: alle 150 Stoelen staan van x 80 tot
-            // 1840 en van y 368 (de rugleuningen van de achterste rij, net onder de kaartjes van
-            // de Zetelverdeling tot y 360) tot ongeveer 740 (de voorste Stoelen opzij, boven het
-            // Opbouwlabel vanaf y 760). Een rugleuning achterin is 26 in plaats van 18 pixels
-            // breed, en het plafond is uit beeld. De verhouding: de Zetelverdeling houdt de hele
-            // Zaal vrij; de panelen van Zetelbalk (vanaf y 646) en Coalitiebalk (vanaf y 676)
-            // vallen over de voorste Stoelen opzij, want daar telt de balk.
+            // Van hoog en ver, met een lens van 48 graden (council-ronde 3: 58 gaf te veel
+            // lege ruimte rond de banken): alle 150 Stoelen staan van x 45 tot 1875 en van y 373
+            // (de rugleuningen van de achterste rij, net onder de kaartjes van de Zetelverdeling
+            // tot y 360) tot ongeveer 732 (de voorste Stoelen opzij, boven het Opbouwlabel vanaf
+            // y 760). De Stoelen achterin zijn groter dan van dichtbij met een wijde lens, en het
+            // plafond is uit beeld. Sjablonen met een paneel onderin kiezen
+            // [`BOVEN_HET_PANEEL`].
             vast(
                 "A",
                 "Totaal vanaf voorzitter",
-                Camerastand::uit_graden([0.0, 10.0, 9.0], 0.0, -32.0, 58.3),
+                Camerastand::uit_graden([0.0, 10.5, 12.5], 0.0, -28.0, 48.0),
             ),
             vast(
                 "S",
@@ -261,10 +261,24 @@ impl Standpunt {
 /// [`Standpunt::vaste`]. Een Stand van een oudere versie bewaart zijn vaste Standpunten zelf;
 /// staat er een nog op een vroegere standaard, dan krijgt hij die van nu
 /// ([`ververs_vaste_standpunten`]).
-const VORIGE_STANDAARDEN: [(&str, [f32; 3], f32, f32, f32); 2] = [
+const VORIGE_STANDAARDEN: [(&str, [f32; 3], f32, f32, f32); 3] = [
     ("A", [0.0, 4.5, 4.45], 0.0, -23.0, 99.0),
     ("A", [0.0, 4.56, 4.48], 0.0, -25.0, 96.5),
+    ("A", [0.0, 10.0, 9.0], 0.0, -32.0, 58.3),
 ];
+
+/// Totaal boven het paneel: de sleutel van een vast shot voor Sjablonen met een paneel onderin
+/// (Uitslag van een Stemming vanaf y 532, Zetelbalk en Coalitiebalk vanaf y 646). Zoals Standpunt
+/// A, maar steiler, zodat alle 150 Stoelen boven het paneel staan: van x 46 tot 1874 en van y 130
+/// tot ongeveer 493 (council-ronde 3: de panelen lagen over de Stoelen tot y 740). Bovenin staat
+/// bij die Sjablonen alleen het programmalogo. Je kiest het overal waar je een Standpunt kiest;
+/// de overgang is die van een Standpunt.
+pub const BOVEN_HET_PANEEL: &str = "boven-het-paneel";
+
+/// De stand van [`BOVEN_HET_PANEEL`], in de studio zoals Standpunt A.
+pub fn boven_het_paneel() -> Camerastand {
+    Camerastand::uit_graden([0.0, 10.0, 12.0], 0.0, -39.0, 50.0)
+}
 
 /// Zet elk vast Standpunt dat nog op een vroegere standaard staat op de standaard van nu. Een vast
 /// Standpunt dat de Regie zelf opnieuw opsloeg, blijft zoals het is.

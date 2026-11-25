@@ -2359,7 +2359,8 @@ fn uitslag_stemming() -> Sjabloon {
         snelheid: 100,
         achtergrond: Achtergrond::Zaal,
         stoelen: Stoelen::Gegevens,
-        standpunt: None,
+        // de Stoelen boven het paneel (council-ronde 3)
+        standpunt: Some(crate::camera::BOVEN_HET_PANEEL.into()),
         blokken,
         kleurovergang: None,
     }
@@ -2488,7 +2489,8 @@ fn zetelbalk_sjabloon() -> Sjabloon {
         snelheid: 100,
         achtergrond: Achtergrond::Zaal,
         stoelen: Stoelen::Gegevens,
-        standpunt: None,
+        // de Stoelen boven het paneel (council-ronde 3)
+        standpunt: Some(crate::camera::BOVEN_HET_PANEEL.into()),
         blokken: vec![
             // het paneel is hoger dan bij de Coalitiebalk: onder de balk is ruimte voor twee
             // rijen labels
@@ -2746,7 +2748,8 @@ fn coalitiebalk() -> Sjabloon {
         snelheid: 100,
         achtergrond: Achtergrond::Zaal,
         stoelen: Stoelen::Gegevens,
-        standpunt: None,
+        // de Stoelen boven het paneel (council-ronde 3)
+        standpunt: Some(crate::camera::BOVEN_HET_PANEEL.into()),
         blokken,
         kleurovergang: None,
     }

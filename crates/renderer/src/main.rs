@@ -29,6 +29,7 @@ mod opname;
 mod schil;
 mod scherm;
 mod stemmingsblokken;
+mod studio;
 mod volging;
 mod voorbeeld;
 mod zaal;
