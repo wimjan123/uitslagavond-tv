@@ -2,6 +2,8 @@
 import type { ReactNode } from "react";
 
 export function Werkbalk({ naam, children, hint }: { naam: string; children?: ReactNode; hint?: ReactNode }) {
+  // Zonder filters of hint geen lege band onder de multiviewer: dan alleen de kop voor schermlezers.
+  if (!children && !hint) return <h2 className="alleen-voorlezen">{naam}</h2>;
   return (
     <div className="werkbalk">
       {/* De naam staat al op het tabblad; hier alleen voor schermlezers. */}

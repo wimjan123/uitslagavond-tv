@@ -40,7 +40,7 @@ export function Controle({ lijst }: { lijst: Stemming[] }) {
           <thead>
             <tr>
               <th>Stemming</th>
-              <th className="kol-ether">In de Ether</th>
+              <th className="kol-ether">Live</th>
               <th className="kol-uitslag">Onze invoer</th>
               <th className="kol-uitslag">Officieel</th>
               <th className="kol-controle">Status</th>

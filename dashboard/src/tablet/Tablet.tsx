@@ -6,7 +6,8 @@ import { useCallback, useEffect, useState } from "react";
 import { Aanmelden } from "../App";
 import { bouwer, wissel } from "../coalitie/coalitie";
 import { graphicTekst, nieuwereCijfers, sjabloonNaam, uurMinuut } from "../graphic";
-import { CoalitieBoog } from "../onderdelen/Coalitie";
+import { HerstelKnop } from "../multiviewer/vakken";
+import { CoalitieBoog, biedCoalitieHerstel } from "../onderdelen/Coalitie";
 import { TweeKeerKnop } from "../onderdelen/TweeKeerKnop";
 import type { Boogmaat } from "../onderdelen/Coalitie";
 import { Schets } from "../presets/Schets";
@@ -203,7 +204,12 @@ function Coalitiebouwer({ stand: s }: { stand: Stand }) {
     );
   }
   const inEther = s.ether?.graphic === inBeeld;
-  const stuur = (partijen: string[]) => void regie.stuur({ soort: "ZetCoalitie", partijen }, TABLET);
+  const stuur = (partijen: string[], tekst: string) => {
+    void regie.stuur({ soort: "ZetCoalitie", partijen }, TABLET);
+    // Live is elke tik meteen in de uitzending: daarom een tijd lang "Zet terug", net als op het dashboard.
+    if (inEther) biedCoalitieHerstel(s, b.partijen, partijen, tekst, TABLET);
+  };
+  const kort = (sleutel: string) => b.volgorde.find((p) => p.sleutel === sleutel)?.kort ?? sleutel;
   return (
     <section className="tablet-coalitie">
       {!inEther && (
@@ -215,17 +221,22 @@ function Coalitiebouwer({ stand: s }: { stand: Stand }) {
       <CoalitieBoog
         bouwer={b}
         uit={regie.staat !== "verbonden"}
-        tik={(sleutel) => stuur(wissel(b.partijen, sleutel))}
+        tik={(sleutel) => {
+          const nieuw = wissel(b.partijen, sleutel);
+          stuur(nieuw, `${kort(sleutel)} ${nieuw.includes(sleutel) ? "erbij" : "eraf"}`);
+        }}
         leeg="Geen Zetels in de set van deze Coalitie."
         live={inEther}
+        gebaar="tik"
         maat={maat}
       />
+      <HerstelKnop toets={false} />
       <TweeKeerKnop
         className="knop tablet-wis"
         tweeKeer={inEther}
         vraag="Tik nog eens: wis alle Partijen uit Live"
         disabled={regie.staat !== "verbonden" || b.partijen.length === 0}
-        onClick={() => stuur([])}
+        onClick={() => stuur([], "Coalitie gewist")}
       >
         Wis coalitie
       </TweeKeerKnop>

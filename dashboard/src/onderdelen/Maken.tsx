@@ -216,7 +216,7 @@ function Titelkaart() {
           title={klaarIsTitelkaart ? "Haalt kop en regel uit de Titelkaart die klaarstaat" : "Kan als er een Titelkaart klaarstaat"}
           onClick={neemOver}
         >
-          Neem over uit Voorbeeld
+          Neem over uit Preview
         </button>
         {!graphic.kop && <span className="knop-reden">Vul eerst een kop in</span>}
       </div>
@@ -297,7 +297,7 @@ function Zetelverdeling() {
         <label className="veld">
           <span className="veld-kop">
             <span className="label">Set</span>
-            <span className="zacht">De Graphic houdt deze cijfers vast tot Bijwerken</span>
+            <span className="zacht">De Graphic houdt deze cijfers vast tot Update</span>
           </span>
           <select value={gekozenSet?.id ?? ""} onChange={(e) => setSet(e.target.value)}>
             {sets.map((x) => (
@@ -436,7 +436,7 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
         <p className="melding">{twee ? "Er zijn twee sets nodig" : "Nog geen sets"}: lees eerst het invoerbestand in of maak een set (zie Systeem).</p>
       ) : (
         <>
-          {setKeuze(eerste?.id ?? "", setSet, twee ? "Eerste set" : "Set", "De Graphic houdt deze cijfers vast tot Bijwerken")}
+          {setKeuze(eerste?.id ?? "", setSet, twee ? "Eerste set" : "Set", "De Graphic houdt deze cijfers vast tot Update")}
           {twee && setKeuze(ander?.id ?? "", setTweede, "Tweede set", "Kies een andere set dan de eerste")}
           {twee && boven && onder && boven.id !== onder.id && (
             <p className="zacht">
@@ -541,7 +541,7 @@ function useCijferformulier() {
   const setVeld = (
     <Keuze
       label="Set"
-      uitleg="De Graphic houdt deze cijfers vast tot Bijwerken"
+      uitleg="De Graphic houdt deze cijfers vast tot Update"
       waarde={gekozenSet?.id ?? ""}
       zet={setSet}
       opties={sets.map((x) => ({ waarde: x.id, tekst: x.label }))}

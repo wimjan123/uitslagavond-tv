@@ -50,7 +50,7 @@ export function OefenToetsen({ klasse }: { klasse: string }) {
         title={
           neemtOp
             ? "Stop eerst de opname"
-            : "Oefenen aan of uit: de gamepad stuurt alleen de camera van het Voorbeeld, de Ether blijft staan"
+            : "Oefenen aan of uit: de gamepad stuurt alleen de camera van Preview, Live blijft staan"
         }
         onClick={() => voerUit(regie, "Oefenen")}
       >
@@ -95,7 +95,7 @@ export function Camera() {
       className={`standpunt-toets${rit ? " standpunt-rit" : ""}`}
       aria-pressed={p.letter === huidig}
       disabled={!verbonden}
-      title={`${rit ? "Camerarit" : "Standpunt"} ${p.naam}: de camera van de Ether gaat erheen. Shift+${toetsVan(p)} knipt meteen.`}
+      title={`${rit ? "Camerarit" : "Standpunt"} ${p.naam}: de Live-camera gaat erheen. Shift+${toetsVan(p)} knipt meteen.`}
       onClick={(e) => kies(p.letter, e.shiftKey)}
     >
       <kbd>{toetsVan(p)}</kbd>
@@ -107,7 +107,7 @@ export function Camera() {
     <section className="camera" aria-label="Camera">
       <div className="camera-kop">
         <span className="monitor-label" title="Deze toetsen sturen de Live-camera">
-          Camera
+          Camera <span className="camera-live">Live</span>
         </span>
         <span className="camera-naam" title={naam}>
           {naam}
@@ -130,7 +130,7 @@ export function Camera() {
             className="camera-schakel"
             aria-pressed={vrij}
             disabled={!verbonden}
-            title="Vrije camera aan of uit: de gamepad stuurt de camera van de Ether. Start op de gamepad doet hetzelfde."
+            title="Vrije camera aan of uit: de gamepad stuurt de Live-camera. Start op de gamepad doet hetzelfde."
             onClick={() => voerUit(regie, "VrijeCamera")}
           >
             <kbd>V</kbd>
@@ -153,7 +153,7 @@ export function Camera() {
           disabled={!verbonden}
           title={
             oefenen
-              ? "Bewaar waar de camera van het Voorbeeld nu staat als eigen Standpunt"
+              ? "Bewaar waar de camera van Preview nu staat als eigen Standpunt"
               : "Bewaar waar de camera nu staat als eigen Standpunt"
           }
           onClick={() => void regie.stuur({ soort: "BewaarStandpunt", naam: nieuweNaam(standpunten) }, CAMERA)}

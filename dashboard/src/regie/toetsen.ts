@@ -8,7 +8,7 @@ export { toetsVan };
  * overslaan kleurt de Partijen die nog niet aan de beurt waren meteen mee. */
 export type TakeActie = "Toon" | "Bijwerken" | "UitBeeld" | "KleurUit" | "SlaOpbouwOver" | "Ververs";
 
-/** Stuur de camera van de Ether naar het Standpunt met deze toets; met Shift knipt hij meteen. */
+/** Stuur de Live-camera naar het Standpunt met deze toets; met Shift knipt hij meteen. */
 export interface StandpuntActie {
   soort: "Standpunt";
   toets: string;
@@ -16,7 +16,7 @@ export interface StandpuntActie {
 }
 
 /**
- * Zet de Vrije camera aan of uit (de gamepad stuurt dan de camera van de Ether), Oefenen aan of uit
+ * Zet de Vrije camera aan of uit (de gamepad stuurt dan de Live-camera), Oefenen aan of uit
  * (de gamepad stuurt alleen het Voorbeeld), of start of stopt een opname (alleen tijdens Oefenen).
  */
 export type CameraActie = "VrijeCamera" | "Oefenen" | "Opnemen";

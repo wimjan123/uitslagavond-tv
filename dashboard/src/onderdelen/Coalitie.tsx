@@ -10,6 +10,7 @@ import { Vink } from "../iconen";
 import { biedHerstel } from "../regie/herstel";
 import { useRegie } from "../regie/regie";
 import type { Graphic } from "../typen/Graphic";
+import type { Stand } from "../typen/Stand";
 import { TweeKeerKnop } from "./TweeKeerKnop";
 import { Werkbalk } from "./Werkbalk";
 import "./coalitie.css";
@@ -30,6 +31,24 @@ const SJABLONEN: { id: Sjabloon; naam: string; uitleg: string }[] = [
 
 const zelfde = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
+/** Herstel na een wijziging van een live coalitie (dashboard en tablet). Alleen terug zolang dezelfde
+ * Graphic (zelfde id) nog in Live staat met precies de nieuwe Partijen: toont een andere Werkplek
+ * intussen iets anders, ook een coalitie met dezelfde Partijen, dan vervalt het. */
+export function biedCoalitieHerstel(s: Stand, voor: string[], nieuw: string[], tekst: string, bij: string): void {
+  const etherId = s.ether?.id;
+  if (etherId === undefined) return;
+  biedHerstel({
+    tekst,
+    wat: "Coalitie live",
+    knop: "Zet terug",
+    geldig: (nu) => {
+      const g = nu.ether?.id === etherId ? nu.ether.graphic : undefined;
+      return !!g && (g.sjabloon === "Coalitie" || g.sjabloon === "Coalitiebalk") && zelfde(g.partijen, nieuw);
+    },
+    doe: (r) => void r.stuur({ soort: "ZetCoalitie", partijen: voor }, bij),
+  });
+}
+
 export function Coalitie() {
   const regie = useRegie();
   const s = regie.stand?.stand;
@@ -42,7 +61,7 @@ export function Coalitie() {
   const kamer = (s?.kamer.fracties.length ?? 0) > 0;
   const sets = [...(s?.cijfers.sets ?? []).map((x) => ({ id: x.id, label: x.label })), ...(kamer ? [{ id: HUIDIGE_KAMER, label: "Huidige Kamer (open data)" }] : [])];
   const inBeeldNu = s ? coalitieInBeeld(s) : null;
-  // Standaard de set van de coalitie in beeld, anders die van de Graphic in de Ether, anders de nieuwste.
+  // Standaard de set van de coalitie in beeld, anders die van de Graphic in Live, anders de nieuwste.
   const etherSet = s?.ether && "set" in s.ether.graphic ? s.ether.graphic.set : undefined;
   const set = setKeuze || inBeeldNu?.set || (etherSet && sets.some((x) => x.id === etherSet) ? etherSet : "") || sets[sets.length - 1]?.id || "";
   const setNaam = sets.find((x) => x.id === set)?.label ?? set;
@@ -53,22 +72,8 @@ export function Coalitie() {
 
   /** Zet de Partijen van de coalitie in beeld; in de Ether met herstel, want dat is meteen live. */
   const zetInBeeld = (nieuw: string[], tekst: string) => {
-    const voor = partijen;
     void regie.stuur({ soort: "ZetCoalitie", partijen: nieuw }, COALITIE);
-    const etherId = s?.ether?.id;
-    if (!inEther || etherId === undefined) return;
-    // Alleen terug zolang dezelfde Graphic (zelfde id) nog in de Ether staat met precies deze Partijen:
-    // toont een andere Werkplek intussen iets anders, ook een coalitie met dezelfde Partijen, dan vervalt het.
-    biedHerstel({
-      tekst,
-      wat: "Coalitie live",
-      knop: "Zet terug",
-      geldig: (nu) => {
-        const g = nu.ether?.id === etherId ? nu.ether.graphic : undefined;
-        return !!g && (g.sjabloon === "Coalitie" || g.sjabloon === "Coalitiebalk") && zelfde(g.partijen, nieuw);
-      },
-      doe: (r) => void r.stuur({ soort: "ZetCoalitie", partijen: voor }, COALITIE),
-    });
+    if (inEther && s) biedCoalitieHerstel(s, partijen, nieuw, tekst, COALITIE);
   };
   const tik = (sleutel: string) => {
     const nieuw = wissel(partijen, sleutel);
@@ -101,6 +106,7 @@ export function Coalitie() {
           tik={tik}
           live={inEther}
           liveSet={inBeeld?.cijfers?.set.label ?? inBeeld?.set}
+          nu={inEther && s ? telling(zetelsVan(s, set), partijen) : undefined}
           leeg="Geen Zetels in deze set: kies een andere set of lees eerst cijfers in."
         />
         <aside className="paneel-detail coalitie-zijkant">
@@ -183,6 +189,8 @@ export function CoalitieBoog({
   leeg,
   live = false,
   liveSet,
+  nu,
+  gebaar = "klik",
   maat = BOOG,
 }: {
   bouwer: Bouwer;
@@ -193,6 +201,10 @@ export function CoalitieBoog({
   live?: boolean;
   /** De set waarvan de cijfers in de live coalitie staan. */
   liveSet?: string;
+  /** De Zetels van deze Partijen met de cijfers van nu; wijkt dat af van wat live staat, dan zie je het. */
+  nu?: number;
+  /** "klik" op het dashboard, "tik" op de tablet. */
+  gebaar?: "klik" | "tik";
   maat?: Boogmaat;
 }) {
   const { volgorde, partijen, zetels, totaal } = b;
@@ -203,7 +215,13 @@ export function CoalitieBoog({
     <section className={`coalitie-boog${live ? " coalitie-live" : ""}`} aria-label="Coalitiebouwer">
       {live && (
         <p className="coalitie-live-regel">
-          <span className="stempel stempel-live">Live</span> Elke klik werkt meteen bij in Live{liveSet && <span className="zacht"> · {liveSet}</span>}
+          <span className="stempel stempel-live">Live</span> Elke {gebaar} wijzigt de live coalitie{liveSet && <span className="zacht"> · {liveSet}</span>}
+        </p>
+      )}
+      {live && nu !== undefined && nu !== totaal && (
+        <p className={(nu >= MEERDERHEID) !== (totaal >= MEERDERHEID) ? "coalitie-nu coalitie-omslag" : "coalitie-nu"} role="status">
+          Met de cijfers van nu: <strong>{nu} Zetels</strong>
+          {(nu >= MEERDERHEID) !== (totaal >= MEERDERHEID) && (nu >= MEERDERHEID ? ", wel een meerderheid" : ", geen meerderheid meer")}
         </p>
       )}
       {volgorde.length === 0 ? (

@@ -27,7 +27,7 @@ export function klaarStaatInBeeld(s: Stand): boolean {
   );
 }
 
-/** Of de Graphic in de Ether het Sjabloon heeft dat nu geldt voor wat klaarstaat. */
+/** Of de Graphic in Live het Sjabloon heeft dat nu geldt voor wat klaarstaat. */
 function zelfdeSjabloon(s: Stand): boolean {
   const kopie = s.ether?.sjabloon;
   const nu = s.klaar && geldendSjabloon(s.sjablonen, sjabloonId(s.klaar.graphic));
@@ -110,7 +110,7 @@ export function voerUit(regie: Regie, actie: Actie): void {
   }
 }
 
-/** Stuur de camera van de Ether naar het Standpunt of de Camerarit met deze sleutel; zet de Vrije camera uit. */
+/** Stuur de Live-camera naar het Standpunt of de Camerarit met deze sleutel; zet de Vrije camera uit. */
 export function kiesStandpunt(regie: Regie, letter: string, knip = false): void {
   void regie.stuur({ soort: "KiesStandpunt", letter, knip }, CAMERA);
 }

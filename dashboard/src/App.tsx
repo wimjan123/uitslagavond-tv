@@ -193,7 +193,7 @@ function Status() {
       {punten.map((p) => (
         <span key={p.naam} className={`status-punt status-${p.toon}`} title={p.status}>
           <span className={`punt punt-${p.toon}`} />
-          {p.naam === "Ether" ? "Live" : p.naam}
+          {p.label}
           {p.toon !== "goed" && <span className="status-tekst">{p.status.toLowerCase()}</span>}
         </span>
       ))}

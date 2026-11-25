@@ -84,7 +84,7 @@ function Voorbeeld() {
       toestand={oefenen ? "oefenen" : klaar ? "klaar" : "rust"}
       gestippeld={!!proef}
       {...(oefenen && !proef
-        ? { naam: "Oefenen", detail: "De gamepad stuurt alleen dit beeld, de Ether blijft staan" }
+        ? { naam: "Oefenen", detail: "De gamepad stuurt alleen dit beeld, Live blijft staan" }
         : regels(klaar?.graphic, s?.sjablonen))}
       rechts={rechts}
       beeld={beelden.Voorbeeld}
@@ -102,7 +102,7 @@ function Ether() {
   // Valt de Renderer van de Ether weg, dan moet dat hier staan: overschakelen naar Reserve begint met zien.
   const geenEther = staat === "verbonden" && !renderers.includes("Ether");
   const rechts = geenEther ? (
-    <span className="strook-fout" title="De Renderer met rol Ether is niet verbonden. Schakel op de mixer over naar Reserve.">
+    <span className="strook-fout" title="De Live-renderer (rol ether) is niet verbonden. Schakel op de mixer over naar Reserve.">
       Live-Renderer weg
     </span>
   ) : !ether ? null : s && kanBijwerken(s) ? (
@@ -152,9 +152,9 @@ function Take() {
   const typen = useTypt();
   return (
     <div className="take">
-      <span className="take-uitleg" title={kanToon ? "Take: zet wat in Preview staat Live (Spatie). Enter doet dit nooit." : waaromGeenToon(s)}>
+      <span className="take-uitleg" title={kanToon ? (typen ? "Klik zet Preview Live. Spatie typt nu in het veld: druk eerst Esc." : "Take: zet wat in Preview staat Live (Spatie). Enter doet dit nooit.") : waaromGeenToon(s)}>
         <button
-          className={`toon${oud ? " toon-oud" : ""}${typen && kanToon ? " toon-typen" : ""}`}
+          className={`toon${oud ? " toon-oud" : ""}`}
           disabled={!kanToon}
           // Enter toont nooit iets, ook niet als deze knop de focus heeft (DESIGN.md, Keyboard).
           onKeyDown={(e) => e.key === "Enter" && e.preventDefault()}
@@ -162,11 +162,11 @@ function Take() {
         >
           <span className="toon-regel">
             <span>Take</span>
-            <kbd>Spatie</kbd>
+            {typen ? <kbd className="kbd-let-op">Esc</kbd> : <kbd>Spatie</kbd>}
           </span>
           {oud && <span className="toon-let-op">oude cijfers (N)</span>}
           {!kanToon && verbonden && <span className="toon-reden">{s?.klaar ? "staat al live" : "niets klaar"}</span>}
-          {typen && kanToon && <span className="toon-reden">je typt: eerst Esc</span>}
+          {typen && kanToon && <span className="toon-typen">je typt: Spatie werkt na Esc</span>}
         </button>
       </span>
       <span
@@ -183,7 +183,7 @@ function Take() {
           <kbd>B</kbd>
         </button>
       </span>
-      <span className="take-uitleg" title={s?.ether ? "Haalt de Graphic uit de Ether. Daarna kun je hem nog terugzetten (Ctrl+Z)." : "Er staat niets in Live"}>
+      <span className="take-uitleg" title={s?.ether ? "Haalt de Graphic uit Live. Daarna kun je hem nog terugzetten (Ctrl+Z)." : "Er staat niets in Live"}>
         <button className="knop knop-take knop-uit" disabled={!verbonden || !kan("UitBeeld", s)} onClick={() => voerUit(regie, "UitBeeld")}>
           <UitBeeld />
           <span className="knop-woord">Take out</span>
@@ -215,11 +215,6 @@ function Take() {
           {melding}
         </p>
       )}
-      {typen && (
-        <p className="take-typen" role="status">
-          Je typt in een veld: sneltoetsen staan uit. <kbd>Esc</kbd>
-        </p>
-      )}
       <HerstelKnop />
     </div>
   );
@@ -244,7 +239,7 @@ function useTypt(): boolean {
 
 /** Na Uit beeld of een wisactie: wat er gebeurde, wat terugkomt, en een knop (Ctrl+Z) om het terug te
  * zetten. De knop verdwijnt zodra er intussen iets anders gebeurde (zie herstel.ts). */
-function HerstelKnop() {
+export function HerstelKnop({ toets = true }: { toets?: boolean }) {
   const regie = useRegie();
   const h = geldigHerstel(useHerstel(), regie.stand?.stand);
   const [, tik] = useState(0);
@@ -261,7 +256,7 @@ function HerstelKnop() {
         <span className="herstel-tekst">{h.tekst}:</span> {h.wat}
       </span>
       <button className="knop herstel-knop" onClick={() => herstel(regie)}>
-        {h.knop} <kbd>Ctrl+Z</kbd>
+        {h.knop} {toets && <kbd>Ctrl+Z</kbd>}
       </button>
       <span className="herstel-tijd" style={{ width: `${(over / (HERSTEL_DUUR / 1000)) * 100}%` }} aria-label={`nog ${over} seconden`} />
     </div>

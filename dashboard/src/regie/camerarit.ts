@@ -31,7 +31,7 @@ export function toetsVan(p: { letter: string; toets?: string; vast?: boolean }):
 /** Aanschuiven: langzaam naar het blok van de gekozen Partij (gelijk aan `camera::AANSCHUIVEN`). */
 export const AANSCHUIVEN = "aanschuiven";
 
-/** Camera blijft staan: Toon verandert alleen de Graphic en de Stoelen, de camera van de Ether blijft
+/** Camera blijft staan: Toon verandert alleen de Graphic en de Stoelen, de Live-camera blijft
  * waar hij is, ook als hij vrij rijdt of een rit speelt (gelijk aan `camera::BLIJF`). */
 export const BLIJF = "blijf";
 export const BLIJF_NAAM = "Camera blijft staan";

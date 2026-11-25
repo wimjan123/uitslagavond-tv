@@ -60,7 +60,7 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
           onMouseDown={zonderFocus}
           onClick={() => klaar && void regie.stuur({ soort: "BewaarPreset", graphic: klaar.graphic, standpunt: klaar.standpunt }, PRESETS)}
         >
-          <Plus /> Voorbeeld bewaren als Preset
+          <Plus /> Preview bewaren als Preset
         </button>
       </Werkbalk>
       {melding && (
@@ -85,7 +85,7 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
             {lijst.length === 0 && (
               <tr className="presets-leeg">
                 <td colSpan={7} className="zacht">
-                  Nog geen Presets. Zet een Graphic klaar en kies "Voorbeeld bewaren als Preset": de Preset houdt de gegevens van dat
+                  Nog geen Presets. Zet een Graphic klaar en kies "Preview bewaren als Preset": de Preset houdt de gegevens van dat
                   moment.
                 </td>
               </tr>
@@ -137,8 +137,18 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
       </td>
       <td className="cel-tekst">
         <div className="een-regel">
-          <span className="titel-cel">{sjabloonNaam(p.graphic, s.sjablonen)}</span>
-          <span className="zacht"> {p.graphic.sjabloon === "Titelkaart" ? p.graphic.kop : groepVan(p.graphic)}</span>
+          {/* Een knop, zodat ook Presets vanaf 10 (zonder sneltoets) met Tab en Enter klaar te zetten zijn. */}
+          <button
+            className="preset-titel titel-cel"
+            disabled={!verbonden}
+            onClick={(e) => {
+              e.stopPropagation();
+              zetKlaar();
+            }}
+          >
+            {sjabloonNaam(p.graphic, s.sjablonen)}
+          </button>
+          {p.graphic.sjabloon === "Titelkaart" && <span className="zacht"> {p.graphic.kop}</span>}
         </div>
       </td>
       <td className="cel-tekst">

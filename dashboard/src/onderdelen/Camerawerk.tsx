@@ -53,9 +53,9 @@ const GAMEPAD = [
 function gebruikVan(s: Stand, letter: string): string[] {
   const waar: string[] = [];
   if (s.klaar && (s.klaar.standpunt ?? standaardStandpunt(s.klaar.graphic)) === letter) waar.push("de klaargezette Graphic");
-  if (s.ether && (s.ether.standpunt ?? standaardStandpunt(s.ether.graphic)) === letter) waar.push("de Graphic in de Ether");
+  if (s.ether && (s.ether.standpunt ?? standaardStandpunt(s.ether.graphic)) === letter) waar.push("de Graphic in Live");
   for (const p of s.presets) if ((p.standpunt ?? standaardStandpunt(p.graphic)) === letter) waar.push(`Preset ${p.nummer}`);
-  if (!s.camera.vrij && s.camera.standpunt === letter) waar.push("de camera van de Ether");
+  if (!s.camera.vrij && s.camera.standpunt === letter) waar.push("de Live-camera");
   return waar;
 }
 
@@ -119,7 +119,7 @@ export function Camerawerk() {
         naam="Camera"
         hint={
           <>
-            <kbd>V</kbd> Vrij · <kbd>O</kbd> Oefenen · <kbd>R</kbd> Opnemen · <kbd>A</kbd>–<kbd>L</kbd> en <kbd>Q</kbd>–<kbd>U</kbd> sturen de Ether
+            <kbd>V</kbd> Vrij · <kbd>O</kbd> Oefenen · <kbd>R</kbd> Opnemen · de letter op een Standpunt stuurt de Live-camera, met <kbd>Shift</kbd> knipt hij
           </>
         }
       />
@@ -149,7 +149,7 @@ export function Camerawerk() {
                         <span className="zacht camera-rij-tijd">{x.tijd}</span>
                       </div>
                     </td>
-                    <td className="ether-cel">{x.letter === inEther && <span className="punt punt-ether" title="In de Ether" />}</td>
+                    <td className="ether-cel">{x.letter === inEther && <span className="punt punt-ether" title="In Live" />}</td>
                   </tr>
                 )),
                 g.rijen.length === 0 && g.leeg && (
@@ -174,7 +174,7 @@ export function Camerawerk() {
               disabled={!verbonden || !(vrij || oefenen)}
               title={
                 oefenen
-                  ? "Bewaar waar de camera van het Voorbeeld nu staat"
+                  ? "Bewaar waar de camera van Preview nu staat"
                   : vrij
                     ? "Bewaar waar de camera nu staat"
                     : "Zet eerst Vrij of Oefenen aan"
@@ -229,22 +229,24 @@ export function Camerawerk() {
   );
 }
 
-/** Het paneel zonder keuze: zo neem je een Camerarit op. */
+/** Het paneel zonder keuze: wat je hier kiest, en ingeklapt hoe je een Camerarit opneemt. */
 function Uitleg() {
   return (
     <section className="paneel-detail">
-      <h3 className="kop-regel">Een Camerarit opnemen</h3>
-      <ol className="stappen">
-        <li>
-          Zet <kbd>O</kbd> Oefenen aan. De gamepad stuurt nu alleen het Voorbeeld; de Ether blijft staan.
-        </li>
-        <li>Rijd met de gamepad naar het beginpunt.</li>
-        <li>
-          Druk <kbd>R</kbd> (of B op de gamepad), rijd de route, en druk nog een keer om te stoppen.
-        </li>
-        <li>De rit staat meteen op de eerste vrije letter van J, K en L en speelt af in het Voorbeeld. Schaaf hem bij met de schuifjes.</li>
-      </ol>
       <p className="zacht">Kies links of op de plattegrond een Standpunt of Camerarit om het in te stellen.</p>
+      <details className="uitleg-details">
+        <summary>Een Camerarit opnemen</summary>
+        <ol className="stappen">
+          <li>
+            Zet <kbd>O</kbd> Oefenen aan. De gamepad stuurt nu alleen Preview; Live blijft staan.
+          </li>
+          <li>Rijd met de gamepad naar het beginpunt.</li>
+          <li>
+            Druk <kbd>R</kbd> (of B op de gamepad), rijd de route, en druk nog een keer om te stoppen.
+          </li>
+          <li>De rit staat meteen op de eerste vrije letter van J, K en L en speelt af in Preview. Schaaf hem bij met de schuifjes.</li>
+        </ol>
+      </details>
     </section>
   );
 }
@@ -263,7 +265,7 @@ function Opname() {
       <p className="opname-tijd">
         <OpnameTijd />
       </p>
-      <p className="zacht">Stuur het Voorbeeld met de gamepad. De server bewaart 100 posities per seconde, tot 60 seconden.</p>
+      <p className="zacht">Stuur Preview met de gamepad. De server bewaart 100 posities per seconde, tot 60 seconden.</p>
       <div className="knoppen">
         <button className="knop knop-hoofd" disabled={regie.staat !== "verbonden"} onClick={() => voerUit(regie, "Opnemen")}>
           Stop <kbd>R</kbd>
@@ -483,7 +485,7 @@ function Melding() {
 
 /** Waarom afspelen in het Voorbeeld nu niet kan, of `null`. */
 function nietAfspelen(s: Stand | undefined): string | null {
-  if (s?.camera.vrij) return "Met de Vrije camera aan toont het Voorbeeld de Ether. Zet Vrij eerst uit.";
+  if (s?.camera.vrij) return "Met de Vrije camera aan toont Preview hetzelfde als Live. Zet Vrij eerst uit.";
   return null;
 }
 
@@ -512,7 +514,7 @@ function StandpuntDetail({ p }: { p: Standpunt }) {
         <button
           className="knop"
           disabled={!verbonden || !!blok}
-          title={blok ?? "Speel de overgang vanaf de Ether af in het Voorbeeld"}
+          title={blok ?? "Speel de overgang vanaf Live af in Preview"}
           onClick={() => stuur({ soort: "ProbeerInVoorbeeld", letter: p.letter })}
         >
           Probeer in Voorbeeld
@@ -592,7 +594,7 @@ function StandpuntDetail({ p }: { p: Standpunt }) {
             disabled={!verbonden || !(vrij || oefenen)}
             title={
               oefenen
-                ? "Zet dit Standpunt waar de camera van het Voorbeeld nu staat"
+                ? "Zet dit Standpunt waar de camera van Preview nu staat"
                 : vrij
                   ? "Zet dit Standpunt waar de camera nu staat"
                   : "Zet eerst Vrij of Oefenen aan"
@@ -663,7 +665,7 @@ function RitDetail({ r }: { r: Camerarit }) {
         <button
           className="knop"
           disabled={!verbonden || !!blok}
-          title={blok ?? "Speel de rit vanaf de Ether af in het Voorbeeld"}
+          title={blok ?? "Speel de rit vanaf Live af in Preview"}
           onClick={() => stuur({ soort: "ProbeerInVoorbeeld", letter: r.letter })}
         >
           Speel af in Voorbeeld
