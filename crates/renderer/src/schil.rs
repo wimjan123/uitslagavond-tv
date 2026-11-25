@@ -3,9 +3,12 @@
 //! voorzitter (Standpunt A, hoog achter de voorwand), ziet de Zaal zonder schil: open van boven,
 //! als in een virtuele studio. Een camera in de Zaal ziet hem gewoon.
 //!
-//! De schil ligt op een eigen [`RenderLayers`]-laag: elke camera kiest per beeld of hij die laag
-//! ziet, naar zijn eigen plek. Zo werkt het ook met twee camera's in één Renderer (het Voorbeeld
-//! en zijn kleine Ether).
+//! Elk deel van het vaste model (één per materiaal) krijgt bij het laden twee meshes: heel, en
+//! zonder schil. Staan alle camera's aan dezelfde kant, dan tekent elk deel één van de twee: zo
+//! zijn er niet meer delen met gebakken licht dan zonder schil, want elk zo'n deel kost tijd per
+//! beeld. Alleen als twee camera's in één Renderer het oneens zijn (het Voorbeeld en zijn kleine
+//! Ether), komt de schil als los deel op een eigen [`RenderLayers`]-laag, die alleen een camera in
+//! de Zaal ziet.
 
 use bevy::camera::visibility::RenderLayers;
 use bevy::mesh::{Indices, VertexAttributeValues};
@@ -38,7 +41,8 @@ pub struct SchilPlugin;
 
 impl Plugin for SchilPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Update, (splits_af, kies_lagen).chain());
+        app.init_resource::<Kant>()
+            .add_systems(Update, (splits_af, kies_kant).chain());
     }
 }
 
@@ -47,8 +51,8 @@ impl Plugin for SchilPlugin {
 #[derive(Component)]
 pub struct Splitsen;
 
-/// Een deel van de schil: afgesplitst uit `Zaal_Vast`, of een los voorwerp dat er helemaal in
-/// hangt (een hanglamp of spot, zie [`in_de_schil_volgens_naam`]).
+/// Een los voorwerp dat helemaal in de schil hangt (een hanglamp of spot, zie
+/// [`in_de_schil_volgens_naam`]): het staat altijd op de laag van de schil.
 #[derive(Component)]
 pub struct Schil;
 
@@ -68,9 +72,43 @@ pub fn naar_de_schil() -> impl Bundle {
 #[derive(Component)]
 pub struct ZietSchil;
 
-/// Splitst elk deel van `Zaal_Vast` in twee meshes: de driehoeken die helemaal in de schil
-/// liggen naar een eigen entity op de laag van de schil, de rest blijft. Materiaal en gebakken
-/// licht blijven gelijk, dus de schil ziet er van binnen precies zo uit als voorheen.
+/// Een gesplitst deel van het vaste model: de mesh heel, die zonder schil (geen als het deel
+/// helemaal schil is), en het losse deel met alleen de schil voor als de camera's het oneens zijn.
+#[derive(Component)]
+struct Gesplitst {
+    heel: Handle<Mesh>,
+    rest: Option<Handle<Mesh>>,
+    schil: Entity,
+}
+
+/// Waar de camera's van deze Renderer staan.
+#[derive(Resource, Default, Clone, Copy, PartialEq, Eq, Debug)]
+enum Kant {
+    /// Allemaal in de Zaal (of nog geen camera): elk deel heel.
+    #[default]
+    Binnen,
+    /// Allemaal buiten: elk deel zonder schil.
+    Buiten,
+    /// Sommige binnen, sommige buiten: elk deel zonder schil, en de schil los op zijn laag.
+    Gemengd,
+}
+
+/// De kant bij de plekken van de camera's: binnen (`false`) of buiten (`true`).
+fn kant(buiten: impl IntoIterator<Item = bool>) -> Kant {
+    let (mut b, mut u) = (false, false);
+    for x in buiten {
+        if x { u = true } else { b = true }
+    }
+    match (b, u) {
+        (_, false) => Kant::Binnen,
+        (false, true) => Kant::Buiten,
+        (true, true) => Kant::Gemengd,
+    }
+}
+
+/// Splitst elk deel van `Zaal_Vast`: de driehoeken die helemaal in de schil liggen, en de rest.
+/// Materiaal en gebakken licht blijven gelijk, dus het deel ziet er heel precies zo uit als
+/// voorheen.
 fn splits_af(
     mut commands: Commands,
     delen: Query<
@@ -84,14 +122,15 @@ fn splits_af(
         With<Splitsen>,
     >,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut kant: ResMut<Kant>,
 ) {
     for (e, mesh, materiaal, plek, licht) in &delen {
         let Some(m) = meshes.get(&mesh.0) else {
             continue;
         };
+        commands.entity(e).remove::<Splitsen>();
         let Some(VertexAttributeValues::Float32x3(punten)) = m.attribute(Mesh::ATTRIBUTE_POSITION)
         else {
-            commands.entity(e).remove::<Splitsen>();
             continue;
         };
         let wereld: Vec<Vec3> = punten
@@ -112,41 +151,75 @@ fn splits_af(
             };
             doel.extend_from_slice(d);
         }
-        commands.entity(e).remove::<Splitsen>();
         if schil.is_empty() {
             continue;
         }
         let mut deel = m.clone();
         deel.insert_indices(Indices::U32(schil));
-        let mut rest = m.clone();
-        rest.insert_indices(Indices::U32(binnen));
-        let _ = meshes.insert(&mesh.0, rest);
-        let mut nieuw = commands.spawn((
-            Schil,
+        let rest = (!binnen.is_empty()).then(|| {
+            let mut rest = m.clone();
+            rest.insert_indices(Indices::U32(binnen));
+            rest
+        });
+        let rest = rest.map(|r| meshes.add(r));
+        // in de wortel, op dezelfde plek in de wereld als het deel; verborgen tot de camera's het
+        // oneens zijn
+        let mut los = commands.spawn((
             Mesh3d(meshes.add(deel)),
             materiaal.clone(),
             plek.compute_transform(),
             RenderLayers::layer(SCHIL_LAAG),
+            Visibility::Hidden,
         ));
         if let Some(l) = licht {
-            nieuw.insert(l.clone());
+            los.insert(l.clone());
         }
+        let schil = los.id();
+        commands.entity(e).insert(Gesplitst { heel: mesh.0.clone(), rest, schil });
+        // een nieuw deel krijgt bij de volgende keuze de goede mesh
+        kant.set_changed();
     }
 }
 
-/// Elke camera die de Zaal tekent, ziet de schil alleen als hij in de Zaal staat.
-fn kies_lagen(
+/// Kiest per beeld de kant van de camera's en zet daar de delen, de losse schil en de lagen van
+/// elke camera naar.
+fn kies_kant(
     mut commands: Commands,
     camera: Query<(Entity, &GlobalTransform, Option<&RenderLayers>), With<ZietSchil>>,
+    mut delen: Query<(&Gesplitst, &mut Mesh3d, &mut Visibility)>,
+    mut zicht: Query<&mut Visibility, Without<Gesplitst>>,
+    mut kant_nu: ResMut<Kant>,
 ) {
+    let mut plekken = Vec::new();
     for (e, plek, lagen) in &camera {
-        let nodig = if buiten(plek.translation()) {
+        let b = buiten(plek.translation());
+        plekken.push(b);
+        let nodig = if b {
             RenderLayers::layer(0)
         } else {
             RenderLayers::from_layers(&[0, SCHIL_LAAG])
         };
         if lagen != Some(&nodig) {
             commands.entity(e).insert(nodig);
+        }
+    }
+    let k = kant(plekken);
+    kant_nu.set_if_neq(k);
+    if !kant_nu.is_changed() {
+        return;
+    }
+    for (g, mut mesh, mut z) in &mut delen {
+        let (nodig, te_zien) = match (k, &g.rest) {
+            (Kant::Binnen, _) => (&g.heel, true),
+            (_, Some(rest)) => (rest, true),
+            (_, None) => (&g.heel, false),
+        };
+        if mesh.0 != *nodig {
+            mesh.0 = nodig.clone();
+        }
+        z.set_if_neq(if te_zien { Visibility::Inherited } else { Visibility::Hidden });
+        if let Ok(mut s) = zicht.get_mut(g.schil) {
+            s.set_if_neq(if k == Kant::Gemengd { Visibility::Inherited } else { Visibility::Hidden });
         }
     }
 }
@@ -180,5 +253,14 @@ mod tests {
             "het oude Standpunt A, in de Zaal"
         );
         assert!(buiten(Vec3::new(0.0, 8.0, 8.0)));
+    }
+
+    #[test]
+    fn de_kant_van_de_cameras() {
+        assert_eq!(kant([]), Kant::Binnen);
+        assert_eq!(kant([false]), Kant::Binnen);
+        assert_eq!(kant([true]), Kant::Buiten);
+        assert_eq!(kant([true, true]), Kant::Buiten);
+        assert_eq!(kant([false, true]), Kant::Gemengd);
     }
 }

@@ -10,7 +10,7 @@ Standpunt A (Totaal vanaf voorzitter) staat hoog boven het plafond en achter de 
 
 ## Consequences
 
-- De schil ligt op een eigen laag (`RenderLayers`); elke camera kiest per beeld of hij die ziet, naar zijn eigen plek. Een camera die van A de Zaal in vliegt, ziet het plafond pas als hij eronder is, dus de wissel valt niet op.
+- Elk deel van het model heeft twee meshes, heel en zonder schil, en tekent er één van: zo kost de schil geen extra delen met gebakken licht (elk zo'n deel kost tijd per beeld). Alleen als twee camera's in één Renderer het oneens zijn (het Voorbeeld), komt de schil los op een eigen laag. Een camera die van A de Zaal in vliegt, ziet het plafond pas als hij eronder is, dus de wissel valt niet op.
 - De vliegruimte van de server heeft een studio: boven de Voorzitter loopt het plafond zacht op, achter de voorwand mag de camera boven 5 m. Ook de Vrije camera kan daar komen.
 - Een Stand van een oudere versie die A nog op een vroegere standaard had, krijgt de nieuwe A. Een A die de Regie zelf opnieuw opsloeg, blijft.
 - De panelen van Zetelbalk en Coalitiebalk vallen over de voorste Stoelen opzij.
