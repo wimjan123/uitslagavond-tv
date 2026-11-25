@@ -7,7 +7,7 @@ use gedeeld::Kleur;
 use gedeeld::sjabloon::{Fractielabel, Inhoud, Naamgroep, STEM_TEGEN, STEM_VOOR, Uitlijning};
 
 use crate::bestanden::Bestanden;
-use crate::blokken::{Deel, Krimp, beeld_deel, beeld_of_wacht, kleur, tekst_deel};
+use crate::blokken::{Deel, beeld_deel, beeld_of_wacht, kleur, tekst_deel};
 
 /// Ruimte tussen voor en tegen in de balk, in pixels.
 const TUSSEN: f32 = 3.0;
@@ -251,6 +251,12 @@ pub fn bouw(
             // daaronder per Fractie een tegel met haar logo of naam en haar aantal stemmen.
             let kolombreed = (b - 48.0) / 2.0;
             let meeste = f32::from((*aantal_voor).max(*aantal_tegen).max(1));
+            // Eén letter voor alle tegels aan beide kanten, zodat geen naam kleiner of groter
+            // staat dan de rest (council-ronde 7), en of er een naam over twee regels loopt.
+            let tegel = ((kolombreed - 24.0 * (TEGELS_PER_RIJ - 1.0)) / TEGELS_PER_RIJ).floor();
+            let namen: Vec<&str> = voor.iter().chain(tegen.iter()).filter(|f| f.logo.is_none()).map(|f| f.kort.as_str()).collect();
+            let tegelletter = tegelletter(&namen, g, tegel - 24.0);
+            let regels = if namen.iter().all(|n| past_op_een_regel(n, tegelletter, tegel - 24.0)) { 1.0 } else { 2.0 };
             let tk = kleur(*tekstkleur);
             for (n, (labels, aantal, woord, achter)) in
                 [(voor, aantal_voor, "voor", STEM_VOOR), (tegen, aantal_tegen, "tegen", STEM_TEGEN)].into_iter().enumerate()
@@ -293,7 +299,6 @@ pub fn bouw(
                         },
                     ))
                     .id();
-                let tegel = ((kolombreed - 24.0 * (TEGELS_PER_RIJ - 1.0)) / TEGELS_PER_RIJ).floor();
                 for f in labels.iter() {
                     let vak = commands
                         .spawn((
@@ -317,31 +322,32 @@ pub fn bouw(
                         None => {
                             commands.entity(vak).insert(gekleurd(NEUTRAAL, dekking));
                             streep(commands, vak, kleur(f.kleur), dekking);
-                            // een lange naam met een spatie loopt over twee regels in dezelfde
-                            // letter; een lang woord krimpt
-                            let twee_regels = f.kort.contains(' ');
-                            let grootte = if twee_regels {
-                                // het langste woord moet op een regel passen
-                                let woord = f.kort.split(' ').map(|w| w.chars().count()).max().unwrap_or(1) as f32;
-                                g.min(TWEE_REGELS).min(((tegel - 24.0) / (woord * 0.62)).floor())
+                            // de naam in een vak zo hoog als de langste naam in het raster nodig
+                            // heeft, zodat de aantallen in alle tegels op één lijn staan
+                            let naamvak = commands
+                                .spawn((
+                                    ChildOf(vak),
+                                    Node {
+                                        height: Val::Px((regels * tegelletter * 1.2).round()),
+                                        max_width: Val::Px(tegel - 24.0),
+                                        flex_direction: FlexDirection::Column,
+                                        justify_content: JustifyContent::Center,
+                                        align_items: AlignItems::Center,
+                                        ..default()
+                                    },
+                                ))
+                                .id();
+                            let t = tekst_deel(commands, bestanden, naamvak, &f.kort, letter, tegelletter, Color::WHITE, Uitlijning::Midden, dekking);
+                            if past_op_een_regel(&f.kort, tegelletter, tegel - 24.0) {
+                                commands.entity(t).insert(TextLayout::no_wrap());
                             } else {
-                                g
-                            };
-                            let t = tekst_deel(commands, bestanden, vak, &f.kort, letter, grootte, Color::WHITE, Uitlijning::Midden, dekking);
-                            if twee_regels {
                                 commands.entity(t).insert(Node { max_width: Val::Px(tegel - 24.0), ..default() });
-                            } else {
-                                commands.entity(t).insert((
-                                    TextLayout::no_wrap(),
-                                    Node { flex_shrink: 0.0, ..default() },
-                                    Krimp { grootte: g, breedte: tegel - 24.0 },
-                                ));
                             }
                             Color::WHITE
                         }
                     };
                     if f.stemmen > 0 {
-                        let t = tekst_deel(commands, bestanden, vak, &f.stemmen.to_string(), letter, (g * 0.75).round().max(30.0), tekstkleur, Uitlijning::Midden, dekking);
+                        let t = tekst_deel(commands, bestanden, vak, &f.stemmen.to_string(), letter, tegelletter, tekstkleur, Uitlijning::Midden, dekking);
                         commands.entity(t).insert(TextLayout::no_wrap());
                     }
                 }
@@ -385,9 +391,10 @@ pub fn bouw(
                 .id();
             let kolombreed = ((b - 48.0) / 2.0).floor();
             let tk = blokkleur;
-            // Elk label even breed, naar de langste naam met zijn aantal in beide kolommen: zo
-            // staan de aantallen in één kolom en beginnen de namen van afwijkers op één lijn.
-            let labelbreed = labelbreedte(voor.iter().chain(tegen.iter()).map(|n| &n.fractie), g, kolombreed);
+            // Elke regel is zo breed als de kolom, als een tabel onder de kop: de korte naam in
+            // een vak dat overal even breed is, daarachter de namen van wie anders stemde en
+            // rechts het aantal (council-ronde 7: de tabel liep niet tot de kop door).
+            let naambreed = naambreedte(voor.iter().chain(tegen.iter()).map(|n| &n.fractie), g, kolombreed);
             for (groepen, aantal, woord, achter) in [(voor, aantal_voor, "voor", STEM_VOOR), (tegen, aantal_tegen, "tegen", STEM_TEGEN)] {
                 let kolom = commands
                     .spawn((
@@ -426,44 +433,30 @@ pub fn bouw(
                         .spawn((
                             ChildOf(kolom),
                             Node {
+                                width: Val::Px(kolombreed),
                                 flex_direction: FlexDirection::Row,
                                 align_items: AlignItems::FlexStart,
                                 column_gap: Val::Px(NAAM_TUSSEN),
-                                ..default()
-                            },
-                        ))
-                        .id();
-                    // het label even breed als de andere, met de naam links en het aantal rechts
-                    let vak = commands
-                        .spawn((
-                            ChildOf(regel),
-                            Node {
-                                width: Val::Px(labelbreed),
                                 padding: UiRect::new(Val::Px(12.0 + STREEP), Val::Px(12.0), Val::Px(0.0), Val::Px(0.0)),
-                                justify_content: JustifyContent::SpaceBetween,
-                                column_gap: Val::Px(12.0),
-                                flex_shrink: 0.0,
                                 ..default()
                             },
                             gekleurd(NEUTRAAL, dekking),
                         ))
                         .id();
-                    streep(commands, vak, kleur(fractie.kleur), dekking);
-                    let aantal = fractie.stemmen.to_string();
-                    for t in [fractie.kort.as_str(), aantal.as_str()] {
-                        let e = tekst_deel(commands, bestanden, vak, t, letter, g, Color::WHITE, Uitlijning::Links, dekking);
-                        commands.entity(e).insert((TextLayout::no_wrap(), Passend::basis(g)));
-                    }
+                    streep(commands, regel, kleur(fractie.kleur), dekking);
+                    let vak = commands.spawn((ChildOf(regel), Node { width: Val::Px(naambreed), flex_shrink: 0.0, ..default() })).id();
+                    let e = tekst_deel(commands, bestanden, vak, &fractie.kort, letter, g, Color::WHITE, Uitlijning::Links, dekking);
+                    commands.entity(e).insert((TextLayout::no_wrap(), Passend::basis(g)));
+                    // de namen lopen in hun eigen ruimte door naar een tweede regel, nooit onder
+                    // de korte naam of het aantal
+                    let kol = commands.spawn((ChildOf(regel), Node { flex_grow: 1.0, flex_shrink: 1.0, flex_basis: Val::Px(0.0), ..default() })).id();
                     let namen = namen.join(", ");
                     if !namen.is_empty() {
-                        // de namen in hun eigen kolom naast de labels; een lange rij loopt daarin
-                        // door naar een tweede regel, nooit onder het label
-                        let kol = commands
-                            .spawn((ChildOf(regel), Node { width: Val::Px((kolombreed - labelbreed - NAAM_TUSSEN).max(0.0)), ..default() }))
-                            .id();
                         let e = tekst_deel(commands, bestanden, kol, &namen, naamletter, g, tk, Uitlijning::Links, dekking);
                         commands.entity(e).insert(Passend::basis(g));
                     }
+                    let e = tekst_deel(commands, bestanden, regel, &fractie.stemmen.to_string(), letter, g, Color::WHITE, Uitlijning::Rechts, dekking);
+                    commands.entity(e).insert((TextLayout::no_wrap(), Node { flex_shrink: 0.0, ..default() }, Passend::basis(g)));
                 }
             }
         }
@@ -502,17 +495,16 @@ fn label(
     vak
 }
 
-/// Ruimte tussen het label van een Fractie en de namen erachter in de Namenlijst.
+/// Ruimte tussen de korte naam, de namen en het aantal in een regel van de Namenlijst.
 const NAAM_TUSSEN: f32 = 16.0;
 
-/// De breedte van elk label in de Namenlijst bij letter `g`: de langste korte naam met zijn aantal,
-/// de streep en de marges, en nooit smaller dan 40 of breder dan 60 procent van de kolom. Geschat
-/// zoals de labels onder een Zetelbalk: de cijfers 0,62 en de letters 0,6 van de lettergrootte.
-fn labelbreedte<'a>(fracties: impl Iterator<Item = &'a Fractielabel>, g: f32, kolom: f32) -> f32 {
-    let langste = fracties
-        .map(|f| f.kort.chars().count() as f32 * 0.6 * g + f.stemmen.to_string().len() as f32 * 0.62 * g)
-        .fold(0.0, f32::max);
-    (langste + 12.0 + STREEP + 12.0 + 12.0 + 12.0).clamp((kolom * 0.4).round(), (kolom * 0.6).round()).round()
+/// De breedte van het vak met de korte naam in de Namenlijst bij letter `g`: de langste korte naam
+/// in beide kolommen, zodat de namen van afwijkers op één lijn beginnen, en nooit breder dan de
+/// helft van de kolom. Geschat zoals de labels onder een Zetelbalk: 0,6 van de lettergrootte per
+/// letter.
+fn naambreedte<'a>(fracties: impl Iterator<Item = &'a Fractielabel>, g: f32, kolom: f32) -> f32 {
+    let langste = fracties.map(|f| f.kort.chars().count() as f32 * 0.6 * g).fold(0.0, f32::max);
+    langste.min(kolom * 0.5).round()
 }
 
 /// De hoogte van de uitleg onder de Namenlijst.
@@ -538,6 +530,32 @@ fn streep(commands: &mut Commands, vak: Entity, kl: Color, dekking: f32) {
         },
         gekleurd(kl, dekking),
     ));
+}
+
+/// Of een naam bij letter `g` op één regel van `ruimte` breed past, geschat zoals de labels onder
+/// een Zetelbalk: 0,62 van de lettergrootte per letter.
+fn past_op_een_regel(naam: &str, g: f32, ruimte: f32) -> bool {
+    naam.chars().count() as f32 * 0.62 * g <= ruimte
+}
+
+/// De letter van de namen in de tegels: zo groot als `g`, maar zo klein dat elke naam past, op
+/// één regel of (met een spatie) over twee regels van hooguit [`TWEE_REGELS`].
+fn tegelletter(namen: &[&str], g: f32, ruimte: f32) -> f32 {
+    namen
+        .iter()
+        .map(|n| {
+            if past_op_een_regel(n, g, ruimte) {
+                return g;
+            }
+            let woord = n.split(' ').map(|w| w.chars().count()).max().unwrap_or(1) as f32;
+            let een_regel = (ruimte / (n.chars().count() as f32 * 0.62)).floor();
+            if n.contains(' ') {
+                g.min(TWEE_REGELS).min((ruimte / (woord * 0.62)).floor()).max(een_regel)
+            } else {
+                een_regel
+            }
+        })
+        .fold(g, f32::min)
 }
 
 /// De korte naam, en bij een verdeelde Fractie het aantal Kamerleden aan deze kant erachter. Onder
@@ -600,6 +618,20 @@ pub fn pas_in(
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn alle_tegels_krijgen_een_letter_die_bij_de_langste_naam_past() {
+        // korte namen: de gewone letter
+        assert_eq!(tegelletter(&["D66", "VVD", "CDA"], 40.0, 224.0), 40.0);
+        // "Groep Markuszower" over twee regels, en dan staat ook D66 in die letter
+        let g = tegelletter(&["D66", "Groep Markuszower", "Lid Keijzer"], 40.0, 224.0);
+        assert!(g <= TWEE_REGELS && g >= 28.0, "{g}");
+        assert!(past_op_een_regel("Lid Keijzer", g, 224.0), "Lid Keijzer op een regel in dezelfde letter");
+        assert!(!past_op_een_regel("Groep Markuszower", g, 224.0));
+        // een lang woord zonder spatie krimpt tot het op een regel past
+        let g = tegelletter(&["D66", "Partijvoordedieren"], 40.0, 224.0);
+        assert!(past_op_een_regel("Partijvoordedieren", g, 224.0) && g < 40.0);
+    }
 
     #[test]
     fn de_drempel_is_een_meerderheid_van_de_uitgebrachte_stemmen() {

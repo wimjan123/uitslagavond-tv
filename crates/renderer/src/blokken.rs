@@ -326,6 +326,10 @@ const BLOKJE_TUSSEN: f32 = 8.0;
 fn labelplekken(delen: &[(f32, f32, Option<f32>)], b: f32) -> Vec<Labelplek> {
     const RUIMTE: f32 = 12.0;
     let mut eind = [f32::NEG_INFINITY; 2];
+    // waar de labels op de eerste rij beginnen: een label op de tweede rij lijnt daarop uit,
+    // als dat hooguit zoveel pixels van zijn eigen plek is
+    const UITLIJNEN: f32 = 72.0;
+    let mut kolommen: Vec<f32> = Vec::new();
     delen
         .iter()
         .map(|&(x, breed, label)| {
@@ -338,10 +342,23 @@ fn labelplekken(delen: &[(f32, f32, Option<f32>)], b: f32) -> Vec<Labelplek> {
             let w = w + BLOKJE + BLOKJE_TUSSEN;
             let gewenst = (midden - BLOKJE / 2.0).clamp(0.0, (b - w).max(0.0));
             for (rij, e) in eind.iter_mut().enumerate() {
-                let links = gewenst.max(*e);
+                let mut links = gewenst.max(*e);
+                // op de tweede rij recht onder het dichtstbijzijnde label erboven beginnen, als
+                // het daar nog onder zijn eigen deel staat: kolommen in plaats van een trap
+                if rij == 1
+                    && let Some(&k) = kolommen
+                        .iter()
+                        .filter(|&&k| k >= *e && (k - gewenst).abs() <= UITLIJNEN && k <= midden && k + w >= midden && k + w <= b)
+                        .min_by(|a, c| (*a - links).abs().total_cmp(&(*c - links).abs()))
+                {
+                    links = k;
+                }
                 // het label moet onder zijn deel beginnen: het blokje onder het midden
                 if links <= midden && links + w >= midden {
                     *e = links + w + RUIMTE;
+                    if rij == 0 {
+                        kolommen.push(links);
+                    }
                     return Labelplek::Onder { rij, x: links };
                 }
             }
@@ -1600,6 +1617,14 @@ mod tests {
                 assert!(*x <= midden && x + label.unwrap() >= midden, "het label staat onder het midden van zijn deel");
             }
         }
+        // een label op de tweede rij begint recht onder het label erboven als dat kan, zodat
+        // de labels in kolommen staan en niet trapsgewijs (council-ronde 7)
+        let x = |i: usize| match p[i] {
+            Labelplek::Onder { x, .. } => x,
+            _ => f32::NAN,
+        };
+        assert_eq!(x(1), x(0), "PvdD onder SP");
+        assert_eq!(x(4), x(3), "Volt onder DENK");
     }
 
     #[test]
