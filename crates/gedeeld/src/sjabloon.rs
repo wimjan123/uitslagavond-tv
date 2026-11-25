@@ -76,7 +76,7 @@ fn standaard_kleurkracht() -> u8 {
 }
 
 /// Hoe de Stoelen van kleur wisselen (de Kleurovergang), bij snelheid 100. De snelheid van de
-/// Stijl en van het Sjabloon maakt hem korter of langer.
+/// Stijl maakt hem korter of langer.
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
 #[ts(export)]
 pub struct Kleurovergang {

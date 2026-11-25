@@ -11,6 +11,7 @@ import type { Stoelen } from "../typen/Stoelen";
 import type { Tekstbron } from "../typen/Tekstbron";
 import { EIGEN, GROEP_EIGEN, MAX_BLOKKEN, MAX_SJABLOONNAAM, STANDAARD_SJABLONEN, VINGERAFDRUKKEN } from "../typen/standaardSjablonen.ts";
 import { MAX_SNELHEID, MIN_SNELHEID } from "../typen/standaardStijl.ts";
+import { foutKleurovergang } from "./kleurovergang.ts";
 
 export type Soort = "vast" | "aangepast" | "eigen";
 
@@ -141,6 +142,7 @@ export const STOELEN: { stoelen: Stoelen; naam: string }[] = [
   { stoelen: "Gegevens", naam: "Kleuren volgens de gegevens" },
   { stoelen: "PartijUitgelicht", naam: "Gekozen Partij licht op, de rest grijs" },
   { stoelen: "Houden", naam: "Houden hun kleur" },
+  { stoelen: "Uit", naam: "Uit: hun eigen blauwe leer" },
 ];
 
 export const ERIN: { erin: Erin; naam: string }[] = [
@@ -222,6 +224,8 @@ export function fout(s: Sjabloon): string | null {
   if (!Number.isInteger(s.snelheid) || s.snelheid < MIN_SNELHEID || s.snelheid > MAX_SNELHEID)
     return `Kies een snelheid tussen ${MIN_SNELHEID} en ${MAX_SNELHEID} procent`;
   if (s.blokken.length > MAX_BLOKKEN) return `Meer dan ${MAX_BLOKKEN} Blokken`;
+  const overgang = s.kleurovergang && foutKleurovergang(s.kleurovergang);
+  if (overgang) return overgang;
   if (s.achtergrond.soort === "Afbeelding" && !s.achtergrond.bestand) return "Kies een afbeelding voor de achtergrond";
   const leeg = s.blokken.findIndex((b) => veldnamen(b).some((v) => !v.trim()));
   if (leeg >= 0) return `Blok ${leeg + 1} heeft een invulveld zonder naam`;

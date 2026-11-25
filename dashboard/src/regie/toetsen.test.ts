@@ -13,11 +13,12 @@ const toets = (key: string, extra: Partial<Toets> = {}): Toets => ({
   ...extra,
 });
 
-test("spatie toont, B werkt bij, X haalt uit beeld", () => {
+test("spatie toont, B werkt bij, X haalt uit beeld, Z zet de kleur uit", () => {
   assert.equal(actieVoorToets(toets(" ")), "Toon");
   assert.equal(actieVoorToets(toets("b")), "Bijwerken");
   assert.equal(actieVoorToets(toets("B")), "Bijwerken");
   assert.equal(actieVoorToets(toets("x")), "UitBeeld");
+  assert.equal(actieVoorToets(toets("z")), "KleurUit");
 });
 
 test("Enter toont nooit iets", () => {
@@ -84,7 +85,7 @@ test("O zet Oefenen aan of uit en R neemt op; B blijft Bijwerken", () => {
 });
 
 test("andere letters doen niets", () => {
-  for (const key of ["q", "z", "Enter"]) assert.equal(actieVoorToets(toets(key)), null);
+  for (const key of ["q", "p", "Enter"]) assert.equal(actieVoorToets(toets(key)), null);
 });
 
 test("een toets hoort bij het Standpunt dat hem nu heeft", () => {

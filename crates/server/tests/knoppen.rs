@@ -241,7 +241,7 @@ async fn knopstatus_zegt_per_veld_wat_klaarstaat_en_wat_in_beeld_is() {
     let r = reqwest::Client::new().get(url(&server, "/api/knoppen")).bearer_auth(SLEUTEL).send().await.unwrap();
     let alles: Value = r.json().await.unwrap();
     assert_eq!(alles["in_beeld"], "ja");
-    let r = reqwest::Client::new().get(url(&server, "/api/knoppen/kleur")).bearer_auth(SLEUTEL).send().await.unwrap();
+    let r = reqwest::Client::new().get(url(&server, "/api/knoppen/onbekend")).bearer_auth(SLEUTEL).send().await.unwrap();
     assert_eq!(r.status(), StatusCode::NOT_FOUND);
 }
 

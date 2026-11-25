@@ -1,4 +1,4 @@
-// Toon, Bijwerken, Uit beeld en Standpunten: dezelfde handelingen voor de knoppen en de sneltoetsen.
+// Toon, Bijwerken, Uit beeld, Kleur uit en Standpunten: dezelfde handelingen voor de knoppen en de sneltoetsen.
 import { nieuwereCijfers, sjabloonId } from "../graphic";
 import { geldendSjabloon, gewijzigdSjabloon } from "../vormgeving/sjablonen";
 import type { Stand } from "../typen/Stand";
@@ -48,6 +48,8 @@ export function kan(actie: TakeActie, s: Stand | undefined): boolean {
       return kanBijwerken(s);
     case "UitBeeld":
       return !!s.ether;
+    case "KleurUit":
+      return s.stoelkleuren.length > 0;
   }
 }
 
@@ -83,6 +85,9 @@ export function voerUit(regie: Regie, actie: Actie): void {
       return;
     case "UitBeeld":
       void regie.stuur({ soort: "UitBeeld" }, TAKE);
+      return;
+    case "KleurUit":
+      void regie.stuur({ soort: "KleurUit" }, TAKE);
       return;
   }
 }

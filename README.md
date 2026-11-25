@@ -60,6 +60,9 @@ target/debug/uitslagavond-renderer --rol voorbeeld --server 127.0.0.1:7400 --zaa
 - Lettertypes, logo's en foto's legt de omroep in `data/bestanden/` (bijvoorbeeld `data/bestanden/logos/pvv.png`; de Stijl en het invoerbestand noemen ze met dat pad). De Renderers halen ze bij de server en bewaren een kopie in `~/.cache/uitslagavond-tv/bestanden` (andere map: `--kopie`). Ontbreekt een partijlogo, dan staat de korte naam op die plek.
 - Renderer zonder venster: `--zonder-venster --beeld ether.png` slaat het beeld op zodra de Stand binnen is. `scripts/renderer-beeld.sh` doet de hele keten (server, Opdracht, Renderer) en werkt ook met software-Vulkan zonder GPU.
 - De Stoelen krijgen hun kleur met de Opdracht `ZetStoelkleuren`: 150 hexcodes in de volgorde vak, rij, nummer (zie `Stoel::alle` in `crates/gedeeld`). Een lege lijst geeft ze hun eigen blauwe leer terug.
+- **Kleur uit** (knop onder Uit beeld, toets Z, Opdracht `KleurUit`): de Stoelen in de Ether krijgen direct hun eigen blauwe leer terug; de Graphic blijft staan. De volgende Graphic die de Stoelen kleurt, zet de kleuren weer aan. Een Sjabloon kan dat ook zelf: Stoelen "Uit".
+- **Kleurovergang**: de Stoelen wisselen van kleur als **Golf** van links naar rechts (standaard 1 seconde) of door **Vervagen**, alle tegelijk (standaard 1,5 seconde). Je kiest hem onder Vormgeving > Stijl; een Sjabloon kan een eigen Kleurovergang hebben. De server zet bij elke nieuwe kleur welke overgang geldt (`Stand::kleurovergang`), zodat Ether en Reserve hetzelfde doen.
+- **Kleurkracht** (Vormgeving > Stijl, 0 tot 100): hoe hoger, hoe voller de kleur van de Stoelen en hoe donkerder de rest van de Zaal zolang er Stoelen gekleurd zijn. Bij 100 houdt de Zaal een tiende van zijn licht over, bij 50 ongeveer een derde; het licht gaat mee met de Kleurovergang.
 - Tijd per beeld meten: `scripts/meet-zaal.sh /pad/naar/zaal` (release-build, standaard 600 seconden).
 - Dashboard tijdens het ontwikkelen: `npm run dev` in `dashboard/` stuurt `/ws` en `/api` door naar een server op `127.0.0.1:7400`.
 
@@ -68,7 +71,7 @@ target/debug/uitslagavond-renderer --rol voorbeeld --server 127.0.0.1:7400 --zaa
 - Ether en Reserve verbinden met dezelfde server en starten hun animaties zodra de Stand binnenkomt; een verschil van een of twee beelden is normaal. Valt de Ether uit, dan schakel je op de **mixer** over naar de Reserve.
 - **Versie**: elk programma heeft de versie uit `Cargo.toml` plus de commit, zoals `0.1.0+4a46080` (`uitslagavond-server --version`). De server weigert een Renderer met een andere versie; onder Systeem zie je welke machine en welke versie dat is. Installeer dan op die machine hetzelfde pakket; de Renderer probeert het elke seconde opnieuw en verbindt daarna vanzelf.
 - **Server weg**: de Renderers houden het laatste beeld vast en verbinden elke seconde opnieuw. Het dashboard toont een rode balk en de status van de Renderers is dan onbekend.
-- **Renderer herstart** (of start halverwege de uitzending): hij krijgt meteen de hele Stand en toont het eindbeeld, zonder animatie, kleurgolf of camera-overgang.
+- **Renderer herstart** (of start halverwege de uitzending): hij krijgt meteen de hele Stand en toont het eindbeeld, zonder animatie, Kleurovergang of camera-overgang.
 - **Server herstart**: hij leest de Stand uit `data/stand.json`, dus er verandert niets in beeld.
 
 ## Cijfers: het invoerbestand

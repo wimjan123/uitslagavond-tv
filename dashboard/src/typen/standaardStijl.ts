@@ -49,3 +49,8 @@ export const MAX_SNELHEID = 400;
 
 /** Langste tekst van het programmalogo zonder beeld, in tekens. */
 export const MAX_LOGOTEKST = 40;
+
+/** De kortste en langste Kleurovergang, en de standaardduur per vorm, in milliseconden. */
+export const MIN_KLEUROVERGANG_MS = 100;
+export const MAX_KLEUROVERGANG_MS = 10000;
+export const STANDAARD_KLEUROVERGANG_MS = { Golf: 1000, Vervagen: 1500 } as const;

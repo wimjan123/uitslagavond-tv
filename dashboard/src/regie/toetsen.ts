@@ -4,7 +4,8 @@ import { toetsVan } from "./camerarit.ts";
 
 export { toetsVan };
 
-export type TakeActie = "Toon" | "Bijwerken" | "UitBeeld";
+/** Kleur uit geeft de Stoelen in de Ether direct hun eigen leer terug, los van de Graphic. */
+export type TakeActie = "Toon" | "Bijwerken" | "UitBeeld" | "KleurUit";
 
 /** Stuur de camera van de Ether naar het Standpunt met deze toets; met Shift knipt hij meteen. */
 export interface StandpuntActie {
@@ -42,6 +43,7 @@ const TOETSEN: Record<string, TakeActie | CameraActie> = {
   " ": "Toon",
   b: "Bijwerken",
   x: "UitBeeld",
+  z: "KleurUit",
   v: "VrijeCamera",
   o: "Oefenen",
   r: "Opnemen",
