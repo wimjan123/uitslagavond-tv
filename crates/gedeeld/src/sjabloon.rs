@@ -1157,15 +1157,26 @@ pub struct Naamgroep {
 }
 
 /// De tekstkleur op een vlak in kleur `achter`: `donker` op een lichte kleur, anders `licht`.
-/// Kijkt naar de helderheid (relatieve luminantie, WCAG) met de grens zo dat het klopt met de
-/// gewone praktijk op tv: wit op middelblauw en oranjerood, donker op groen, oranje en geel.
+/// Kijkt naar de helderheid (relatieve luminantie, WCAG): wit zolang het minstens 3,5 keer zo
+/// licht is als de kleur ([`LICHT_VANAF`]; de tekst is altijd vet en 30 px of groter), anders
+/// donker. Zo blijft wit op middelblauw, rood en donkergroen, en wordt het donker op het groen
+/// van D66, het oranje van VVD, cyaan, geel en lichtblauw (council ronde 4: wit op oranje en fel
+/// groen verloor zijn contrast).
 pub fn tekst_op(achter: Kleur, licht: Kleur, donker: Kleur) -> Kleur {
+    if luminantie(achter) > LICHT_VANAF { donker } else { licht }
+}
+
+/// Vanaf deze helderheid (relatieve luminantie) staat er donkere tekst op een kleur: daar haalt
+/// wit nog maar 3,5 keer zoveel licht als de kleur ((1 + 0,05) / (0,25 + 0,05)).
+pub const LICHT_VANAF: f32 = 0.25;
+
+/// De relatieve luminantie van een kleur (WCAG), van 0 (zwart) tot 1 (wit).
+pub fn luminantie(k: Kleur) -> f32 {
     let lin = |c: u8| {
         let c = f32::from(c) / 255.0;
         if c <= 0.04045 { c / 12.92 } else { ((c + 0.055) / 1.055).powf(2.4) }
     };
-    let l = 0.2126 * lin(achter.r) + 0.7152 * lin(achter.g) + 0.0722 * lin(achter.b);
-    if l > 0.32 { donker } else { licht }
+    0.2126 * lin(k.r) + 0.7152 * lin(k.g) + 0.0722 * lin(k.b)
 }
 
 /// Een kleurverloop met de kleuren opgezocht.
@@ -1298,10 +1309,13 @@ pub const GRIJS: Kleur = Kleur {
     b: 0x80,
 };
 
-/// De stemkleur voor: geen Stijlkleur, gelijk in Sjabloon en Zaal (`docs/vormgeving.md`).
-pub const STEM_VOOR: Kleur = Kleur { r: 0x17, g: 0xa3, b: 0x5b };
+/// De stemkleur voor: geen Stijlkleur, gelijk in Sjabloon en Zaal (`docs/vormgeving.md`). Voor is
+/// licht blauwgroen en tegen donkerrood: ze verschillen ook in helderheid (0,37 tegen 0,13), zodat
+/// wie rood en groen slecht onderscheidt ze toch uit elkaar houdt, en voor botst minder met het
+/// groen van D66 (council ronde 4). Op voor staat donkere tekst, op tegen witte ([`tekst_op`]).
+pub const STEM_VOOR: Kleur = Kleur { r: 0x29, g: 0xb8, b: 0x94 };
 /// De stemkleur tegen.
-pub const STEM_TEGEN: Kleur = Kleur { r: 0xd9, g: 0x3a, b: 0x3a };
+pub const STEM_TEGEN: Kleur = Kleur { r: 0xc0, g: 0x28, b: 0x3a };
 
 /// De `id` van de vaste Sjablonen voor Stemmingen.
 pub const UITSLAG_STEMMING: &str = "uitslag-stemming";
@@ -2132,11 +2146,11 @@ fn zetelverdeling() -> Sjabloon {
             },
             programmabug(),
             Blok {
-                plek: plek(96, 236, 1728, 124),
+                plek: plek(96, 236, 1728, 136),
                 soort: Bloksoort::Partijlabels {
                     letter: Letterkeuze::Stijl(Stijlletter::Cijfers),
                     naamletter: Letterkeuze::Stijl(Stijlletter::Tekst),
-                    grootte: 30,
+                    grootte: 34,
                     kaartjes: true,
                 },
                 kleur: Kleurkeuze::Stijl(Stijlkleur::Vlak),

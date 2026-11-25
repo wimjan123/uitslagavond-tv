@@ -13,8 +13,9 @@ path = "src/main.rs"
 [dependencies]
 gedeeld = { workspace = true, features = ["volger"] }
 clap.workspace = true
-# JPEG voor de kleine beelden van het Voorbeeld; dezelfde versie als in Bevy.
-image = { version = "0.25", default-features = false, features = ["jpeg"] }
+# JPEG voor de kleine beelden van het Voorbeeld en de vrijstaande portretfoto's (JPEG of PNG);
+# dezelfde versie als in Bevy.
+image = { version = "0.25", default-features = false, features = ["jpeg", "png"] }
 serde.workspace = true
 serde_json.workspace = true
 # het getal 76 op de vloer van de Zaal; dezelfde versie als in Bevy

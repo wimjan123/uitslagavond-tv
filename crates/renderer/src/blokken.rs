@@ -103,8 +103,11 @@ pub struct Randkleur(pub Color);
 
 /// Ruimte tussen de kaartjes van Partijlabels, en om de rij heen.
 const KAARTJE_TUSSEN: f32 = 6.0;
-/// De band in de partijkleur bovenaan een kaartje.
-const KAARTJE_BAND: f32 = 14.0;
+/// Het kleurteken bovenaan een kaartje: een balkje in de partijkleur, even breed op elk kaartje
+/// (hooguit het kaartje min 12 px), midden boven het getal. Een band over het hele kaartje werd
+/// bij een lange naam breder en las als een tweede grafiek (council ronde 4).
+const KAARTJE_BAND: f32 = 12.0;
+const KAARTJE_TEKEN: f32 = 56.0;
 
 /// De breedte van elk kaartje van Partijlabels in `ruimte`: naar wat erop moet (de naam of het
 /// getal, het breedste), zodat een lange naam als GL-PvdA niet kleiner hoeft dan de rest. Hele
@@ -159,17 +162,9 @@ pub fn leesbaar_op(k: Kleur) -> Color {
     }
 }
 
-/// Of donkere letters op deze kleur beter te lezen zijn dan witte.
+/// Of donkere letters op deze kleur beter te lezen zijn dan witte ([`gedeeld::sjabloon::tekst_op`]).
 pub fn is_licht(k: Kleur) -> bool {
-    let lin = |c: u8| {
-        let c = f32::from(c) / 255.0;
-        if c <= 0.04045 {
-            c / 12.92
-        } else {
-            ((c + 0.055) / 1.055).powf(2.4)
-        }
-    };
-    0.2126 * lin(k.r) + 0.7152 * lin(k.g) + 0.0722 * lin(k.b) > 0.4
+    gedeeld::sjabloon::luminantie(k) > gedeeld::sjabloon::LICHT_VANAF
 }
 
 /// De knoop van een Blok op zijn plek, met de inhoud erin.
@@ -1181,8 +1176,8 @@ pub fn bouw_inhoud(
                     ChildOf(kaartje),
                     Node {
                         position_type: PositionType::Absolute,
-                        left: Val::Px(0.0),
-                        right: Val::Px(0.0),
+                        left: Val::Px(((breed - KAARTJE_TEKEN.min(breed - 12.0)) / 2.0).round()),
+                        width: Val::Px(KAARTJE_TEKEN.min(breed - 12.0).max(0.0)),
                         top: Val::Px(0.0),
                         height: Val::Px(KAARTJE_BAND),
                         ..default()

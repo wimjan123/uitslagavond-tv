@@ -14,8 +14,8 @@ import type { Stijlkleuren } from "../typen/Stijlkleuren";
 import { coalitieTekst } from "../coalitie/coalitie";
 
 /** De stemkleuren, gelijk aan `STEM_VOOR` en `STEM_TEGEN` (geen Stijlkleur). */
-const VOOR = "#17A35B";
-const TEGEN = "#D93A3A";
+const VOOR = "#29B894";
+const TEGEN = "#C0283A";
 
 function alsTitelkaart(g: Graphic): [string, string] {
   switch (g.sjabloon) {

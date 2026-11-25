@@ -14,7 +14,7 @@ Vijf Stijlkleuren. Een vast Sjabloon gebruikt alleen deze kleuren (`Kleurkeuze::
 | Vlak | `#1C1F26` grafiet | de naambalk (93 procent) en de onderkant van elk paneel |
 | Achtergrond | `#3A3F4B` leisteen | de bovenkant van het verloop in panelen, de waas over het beeld |
 
-Vaste afgeleide waarden: rasterlijnen in Hoofd op 22 procent, de rest van een Zetelbalk in Tekst op 14 procent (neutraal grijs). Stemkleuren (geen Stijlkleur, gelijk aan de Stoelen): voor `#17A35B`, tegen `#D93A3A`. Partijkleuren komen uit de partijlijst en zijn in de mockups voorbeeldkleuren.
+Vaste afgeleide waarden: rasterlijnen in Hoofd op 22 procent, de rest van een Zetelbalk in Tekst op 14 procent (neutraal grijs). Stemkleuren (geen Stijlkleur, gelijk aan de Stoelen): voor `#29B894` licht blauwgroen, tegen `#C0283A` donkerrood. Ze verschillen ook in helderheid, zodat wie rood en groen slecht onderscheidt ze uit elkaar houdt; op voor staat donkere tekst, op tegen witte. Partijkleuren komen uit de partijlijst en zijn in de mockups voorbeeldkleuren.
 
 ## Lettertypes
 
@@ -76,7 +76,7 @@ Een waas onderin over de volle breedte (y 560 tot 1080) in Vlak, van 85 procent 
 
 ### Zetelverdeling in de Zaal (gebouwd)
 
-Linksboven een naambalk met de kicker "ZETELVERDELING" en de naam van de set (64 px), rechtsboven het programmalogo. De Stoelen komen als Opbouw (1,5 seconde per Partij). Intussen staat op de vloer (y 760) het Opbouwlabel: een vlak (94 procent) met een streep van 18 px in de partijkleur, de Zetels (110 px, cijferletter), de korte naam (52 px, kopletter, Hoofd) en "zetels" eronder. Daarna staan in het plafond (y 236, 124 px hoog) de Partijlabels als kaartjes op één rij, in de volgorde van de Stoelen van links naar rechts, op één vlak (97 procent) zodat de Zaal er niet doorheen schijnt: per kaartje een band van 14 px in de partijkleur bovenaan, de Zetels (45 px) en de korte naam (30 px, Tekst). Elk kaartje is zo breed als zijn naam of getal nodig heeft, zodat een lange naam niet kleiner wordt. Geen ronding, ook niet in het Opbouwlabel. Tijdens de Opbouw dimmen de Partijen na hun stap naar 30 procent, zodat alleen de Partij van het label vol oplicht; na de laatste stap komen ze allemaal tegelijk terug. De camera staat stil op Standpunt A; de plekken passen daarbij en bij het eindbeeld van de Onthulling.
+Linksboven een naambalk met de kicker "ZETELVERDELING" en de naam van de set (64 px), rechtsboven het programmalogo. De Stoelen komen als Opbouw (1,5 seconde per Partij). Intussen staat op de vloer (y 760) het Opbouwlabel: een vlak (94 procent) met een streep van 18 px in de partijkleur, de Zetels (110 px, cijferletter), de korte naam (52 px, kopletter, Hoofd) en "zetels" eronder. Daarna staan in het plafond (y 236, 136 px hoog) de Partijlabels als kaartjes op één rij, in de volgorde van de Stoelen van links naar rechts, op één vlak (97 procent) zodat de Zaal er niet doorheen schijnt: per kaartje bovenaan een kleurteken van 56 bij 12 px in de partijkleur, op elk kaartje even breed, de Zetels (51 px) en de korte naam (34 px, Tekst). Elk kaartje is zo breed als zijn naam of getal nodig heeft, zodat een lange naam niet kleiner wordt. Geen ronding, ook niet in het Opbouwlabel. Tijdens de Opbouw dimmen de Partijen na hun stap naar 30 procent, zodat alleen de Partij van het label vol oplicht; na de laatste stap komen ze allemaal tegelijk terug. De camera staat stil op Standpunt A; de plekken passen daarbij en bij het eindbeeld van de Onthulling.
 
 ### Uitslag per Partij (#49, gebouwd)
 
@@ -114,7 +114,7 @@ Drie Sjablonen met dezelfde uitslag; de Regie wisselt ertussen in het scherm Ste
 - **Fracties voor en tegen**: `paneel` op x 96, y 196, 1728 bij 814 (onder het programmalogo), over de Zaal donker en onscherp, en het grote Blok Fractielijst: twee kolommen met een kop in de stemkleur ("101 voor"), zo breed als zijn aandeel, en daaronder per Fractie een tegel van 112 px hoog, drie naast elkaar: het partijlogo of de korte naam in wit op een neutraal vlak met links een streep in de partijkleur (40 px; een naam met een spatie op twee regels van hooguit 30 px, een lang woord kleiner), met eronder het aantal stemmen (30 px). Zo trekt een Fractie met één stem niet evenveel kleur als een met 26.
 - **Hoofdelijke stemming**: hetzelfde paneel met kicker "HOOFDELIJKE STEMMING" en het grote Blok Namenlijst als tabel in twee kolommen, voor links en tegen rechts, elk met een kop in de stemkleur zo breed als zijn aandeel; per Fractie een regel met haar label (neutraal vlak met een streep in de partijkleur, naam links, aantal Kamerleden dat zo stemde rechts), en alleen bij wie anders stemde dan de eigen Fractie de achternamen (Tekst 40 px). Staan er namen, dan zegt een regel onder de kortste kolom "Met naam: stemde anders dan de eigen fractie". Een verdeelde Fractie staat zo aan beide kanten. Alle 150 namen passen niet leesbaar in beeld; de Zaal toont elke stem op de Stoel. Past de lijst niet, dan wordt de letter kleiner. Standpunt G (Bovenaf).
 
-De tekstkleur op een partijkleur is Tekst of Vlak, op de helderheid van de partijkleur (`tekst_op`).
+De tekstkleur op een partijkleur of stemkleur is Tekst of Vlak, op de helderheid van die kleur (`tekst_op`): wit zolang wit minstens 3,5 keer zo licht is (relatieve luminantie tot 0,25), anders donker.
 
 ### Persoonskaart (gebouwd)
 

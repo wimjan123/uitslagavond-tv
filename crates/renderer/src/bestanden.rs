@@ -248,6 +248,23 @@ fn beeldsoort(naam: &str, b: &[u8]) -> String {
     }
 }
 
+/// Een portretfoto als beeld met een doorzichtige achtergrond ([`crate::vrijstaand`]).
+fn vrijstaande_foto(inhoud: &[u8]) -> Option<Image> {
+    use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
+    let foto = image::load_from_memory(inhoud).ok()?.to_rgb8();
+    let uit = crate::vrijstaand::maak_vrijstaand(&foto);
+    let (w, h) = uit.dimensions();
+    let mut b = Image::new(
+        Extent3d { width: w, height: h, depth_or_array_layers: 1 },
+        TextureDimension::D2,
+        uit.into_raw(),
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::RENDER_WORLD,
+    );
+    b.sampler = ImageSampler::linear();
+    Some(b)
+}
+
 /// Of de bytes een lettertype zijn (TrueType, OpenType of een collectie).
 fn is_lettertype(b: &[u8]) -> bool {
     matches!(b.get(..4), Some([0, 1, 0, 0] | b"OTTO" | b"true" | b"ttcf"))
@@ -270,6 +287,15 @@ fn ontvang(
             continue;
         }
         let soort = beeldsoort(&naam, &inhoud);
+        // een portretfoto vrijstaand, zonder zijn witte studio-achtergrond
+        if naam.starts_with("fotos/") {
+            if let Some(b) = vrijstaande_foto(&inhoud) {
+                let h = beelden.add(b);
+                bestanden.beelden.insert(naam.clone(), h);
+                info!("foto binnen: {naam}");
+                continue;
+            }
+        }
         match Image::from_buffer(
             &inhoud,
             ImageType::Extension(&soort),
