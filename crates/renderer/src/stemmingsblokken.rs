@@ -285,7 +285,8 @@ pub fn bouw(
                             tk
                         }
                         None => {
-                            commands.entity(vak).insert(gekleurd(kleur(f.kleur), dekking));
+                            commands.entity(vak).insert(gekleurd(NEUTRAAL, dekking));
+                            streep(commands, vak, kleur(f.kleur), dekking);
                             // een lange naam met een spatie loopt over twee regels in dezelfde
                             // letter; een lang woord krimpt
                             let twee_regels = f.kort.contains(' ');
@@ -296,7 +297,7 @@ pub fn bouw(
                             } else {
                                 g
                             };
-                            let t = tekst_deel(commands, bestanden, vak, &f.kort, letter, grootte, kleur(f.tekstkleur), Uitlijning::Midden, dekking);
+                            let t = tekst_deel(commands, bestanden, vak, &f.kort, letter, grootte, Color::WHITE, Uitlijning::Midden, dekking);
                             if twee_regels {
                                 commands.entity(t).insert(Node { max_width: Val::Px(tegel - 24.0), ..default() });
                             } else {
@@ -306,7 +307,7 @@ pub fn bouw(
                                     Krimp { grootte: g, breedte: tegel - 24.0 },
                                 ));
                             }
-                            kleur(f.tekstkleur)
+                            Color::WHITE
                         }
                     };
                     if f.stemmen > 0 {
@@ -327,6 +328,14 @@ pub fn bouw(
         } => {
             let g = f32::from(*grootte);
             commands.entity(binnen).insert(Node { overflow: Overflow::clip(), ..op(0.0, 0.0, Val::Px(b), Val::Px(h)) });
+            // Staan er namen, dan zegt een regel onderaan waarom: die stemden anders dan hun Fractie.
+            let met_namen = voor.iter().chain(tegen.iter()).any(|n| !n.namen.is_empty());
+            let uitleg = if met_namen { UITLEG_HOOG } else { 0.0 };
+            if met_namen {
+                let regel = commands.spawn((ChildOf(binnen), op(0.0, h - UITLEG_HOOG + 10.0, Val::Px(b), Val::Px(UITLEG_HOOG - 10.0)))).id();
+                let t = tekst_deel(commands, bestanden, regel, "Met naam: stemde anders dan de eigen fractie", naamletter, 30.0, blokkleur.with_alpha(0.75), Uitlijning::Links, dekking);
+                commands.entity(t).insert(TextLayout::no_wrap());
+            }
             // Twee kolommen, voor links en tegen rechts, als een tabel: elke Fractie op een eigen
             // regel met haar label (en aantal) en daarachter de namen van wie anders stemde. Past
             // het niet, dan krimpt alles.
@@ -339,7 +348,7 @@ pub fn bouw(
                         align_items: AlignItems::FlexStart,
                         ..op(0.0, 0.0, Val::Px(b), Val::Auto)
                     },
-                    Passend { basis: 0.0, ruimte: Vec2::new(b, h), schaal: 1.0 },
+                    Passend { basis: 0.0, ruimte: Vec2::new(b, h - uitleg), schaal: 1.0 },
                 ))
                 .id();
             let kolombreed = ((b - 48.0) / 2.0).floor();
@@ -397,18 +406,19 @@ pub fn bouw(
                             ChildOf(regel),
                             Node {
                                 min_width: Val::Px((kolombreed * 0.4).round()),
-                                padding: UiRect::axes(Val::Px(12.0), Val::Px(2.0)),
+                                padding: UiRect::new(Val::Px(12.0 + STREEP), Val::Px(12.0), Val::Px(2.0), Val::Px(2.0)),
                                 justify_content: JustifyContent::SpaceBetween,
                                 column_gap: Val::Px(12.0),
                                 flex_shrink: 0.0,
                                 ..default()
                             },
-                            gekleurd(kleur(fractie.kleur), dekking),
+                            gekleurd(NEUTRAAL, dekking),
                         ))
                         .id();
+                    streep(commands, vak, kleur(fractie.kleur), dekking);
                     let aantal = fractie.stemmen.to_string();
                     for t in [fractie.kort.as_str(), aantal.as_str()] {
-                        let e = tekst_deel(commands, bestanden, vak, t, letter, g, kleur(fractie.tekstkleur), Uitlijning::Links, dekking);
+                        let e = tekst_deel(commands, bestanden, vak, t, letter, g, Color::WHITE, Uitlijning::Links, dekking);
                         commands.entity(e).insert((TextLayout::no_wrap(), Passend::basis(g)));
                     }
                     let namen = namen.join(", ");
@@ -423,8 +433,9 @@ pub fn bouw(
     }
 }
 
-/// Een label: de korte naam in `letter` op de partijkleur, met deze binnenmarge (links en
-/// rechts, boven en onder).
+/// Een label: een neutraal vlak met links een streep in de partijkleur en de korte naam met het
+/// aantal stemmen in wit, met deze binnenmarge (links en rechts, boven en onder). Zo trekt een
+/// Fractie met één stem niet evenveel kleur als een met 26.
 #[allow(clippy::too_many_arguments)]
 fn label(
     commands: &mut Commands,
@@ -440,23 +451,48 @@ fn label(
         .spawn((
             ChildOf(ouder),
             Node {
-                padding: UiRect::axes(Val::Px(x), Val::Px(y)),
+                padding: UiRect::new(Val::Px(x + STREEP), Val::Px(x), Val::Px(y), Val::Px(y)),
                 flex_shrink: 0.0,
                 ..default()
             },
-            gekleurd(kleur(f.kleur), dekking),
+            gekleurd(NEUTRAAL, dekking),
         ))
         .id();
-    let t = tekst_deel(commands, bestanden, vak, &naam_met_aantal(f), letter, grootte.round(), kleur(f.tekstkleur), Uitlijning::Links, dekking);
+    streep(commands, vak, kleur(f.kleur), dekking);
+    let t = tekst_deel(commands, bestanden, vak, &naam_met_aantal(f), letter, grootte.round(), Color::WHITE, Uitlijning::Links, dekking);
     commands.entity(t).insert((TextLayout::no_wrap(), Passend::basis(grootte.round())));
     vak
 }
 
-/// De korte naam, en bij een verdeelde Fractie het aantal Kamerleden aan deze kant erachter.
+/// De hoogte van de uitleg onder de Namenlijst.
+const UITLEG_HOOG: f32 = 54.0;
+
+/// De ondergrond van een label of tegel van een Fractie: wit op 10 procent over het paneel.
+const NEUTRAAL: Color = Color::srgba(1.0, 1.0, 1.0, 0.10);
+/// De streep in de partijkleur links in een label of tegel.
+const STREEP: f32 = 10.0;
+
+/// Een streep in de partijkleur over de volle hoogte, links in `vak`.
+fn streep(commands: &mut Commands, vak: Entity, kl: Color, dekking: f32) {
+    commands.spawn((
+        ChildOf(vak),
+        Node {
+            position_type: PositionType::Absolute,
+            left: Val::Px(0.0),
+            top: Val::Px(0.0),
+            bottom: Val::Px(0.0),
+            width: Val::Px(STREEP),
+            ..default()
+        },
+        gekleurd(kl, dekking),
+    ));
+}
+
+/// De korte naam met het aantal Kamerleden dat aan deze kant stemde erachter.
 fn naam_met_aantal(f: &Fractielabel) -> String {
-    match f.aantal {
-        Some(a) => format!("{}\u{2002}{a}", f.kort),
-        None => f.kort.clone(),
+    match f.stemmen {
+        0 => f.kort.clone(),
+        n => format!("{}\u{2002}{n}", f.kort),
     }
 }
 
