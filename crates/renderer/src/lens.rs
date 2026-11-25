@@ -44,7 +44,7 @@ const HELEMAAL_GRADEN: f32 = 40.0;
 const DIAFRAGMA: f32 = 0.25;
 /// Bij een volle close-up is de occlusie sterker en dichter bij: contactschaduw onder bureaus en
 /// Stoelen, die in een wijd shot te zwaar zou zijn.
-const OCCLUSIE_EXTRA: f32 = 0.3;
+const OCCLUSIE_EXTRA: f32 = 0.45;
 const OCCLUSIE_STRAAL_DICHTBIJ: f32 = 0.35;
 /// Nooit onscherper dan dit, in pixels.
 const MEESTE_ONSCHERPTE: f32 = 20.0;
@@ -52,6 +52,9 @@ const MEESTE_ONSCHERPTE: f32 = 20.0;
 /// de Stoel en de bureaus niet eerder het oog trekken dan het gezicht op de kaart (council-ronde 5).
 const DIAFRAGMA_PERSOON: f32 = 0.14;
 const MEESTE_ONSCHERPTE_PERSOON: f32 = 30.0;
+/// Bij de Persoonskaart wordt wat voor de Stoel staat (het bureau vooraan) zoveel donkerder: het
+/// trok met de lege Stoel eerder het oog dan het portret (council-ronde 6).
+const VOORGROND_PERSOON: f32 = 0.85;
 /// Alleen in de Zaal: onder het plafond.
 const ONDER_Y: f32 = 5.0;
 
@@ -102,11 +105,11 @@ fn stel_scherpte_bij(
     mut nabijheid: ResMut<Nabijheid>,
 ) {
     let b = &crate::beeld::BEELD;
-    for (e, plek, projectie, nu, occlusie, zaal_onscherp) in &mut camera {
+    for (e, plek, projectie, nu, mut occlusie, zaal_onscherp) in &mut camera {
         let Projection::Perspective(p) = projectie else { continue };
         let s = sterkte(p.fov, plek.translation.y);
         nabijheid.set_if_neq(Nabijheid(s));
-        if let Some(mut o) = occlusie {
+        if let Some(o) = occlusie.as_mut() {
             let (sterk, straal) = (b.occlusie + OCCLUSIE_EXTRA * s, b.occlusie_straal + (OCCLUSIE_STRAAL_DICHTBIJ - b.occlusie_straal) * s);
             if o.sterkte != sterk || o.straal != straal {
                 (o.sterkte, o.straal) = (sterk, straal);
@@ -117,6 +120,12 @@ fn stel_scherpte_bij(
         }
         let afstand = (s > 0.0).then(|| scherp_op(plek, p.fov, uitlichting.stoel)).flatten();
         let persoon = uitlichting.sterkte();
+        if let Some(o) = occlusie.as_mut() {
+            let (voor, donker) = (afstand.unwrap_or(0.0), VOORGROND_PERSOON * persoon * s);
+            if o.voorgrond != voor || o.voorgrond_donker != donker {
+                (o.voorgrond, o.voorgrond_donker) = (voor, donker);
+            }
+        }
         match afstand {
             Some(afstand) => {
                 let dof = DepthOfField {
