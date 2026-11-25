@@ -627,8 +627,12 @@ impl Stand {
                     stijl: self.stijl.clone(),
                     sjabloon: self.sjabloon(&klaar.graphic.sjabloon_id()).map(Cow::into_owned),
                 };
-                // Een nieuwe Graphic tonen beweegt de camera naar haar Standpunt.
-                self.kies_standpunt(&ether.standpunt(), false, h);
+                // Een nieuwe Graphic tonen beweegt de camera naar haar Standpunt, behalve als
+                // de camera blijft staan.
+                let letter = ether.standpunt();
+                if letter != camera::BLIJF {
+                    self.kies_standpunt(&letter, false, h);
+                }
                 if let Some(k) = ether.stoelkleuren() {
                     self.stoelkleuren = k;
                     self.kleurovergang = ether.kleurovergang();
@@ -658,7 +662,7 @@ impl Stand {
                     self.stoelkleuren = k;
                     self.kleurovergang = ether.kleurovergang().bij_bijwerken();
                 }
-                if ander_standpunt {
+                if ander_standpunt && klaar.standpunt() != camera::BLIJF {
                     let letter = klaar.standpunt().into_owned();
                     self.kies_standpunt(&letter, false, h);
                 }
@@ -684,6 +688,10 @@ impl Stand {
                     sjabloon::Kleurovergang { vorm: sjabloon::Overgangsvorm::Vervagen, duur_ms: OPBOUW_OVERSLAAN_MS };
             }
             Opdracht::KiesStandpunt { letter, knip } => {
+                // "Camera blijft staan" is een keuze voor een Graphic, geen plek om heen te gaan
+                if letter == camera::BLIJF {
+                    return Err(Weigering::OnbekendStandpunt(letter.clone()));
+                }
                 self.controleer_standpunt(Some(letter))?;
                 // Aanschuiven gaat naar de Partij van de Graphic in de Ether
                 let letter = match (letter.as_str(), &self.ether) {
@@ -1125,8 +1133,10 @@ impl Stand {
     }
 
     /// Waar de camera staat bij dit Standpunt, aan het begin van deze Camerarit, of bij het shot
-    /// van deze Stoel ([`camera::stoelsleutel`]).
+    /// van deze Stoel ([`camera::stoelsleutel`]). Bij [`camera::BLIJF`]: die van het Standpunt van
+    /// de Ether.
     pub fn camerastand_van(&self, letter: &str) -> Option<Camerastand> {
+        let letter = if letter == camera::BLIJF { self.camera.standpunt.as_str() } else { letter };
         self.standpunt(letter)
             .map(|s| s.stand)
             .or_else(|| self.camerarit(letter).and_then(Camerarit::beginstand))
@@ -1134,7 +1144,8 @@ impl Stand {
             .or_else(|| camera::aanschuif_uit_sleutel(letter).and_then(|(van, tot)| camera::aanschuif_stand(van, tot)))
     }
 
-    /// Of er een Standpunt, Camerarit of Stoel met deze sleutel is (geen sleutel mag ook).
+    /// Of er een Standpunt, Camerarit of Stoel met deze sleutel is, of Aanschuiven of Camera
+    /// blijft staan (geen sleutel mag ook).
     fn controleer_standpunt(&self, letter: Option<&str>) -> Result<(), Weigering> {
         match letter {
             Some(l)
@@ -1142,6 +1153,7 @@ impl Stand {
                     && self.camerarit(l).is_none()
                     && camera::stoel_uit_sleutel(l).is_none()
                     && l != camera::AANSCHUIVEN
+                    && l != camera::BLIJF
                     && camera::aanschuif_uit_sleutel(l).is_none() =>
             {
                 Err(Weigering::OnbekendStandpunt(l.into()))
