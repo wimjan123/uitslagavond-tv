@@ -2,7 +2,7 @@
 
 Een Stream Deck stuurt dezelfde Opdrachten als het dashboard, over HTTP. Daar zit [Bitfocus Companion](https://bitfocus.io/companion) tussen, met de module **Generic HTTP**. Geen OSC.
 
-Wat een knop kan: een Preset klaarzetten, Toon, Bijwerken, Uit beeld, Kleur uit, een Standpunt of Camerarit kiezen en de Vrije camera aan- of uitzetten. Elke knopdruk staat in het logboek van de server, met de naam van de knop.
+Wat een knop kan: een Preset klaarzetten, Toon, Bijwerken, Uit beeld, Kleur uit, Opbouw overslaan, een Standpunt of Camerarit kiezen en de Vrije camera aan- of uitzetten. Elke knopdruk staat in het logboek van de server, met de naam van de knop.
 
 ## Installeren
 
@@ -39,6 +39,7 @@ Elke knop is een **POST** naar `api/opdracht` met **Content Type** `application/
 | Bijwerken | `api/opdracht` | `{"soort":"Bijwerken"}` |
 | Uit beeld | `api/opdracht` | `{"soort":"UitBeeld"}` |
 | Kleur uit (zoals Z) | `api/opdracht` | `{"soort":"KleurUit"}` |
+| Opbouw overslaan (zoals C) | `api/opdracht` | `{"soort":"SlaOpbouwOver"}` |
 | Standpunt D (bewegen) | `api/opdracht` | `{"soort":"KiesStandpunt","letter":"D"}` |
 | Standpunt D (knippen, zoals Shift+D) | `api/opdracht` | `{"soort":"KiesStandpunt","letter":"D","knip":true}` |
 | Vrije camera om (zoals V) | `api/vrije-camera/wissel` | leeg |

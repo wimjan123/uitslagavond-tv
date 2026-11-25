@@ -130,7 +130,7 @@ pub enum Overgangsvorm {
 }
 
 /// De kleur van de Stoelen die in een Opbouw nog niet aan de beurt zijn.
-pub const OPBOUW_WACHTKLEUR: Kleur = Kleur { r: 0x3a, g: 0x3f, b: 0x4b };
+pub const OPBOUW_WACHTKLEUR: Kleur = Kleur { r: 0x30, g: 0x30, b: 0x30 };
 
 /// De kortste en langste Kleurovergang, in milliseconden.
 pub const MIN_KLEUROVERGANG_MS: u16 = 100;
