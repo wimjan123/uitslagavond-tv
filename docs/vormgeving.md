@@ -122,6 +122,10 @@ Een zijpaneel rechts tot de rand van het beeld (x 1166, 754 breed): bovenaan een
 
 Gebouwd met het nieuwe Blok **Partijregel** (het Partijlogo of de korte naam op een vlak in de partijkleur dat om de naam past, met de functie erachter op één regel). De naam en de regel met extra gegevens blijven op één regel (`een_regel` op een Tekst) en krijgen een kleinere letter als ze niet passen; de vrije regel mag over twee regels lopen. Het streepje voor de vrije regel verdwijnt als die leeg is (`bij_tekst` op een Vlak). Op een donkere partijkleur staan de voorletters in wit.
 
+## Stoelen in de Zaal
+
+De **Kleurovergang** en de **Kleurkracht** staan in de Stijl (`Stijl::kleurovergang`, `Stijl::kleurkracht`). De standaard: een Golf van links naar rechts van 1 seconde (Vervagen: 1,5 seconde) en Kleurkracht 50. Bij Kleurkracht 50 houdt de rest van de Zaal ongeveer een derde van zijn licht over zolang er Stoelen gekleurd zijn, bij 100 een tiende; het leer straalt zacht in zijn eigen kleur, zodat de kleur ook vol blijft waar de bak donker is. Een Sjabloon kan een eigen Kleurovergang hebben (`Sjabloon::kleurovergang`).
+
 ## Programmalogo
 
 Het programmalogo is merkmateriaal en zit daarom niet in de software. De standaard-Stijl noemt het bestand `programmalogo.png` in de map `bestanden` van de server (`data/bestanden/programmalogo.png`): leg daar het logo neer, wit op doorzichtig, als PNG. De Renderers halen het op en tonen het als bug rechtsboven. Zonder dat bestand staat de tekst "Uitslagavond" in de kopletter op die plek. In het dashboard kan de Regie onder Vormgeving > Stijl ook een ander logo plaatsen; dat krijgt een eigen naam bij zijn inhoud.
@@ -136,7 +140,7 @@ Onder **Vormgeving > Sjablonen** in het dashboard (#62). Eén blokkeneditor voor
 
 - **Links** de lijst: eerst de vaste Sjablonen (met de stempel Aangepast als de omroep er een aanpaste, en Nieuwe standaard als de software sindsdien met een andere standaard kwam), dan de eigen Sjablonen en de knop Nieuw Sjabloon.
 - **In het midden** een schets van het beeld (1920 bij 1080) met de Blokken in de kleuren van de Stijl. Klik kiest een Blok, slepen verplaatst het, het hoekje rechtsonder maakt het groter of kleiner. Daaronder de Blokken op volgorde (het eerste ligt achteraan), met Blok toevoegen (de acht gewone Blokken), Naar voren, Naar achteren, Kopie en Wis Blok. Een naambalk die om de tekst van andere Blokken past, schuift mee.
-- **Rechts** de instellingen van het gekozen Blok (plek en grootte in pixels, kleur uit de Stijl of eigen, lettertype en grootte, de inhoud, animatie in en uit en "start na" in seconden) of van **heel het Sjabloon**: naam, achtergrond, wat de Stoelen doen, het standaard Standpunt of de standaard Camerarit, en de snelheid bovenop die van de Stijl.
+- **Rechts** de instellingen van het gekozen Blok (plek en grootte in pixels, kleur uit de Stijl of eigen, lettertype en grootte, de inhoud, animatie in en uit en "start na" in seconden) of van **heel het Sjabloon**: naam, achtergrond, wat de Stoelen doen (kleuren volgens de gegevens, gekozen Partij uitgelicht, houden of uit), een eigen Kleurovergang of die van de Stijl, het standaard Standpunt of de standaard Camerarit, en de snelheid bovenop die van de Stijl.
 
 De achtergrond is de Zaal, de Zaal donker en onscherp (een zwart vlak op 80 procent, dus ongeveer half zo licht, en vaag met scherptediepte op de camera; de Graphic zelf blijft scherp), een eigen kleur of een eigen afbeelding (PNG of JPEG, geplaatst via `POST /api/bestand`). De Renderer tekent hem als eerste Blok, dat vervaagt (`Sjabloon::met_achtergrond`). De Regie kan de achtergrond niet per Graphic veranderen.
 

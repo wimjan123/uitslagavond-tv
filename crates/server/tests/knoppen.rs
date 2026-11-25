@@ -241,7 +241,7 @@ async fn knopstatus_zegt_per_veld_wat_klaarstaat_en_wat_in_beeld_is() {
     let r = reqwest::Client::new().get(url(&server, "/api/knoppen")).bearer_auth(SLEUTEL).send().await.unwrap();
     let alles: Value = r.json().await.unwrap();
     assert_eq!(alles["in_beeld"], "ja");
-    let r = reqwest::Client::new().get(url(&server, "/api/knoppen/kleur")).bearer_auth(SLEUTEL).send().await.unwrap();
+    let r = reqwest::Client::new().get(url(&server, "/api/knoppen/onbekend")).bearer_auth(SLEUTEL).send().await.unwrap();
     assert_eq!(r.status(), StatusCode::NOT_FOUND);
 }
 
@@ -266,4 +266,23 @@ async fn wisselknop_zet_de_vrije_camera_om_zoals_v_op_het_dashboard() {
     let (status, _) = druk(&server, "/api/vrije-camera/wissel", None).await;
     assert_eq!(status, StatusCode::OK);
     assert!(!stand(&server).await.stand.camera.vrij);
+}
+
+#[tokio::test]
+async fn knop_kleur_uit_geeft_de_stoelen_hun_eigen_leer_terug() {
+    let map = tempfile::tempdir().unwrap();
+    let server = start(map.path()).await;
+    assert_eq!(veld(&server, "kleur").await, "uit");
+
+    let rood = "#d4202c".parse().unwrap();
+    voer_uit(&server, Opdracht::ZetStoelkleuren { kleuren: vec![rood; 150] }).await;
+    assert_eq!(veld(&server, "kleur").await, "aan");
+
+    druk_ok(&server, "/api/opdracht", json!({"soort": "KleurUit"})).await;
+    assert_eq!(veld(&server, "kleur").await, "uit");
+    assert!(stand(&server).await.stand.stoelkleuren.is_empty());
+
+    // nog eens: er is niets meer uit te zetten
+    let (status, _) = druk(&server, "/api/opdracht", Some(json!({"soort": "KleurUit"}))).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
 }

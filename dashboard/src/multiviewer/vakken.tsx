@@ -112,6 +112,14 @@ function Take() {
       <button className="knop knop-take" disabled={!verbonden || !kan("UitBeeld", s)} onClick={() => voerUit(regie, "UitBeeld")}>
         Uit beeld <kbd>X</kbd>
       </button>
+      <button
+        className="knop knop-take"
+        disabled={!verbonden || !kan("KleurUit", s)}
+        onClick={() => voerUit(regie, "KleurUit")}
+        title="De Stoelen in de Ether krijgen hun eigen leer terug; de Graphic blijft staan"
+      >
+        Kleur uit <kbd>Z</kbd>
+      </button>
       {melding && (
         <p className="take-melding" role="alert">
           {melding}

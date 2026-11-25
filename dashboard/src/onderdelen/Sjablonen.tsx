@@ -17,7 +17,7 @@ import type { Stijlkleur } from "../typen/Stijlkleur";
 import type { Stijlletter } from "../typen/Stijlletter";
 import type { Tekstbron } from "../typen/Tekstbron";
 import type { Uitlijning } from "../typen/Uitlijning";
-import { MAX_SNELHEID, MIN_SNELHEID } from "../typen/standaardStijl";
+import { MAX_SNELHEID, MIN_SNELHEID, STANDAARD_STIJL } from "../typen/standaardStijl";
 import {
   ACHTERGRONDEN,
   BLOKNAMEN,
@@ -38,6 +38,7 @@ import {
   wisBlok,
 } from "../vormgeving/sjablonen";
 import { letterKeuzes, letterNaam } from "../vormgeving/stijl";
+import { KleurovergangKeuze } from "./KleurovergangKeuze";
 import { Kiezer, useBestand } from "./Vormgeving";
 
 const VORMGEVING = "vormgeving";
@@ -304,11 +305,12 @@ export function SjablonenDeel() {
   );
 }
 
-/** De instellingen van het hele Sjabloon: naam, achtergrond, Stoelen, Standpunt en snelheid. */
+/** De instellingen van het hele Sjabloon: naam, achtergrond, Stoelen en hun Kleurovergang, Standpunt en snelheid. */
 function SjabloonVelden({ sjabloon: s, vast, zet }: { sjabloon: Sjabloon; vast: boolean; zet(s: Sjabloon): void }) {
   const regie = useRegie();
   const stand = regie.stand?.stand;
   const keuzes = cameraKeuzes(stand?.standpunten ?? [], stand?.cameraritten ?? []);
+  const stijlOvergang = (stand?.stijl ?? STANDAARD_STIJL).kleurovergang;
   const wijzig = (w: (s: Sjabloon) => void) => {
     const n = structuredClone(s);
     w(n);
@@ -365,6 +367,19 @@ function SjabloonVelden({ sjabloon: s, vast, zet }: { sjabloon: Sjabloon; vast: 
           ))}
         </select>
       </label>
+      <div className="veld">
+        <label className="veld">
+          <span className="label">Kleurovergang</span>
+          <select
+            value={s.kleurovergang ? "eigen" : "stijl"}
+            onChange={(e) => wijzig((n) => (n.kleurovergang = e.target.value === "eigen" ? structuredClone(stijlOvergang) : undefined))}
+          >
+            <option value="stijl">Zoals de Stijl ({stijlOvergang.vorm === "Golf" ? "Golf" : "Vervagen"})</option>
+            <option value="eigen">Eigen Kleurovergang</option>
+          </select>
+        </label>
+        {s.kleurovergang && <KleurovergangKeuze waarde={s.kleurovergang} zet={(k) => wijzig((n) => (n.kleurovergang = k))} />}
+      </div>
       <label className="veld">
         <span className="veld-kop">
           <span className="label">Standpunt</span>

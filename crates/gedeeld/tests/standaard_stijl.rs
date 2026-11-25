@@ -1,11 +1,16 @@
 //! Het dashboard krijgt de standaard-Stijl en de grenzen van de Stijl uit deze crate, zoals de
 //! typen: `cargo test -p gedeeld` schrijft ze naar `dashboard/src/typen/standaardStijl.ts`.
 
-use gedeeld::sjabloon::{INGEBOUWD, MAX_LOGOTEKST, MAX_SNELHEID, MIN_SNELHEID, Stijl};
+use gedeeld::sjabloon::{
+    INGEBOUWD, Kleurovergang, MAX_KLEUROVERGANG_MS, MAX_LOGOTEKST, MAX_SNELHEID, MIN_KLEUROVERGANG_MS, MIN_SNELHEID,
+    Overgangsvorm, Stijl,
+};
 
 fn inhoud() -> String {
     let stijl = serde_json::to_string_pretty(&Stijl::default()).unwrap();
     let letters = serde_json::to_string(&INGEBOUWD).unwrap();
+    let golf = Kleurovergang::standaard(Overgangsvorm::Golf).duur_ms;
+    let vervagen = Kleurovergang::standaard(Overgangsvorm::Vervagen).duur_ms;
     format!(
         "// Gemaakt door `cargo test -p gedeeld` (crates/gedeeld/tests/standaard_stijl.rs). Niet met de hand wijzigen.\n\
          import type {{ Stijl }} from \"./Stijl\";\n\n\
@@ -17,7 +22,11 @@ fn inhoud() -> String {
          export const MIN_SNELHEID = {MIN_SNELHEID};\n\
          export const MAX_SNELHEID = {MAX_SNELHEID};\n\n\
          /** Langste tekst van het programmalogo zonder beeld, in tekens. */\n\
-         export const MAX_LOGOTEKST = {MAX_LOGOTEKST};\n"
+         export const MAX_LOGOTEKST = {MAX_LOGOTEKST};\n\n\
+         /** De kortste en langste Kleurovergang, en de standaardduur per vorm, in milliseconden. */\n\
+         export const MIN_KLEUROVERGANG_MS = {MIN_KLEUROVERGANG_MS};\n\
+         export const MAX_KLEUROVERGANG_MS = {MAX_KLEUROVERGANG_MS};\n\
+         export const STANDAARD_KLEUROVERGANG_MS = {{ Golf: {golf}, Vervagen: {vervagen} }} as const;\n"
     )
 }
 

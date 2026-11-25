@@ -2,7 +2,7 @@
 
 Een Stream Deck stuurt dezelfde Opdrachten als het dashboard, over HTTP. Daar zit [Bitfocus Companion](https://bitfocus.io/companion) tussen, met de module **Generic HTTP**. Geen OSC.
 
-Wat een knop kan: een Preset klaarzetten, Toon, Bijwerken, Uit beeld, een Standpunt of Camerarit kiezen en de Vrije camera aan- of uitzetten. Elke knopdruk staat in het logboek van de server, met de naam van de knop.
+Wat een knop kan: een Preset klaarzetten, Toon, Bijwerken, Uit beeld, Kleur uit, een Standpunt of Camerarit kiezen en de Vrije camera aan- of uitzetten. Elke knopdruk staat in het logboek van de server, met de naam van de knop.
 
 ## Installeren
 
@@ -38,6 +38,7 @@ Elke knop is een **POST** naar `api/opdracht` met **Content Type** `application/
 | Toon | `api/opdracht` | `{"soort":"Toon"}` |
 | Bijwerken | `api/opdracht` | `{"soort":"Bijwerken"}` |
 | Uit beeld | `api/opdracht` | `{"soort":"UitBeeld"}` |
+| Kleur uit (zoals Z) | `api/opdracht` | `{"soort":"KleurUit"}` |
 | Standpunt D (bewegen) | `api/opdracht` | `{"soort":"KiesStandpunt","letter":"D"}` |
 | Standpunt D (knippen, zoals Shift+D) | `api/opdracht` | `{"soort":"KiesStandpunt","letter":"D","knip":true}` |
 | Vrije camera om (zoals V) | `api/vrije-camera/wissel` | leeg |
@@ -64,6 +65,7 @@ De server geeft per veld een korte tekst, zodat Companion een knop kan kleuren o
 | `preset_live` | het nummer van de Preset in de Ether, anders leeg |
 | `standpunt` | de letter van het laatst gekozen Standpunt of de laatste Camerarit |
 | `vrije_camera` | `aan` of `uit` |
+| `kleur` | `aan` als de Stoelen in de Ether gekleurd zijn, `uit` bij hun eigen blauwe leer |
 
 - Eén veld: **GET** `api/knoppen/kan_tonen` (antwoord: `ja`, platte tekst). Alle velden tegelijk: **GET** `api/knoppen` (JSON).
 - Zo werkt het in Companion:

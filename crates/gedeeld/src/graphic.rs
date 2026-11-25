@@ -435,6 +435,7 @@ impl Graphic {
         match stoelen {
             Stoelen::Gegevens => self.stoelkleuren(),
             Stoelen::Houden => None,
+            Stoelen::Uit => Some(Vec::new()),
             Stoelen::PartijUitgelicht => {
                 let (partij, cijfers) = (self.partij()?, self.zetelstand()?);
                 Some(cijfers.stoelkleuren_van(partij))
@@ -604,6 +605,11 @@ impl GraphicInBeeld {
     /// de kleuren van de vorige Graphic.
     pub fn stoelkleuren(&self) -> Option<Vec<crate::Kleur>> {
         self.graphic.stoelkleuren_in(self.sjabloon.as_ref().map(|s| s.stoelen).unwrap_or_default())
+    }
+
+    /// De Kleurovergang van het Sjabloon van deze Graphic, of anders die van haar Stijl.
+    pub fn kleurovergang(&self) -> crate::sjabloon::Kleurovergang {
+        self.sjabloon.as_ref().and_then(|s| s.kleurovergang).unwrap_or(self.stijl.kleurovergang)
     }
 }
 

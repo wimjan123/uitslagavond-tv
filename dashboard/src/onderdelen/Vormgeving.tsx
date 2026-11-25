@@ -6,6 +6,7 @@ import { useRegie } from "../regie/regie";
 import { MAX_LOGOTEKST, MAX_SNELHEID, MIN_SNELHEID, STANDAARD_STIJL } from "../typen/standaardStijl";
 import type { Stijl } from "../typen/Stijl";
 import { KLEUREN, LETTERS, fout, gewijzigd, letterKeuzes, letterNaam } from "../vormgeving/stijl";
+import { KleurovergangKeuze } from "./KleurovergangKeuze";
 import { SjablonenDeel } from "./Sjablonen";
 import { Werkbalk } from "./Werkbalk";
 import "./vormgeving.css";
@@ -182,7 +183,36 @@ function StijlDeel() {
             <span className="zacht">Snel</span>
             <span className="stijl-procent">{stijl.snelheid}%</span>
           </div>
-          <p className="zacht">Alle animaties en de kleurgolf in de Zaal. 100% is normaal; een Sjabloon kan daar nog een eigen snelheid bovenop hebben.</p>
+          <p className="zacht">Alle animaties en de Kleurovergang in de Zaal. 100% is normaal; een Sjabloon kan daar nog een eigen snelheid bovenop hebben.</p>
+        </section>
+
+        <section className="stijl-deel">
+          <h3 className="label">Stoelen in de Zaal</h3>
+          <div className="veld">
+            <span className="veld-kop">
+              <span className="label">Kleurovergang</span>
+              <span className="zacht">een Sjabloon kan een eigen hebben</span>
+            </span>
+            <KleurovergangKeuze waarde={stijl.kleurovergang} zet={(k) => zet((s) => (s.kleurovergang = k))} />
+          </div>
+          <div className="veld">
+            <span className="label">Kleurkracht</span>
+            <div className="stijl-snelheid">
+              <span className="zacht">Zacht</span>
+              <input
+                type="range"
+                aria-label="Kleurkracht van de Stoelen"
+                min={0}
+                max={100}
+                step={5}
+                value={stijl.kleurkracht}
+                onChange={(e) => zet((s) => (s.kleurkracht = Number(e.target.value)))}
+              />
+              <span className="zacht">Krachtig</span>
+              <span className="stijl-procent">{stijl.kleurkracht}%</span>
+            </div>
+          </div>
+          <p className="zacht">Hoe hoger, hoe voller de kleur van de Stoelen en hoe donkerder de rest van de Zaal zolang ze gekleurd zijn.</p>
         </section>
       </div>
 

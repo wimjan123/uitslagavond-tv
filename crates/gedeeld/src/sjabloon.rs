@@ -58,7 +58,69 @@ pub struct Stijl {
     /// de standaard.
     #[serde(default)]
     pub beweging: Beweging,
+    /// Hoe de Stoelen van kleur wisselen. Een Sjabloon kan een eigen Kleurovergang hebben.
+    #[serde(default)]
+    pub kleurovergang: Kleurovergang,
+    /// De Kleurkracht in procent: 0 toont de kleur zoals het leer hem in de Zaal geeft, 100 de
+    /// volste kleur met de rest van de Zaal het donkerst. Een Stand van vóór de Kleurkracht
+    /// krijgt de standaard.
+    #[serde(default = "standaard_kleurkracht")]
+    pub kleurkracht: u8,
 }
+
+/// De Kleurkracht van de standaardstijl, in procent.
+pub const KLEURKRACHT: u8 = 50;
+
+fn standaard_kleurkracht() -> u8 {
+    KLEURKRACHT
+}
+
+/// Hoe de Stoelen van kleur wisselen (de Kleurovergang), bij snelheid 100. De snelheid van de
+/// Stijl maakt hem korter of langer.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[ts(export)]
+pub struct Kleurovergang {
+    pub vorm: Overgangsvorm,
+    /// Hoe lang de hele overgang duurt, in milliseconden.
+    pub duur_ms: u16,
+}
+
+impl Default for Kleurovergang {
+    fn default() -> Self {
+        Kleurovergang::standaard(Overgangsvorm::Golf)
+    }
+}
+
+impl Kleurovergang {
+    /// De standaard van een vorm: de Golf duurt een seconde, Vervagen anderhalve.
+    pub fn standaard(vorm: Overgangsvorm) -> Self {
+        let duur_ms = match vorm {
+            Overgangsvorm::Golf => 1000,
+            Overgangsvorm::Vervagen => 1500,
+        };
+        Kleurovergang { vorm, duur_ms }
+    }
+
+    /// Of de duur tussen [`MIN_KLEUROVERGANG_MS`] en [`MAX_KLEUROVERGANG_MS`] ligt.
+    pub fn kan(&self) -> bool {
+        (MIN_KLEUROVERGANG_MS..=MAX_KLEUROVERGANG_MS).contains(&self.duur_ms)
+    }
+}
+
+/// De vorm van een Kleurovergang.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, Default, PartialEq, Eq)]
+#[ts(export)]
+pub enum Overgangsvorm {
+    /// Van links naar rechts in beeld: elke Stoel vloeit over als de golf hem bereikt.
+    #[default]
+    Golf,
+    /// Alle Stoelen tegelijk.
+    Vervagen,
+}
+
+/// De kortste en langste Kleurovergang, in milliseconden.
+pub const MIN_KLEUROVERGANG_MS: u16 = 100;
+pub const MAX_KLEUROVERGANG_MS: u16 = 10_000;
 
 /// De tijden en maten van de animaties van de Blokken, bij snelheid 100. Welke animatie een
 /// Blok krijgt, kiest het Sjabloon ([`Animatie`]); hoe die animatie loopt, staat hier.
@@ -176,6 +238,8 @@ impl Default for Stijl {
             },
             snelheid: 100,
             beweging: Beweging::default(),
+            kleurovergang: Kleurovergang::default(),
+            kleurkracht: KLEURKRACHT,
         }
     }
 }
@@ -197,6 +261,10 @@ pub enum StijlWeigering {
     LogotekstTeLang,
     #[error("de beweging klopt niet: {0}")]
     Beweging(&'static str),
+    #[error("de Kleurovergang duurt {0} ms; kies tussen {MIN_KLEUROVERGANG_MS} en {MAX_KLEUROVERGANG_MS}")]
+    Kleurovergang(u16),
+    #[error("de Kleurkracht is {0} procent; kies tussen 0 en 100")]
+    Kleurkracht(u8),
 }
 
 /// De eerste standaardstijl (tot 22 november 2026), zoals een oude stand.json hem bewaarde.
@@ -218,6 +286,8 @@ fn oude_standaard() -> Stijl {
         programmalogo: Programmalogo { bestand: None, tekst: "UITSLAGAVOND".into() },
         snelheid: 100,
         beweging: Beweging::default(),
+        kleurovergang: Kleurovergang::default(),
+        kleurkracht: KLEURKRACHT,
     }
 }
 
@@ -273,6 +343,12 @@ impl Stijl {
         }
         if self.programmalogo.tekst.chars().count() > MAX_LOGOTEKST {
             return Err(StijlWeigering::LogotekstTeLang);
+        }
+        if !self.kleurovergang.kan() {
+            return Err(StijlWeigering::Kleurovergang(self.kleurovergang.duur_ms));
+        }
+        if self.kleurkracht > 100 {
+            return Err(StijlWeigering::Kleurkracht(self.kleurkracht));
         }
         self.beweging.controleer().map_err(StijlWeigering::Beweging)
     }
@@ -772,6 +848,10 @@ pub struct Sjabloon {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub standpunt: Option<String>,
+    /// Een eigen Kleurovergang voor de Stoelen. Zonder: die van de Stijl.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub kleurovergang: Option<Kleurovergang>,
 }
 
 /// Wat er achter de Blokken van een Sjabloon te zien is.
@@ -807,6 +887,8 @@ pub enum Stoelen {
     PartijUitgelicht,
     /// Ze houden de kleuren van de vorige Graphic.
     Houden,
+    /// Ze krijgen hun eigen leer terug, net als bij Kleur uit.
+    Uit,
 }
 
 /// Wat een Graphic invult: de waarden van de invulvelden en de keuzes van de Regie.
@@ -1919,6 +2001,7 @@ fn titelkaart() -> Sjabloon {
             // 4: het programmalogo
             programmabug(),
         ],
+        kleurovergang: None,
     }
 }
 
@@ -1957,6 +2040,7 @@ fn zetelverdeling() -> Sjabloon {
                 animatie: animatie(Erin::OpenenVanuitLijn, Eruit::SluitenNaarLijn, 0),
             },
         ],
+        kleurovergang: None,
     }
 }
 
@@ -2084,6 +2168,7 @@ fn persoonskaart() -> Sjabloon {
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken,
+        kleurovergang: None,
     }
 }
 
@@ -2162,6 +2247,7 @@ fn uitslag_stemming() -> Sjabloon {
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken,
+        kleurovergang: None,
     }
 }
 
@@ -2191,6 +2277,7 @@ fn groot_stemmingspaneel(id: &str, naam: &str, kicker_tekst: &str, groot: Blokso
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken,
+        kleurovergang: None,
     }
 }
 
@@ -2294,6 +2381,7 @@ fn zetelbalk_sjabloon() -> Sjabloon {
             zetelbalk_blok(plek(144, 872, 1632, 52), false, false),
             programmabug(),
         ],
+        kleurovergang: None,
     }
 }
 
@@ -2323,6 +2411,7 @@ fn twee_sets() -> Sjabloon {
             zetelbalk_blok(plek(144, 832, 1632, 52), false, true),
             programmabug(),
         ],
+        kleurovergang: None,
     }
 }
 
@@ -2362,6 +2451,7 @@ fn uitslag_per_partij() -> Sjabloon {
             },
             programmabug(),
         ],
+        kleurovergang: None,
     }
 }
 
@@ -2402,6 +2492,7 @@ fn winst_en_verlies() -> Sjabloon {
             },
             programmabug(),
         ],
+        kleurovergang: None,
     }
 }
 
@@ -2443,6 +2534,7 @@ fn partij_uitgelicht() -> Sjabloon {
             paneeltekst(plek(380, 134, 1000, 92), Tekstbron::Partijnaam, Stijlletter::Kop, 76, Stijlkleur::Hoofd, Uitlijning::Links),
             programmabug(),
         ],
+        kleurovergang: None,
     }
 }
 
@@ -2507,6 +2599,7 @@ fn coalitie_in_de_zaal() -> Sjabloon {
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken,
+        kleurovergang: None,
     }
 }
 
@@ -2536,6 +2629,7 @@ fn coalitiebalk() -> Sjabloon {
         stoelen: Stoelen::Gegevens,
         standpunt: None,
         blokken,
+        kleurovergang: None,
     }
 }
 
@@ -2623,6 +2717,8 @@ pub enum SjabloonWeigering {
     NaamTeLang,
     #[error("de snelheid is {0} procent; kies tussen {MIN_SNELHEID} en {MAX_SNELHEID}")]
     Snelheid(u16),
+    #[error("de Kleurovergang duurt {0} ms; kies tussen {MIN_KLEUROVERGANG_MS} en {MAX_KLEUROVERGANG_MS}")]
+    Kleurovergang(u16),
     #[error("meer dan {MAX_BLOKKEN} Blokken")]
     TeVeelBlokken,
     #[error("geen geldige bestandsnaam: {0:?}")]
@@ -2649,6 +2745,9 @@ impl Sjabloon {
         }
         if !(MIN_SNELHEID..=MAX_SNELHEID).contains(&self.snelheid) {
             return Err(SjabloonWeigering::Snelheid(self.snelheid));
+        }
+        if let Some(k) = self.kleurovergang.filter(|k| !k.kan()) {
+            return Err(SjabloonWeigering::Kleurovergang(k.duur_ms));
         }
         if self.blokken.len() > MAX_BLOKKEN {
             return Err(SjabloonWeigering::TeVeelBlokken);
