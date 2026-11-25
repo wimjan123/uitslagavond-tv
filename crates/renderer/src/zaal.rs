@@ -14,10 +14,11 @@ use bevy::prelude::*;
 use bevy::world_serialization::WorldInstanceReady;
 use bevy::color::Mix;
 use gedeeld::uitslagindeling::stoelen_van_links_naar_rechts;
-use gedeeld::sjabloon::{Kleurovergang, OPBOUW_WACHTKLEUR, Overgangsvorm};
+use gedeeld::sjabloon::{GRIJS, Kleurovergang, OPBOUW_WACHTKLEUR, Overgangsvorm};
 use gedeeld::{AANTAL_STOELEN, Kleur, Stoel};
 use serde::Deserialize;
 
+use crate::afwerking::{Afgewerkt, AfwerkingPlugin};
 use crate::omgeving::{self, OmgevingPlugin, Reflecties};
 use crate::volging::Standen;
 #[cfg(test)]
@@ -48,10 +49,11 @@ impl Plugin for ZaalPlugin {
             .init_resource::<Uitlichting>()
             .add_systems(
                 Update,
-                ((herken_stoelen, kleur_stoelen, licht_stoel_op).chain(), dim_zaal, geef_stoelen_licht),
+                ((herken_stoelen, kleur_stoelen, licht_stoel_op).chain(), dim_zaal, geef_stoelen_licht)
+                    .after(Afgewerkt),
             );
         if let Some(map) = &self.map {
-            app.add_plugins(OmgevingPlugin)
+            app.add_plugins((OmgevingPlugin, AfwerkingPlugin, crate::occlusie::OcclusiePlugin))
                 .insert_resource(ZaalMap(map.clone()))
                 .init_resource::<ModelGeladen>()
                 .insert_resource(GlobalAmbientLight {
@@ -461,7 +463,7 @@ impl Golf {
                             return Stoelstand::Klaar;
                         }
                         let leer = lineair(wacht).mix(&lineair(naar), f).mix(&lineair(Some(Kleur { r: 255, g: 255, b: 255 })), GLOED_LICHT * g);
-                        let eigen = naar.map_or(LinearRgba::BLACK, |k| LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)));
+                        let eigen = naar.filter(|k| *k != GRIJS).map_or(LinearRgba::BLACK, |k| LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)));
                         let straling = LinearRgba::BLACK.mix(&straalt(naar), f) + eigen * (GLOED_STRAALT * g);
                         Stoelstand::Onderweg(leer, straling)
                     }
@@ -490,6 +492,18 @@ pub struct Opbouwstand {
     pub stap: Option<(Kleur, f32)>,
     /// Seconden per Partij.
     pub per_stap: f32,
+}
+
+/// Een Stoel die niet meedoet ([`GRIJS`] in de Stand: geen Partij, niet uitgelicht, geen stem)
+/// is in de Zaal donker neutraal en straalt niet, zodat de gekleurde Stoelen eruit springen. Het
+/// grijs zelf blijft voor de Graphics.
+const STOEL_UIT: Kleur = Kleur { r: 0x30, g: 0x32, b: 0x36 };
+
+/// De kleur van het leer bij een kleur uit de Stand (lineair). De leertextuur heeft ruimte voor
+/// een factor 2 (webexport.K bij het model); de helft brengt hem terug op de kleur zelf.
+fn leer_in_de_zaal(k: Kleur) -> LinearRgba {
+    let k = if k == GRIJS { STOEL_UIT } else { k };
+    LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * 0.5
 }
 
 /// Hoe fel het leer bij Kleurkracht 100 straalt in zijn eigen kleur, bovenop het licht uit de bak:
@@ -548,15 +562,13 @@ fn kleur_stoelen(
     else {
         return;
     };
-    // De leertextuur heeft ruimte voor een factor 2 (webexport.K bij het model); de helft van de
-    // kleur brengt hem terug op de kleur uit de Stand.
-    let lineair = |k: Option<Kleur>| {
-        k.map_or(eigen_leer, |k| LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * 0.5)
-    };
-    // Het leer straalt zacht in zijn eigen kleur, naar de Kleurkracht; het eigen leer niet.
+    let lineair = |k: Option<Kleur>| k.map_or(eigen_leer, leer_in_de_zaal);
+    // Het leer straalt zacht in zijn eigen kleur, naar de Kleurkracht; het eigen leer en een
+    // Stoel die niet meedoet niet.
     let kracht = kleurkracht(&standen);
-    let straalt = |k: Option<Kleur>| {
-        k.map_or(LinearRgba::BLACK, |k| LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * (kracht * KLEUR_STRAALT))
+    let straalt = |k: Option<Kleur>| match k {
+        Some(k) if k != GRIJS => LinearRgba::from(Color::srgb_u8(k.r, k.g, k.b)) * (kracht * KLEUR_STRAALT),
+        _ => LinearRgba::BLACK,
     };
     if kracht != golf.kracht {
         // een andere Kleurkracht: de materialen per kleur stralen anders
@@ -907,9 +919,10 @@ fn toon_lijn_bij_76(
     }
 }
 
-/// Hoe fel de Stoel van de Persoonskaart straalt: warm wit, zodat hij oplicht in elke kleur maar
-/// zijn eigen kleur houdt.
-const UITGELICHT: LinearRgba = LinearRgba::rgb(0.34, 0.3, 0.22);
+/// Hoe fel de Stoel van de Persoonskaart straalt in de kleur van zijn Partij (of, zonder Partij,
+/// in zijn eigen kleur): een duidelijke maar natuurlijke markering, geen wit licht dat leest als
+/// een renderfout.
+const UITGELICHT_STRAALT: f32 = 0.55;
 /// Zo lang duurt het oplichten en uitgaan, in seconden bij snelheid 100.
 const UITLICHTEN_S: f32 = 0.5;
 
@@ -920,9 +933,29 @@ struct Uitlichting {
     stoel: Option<usize>,
     /// 0 uit, 1 helemaal aan.
     sterkte: f32,
+    /// De kleur van de Partij van wie er zit.
+    kleur: Option<Kleur>,
     /// Van het gewone materiaal naar de stralende kopie, en terug.
     straalt: HashMap<AssetId<StandardMaterial>, Handle<StandardMaterial>>,
     gewoon: HashMap<AssetId<StandardMaterial>, Handle<StandardMaterial>>,
+}
+
+/// De kleur van de Partij van het Kamerlid op een Persoonskaart.
+fn partijkleur(stand: &gedeeld::Stand, graphic: &gedeeld::Graphic) -> Option<Kleur> {
+    let gedeeld::Graphic::Persoonskaart { gegevens: Some(g), .. } = graphic else {
+        return None;
+    };
+    stand.cijfers.partij(g.partij.as_deref()?)?.kleur.parse().ok()
+}
+
+/// Het leer en de straling van de uitgelichte Stoel bij `sterkte` (0 tot 1): het leer gaat naar
+/// de kleur van de Partij en straalt zacht in die kleur. Zonder Partij houdt het zijn eigen kleur
+/// en straalt daarin.
+fn uitgelicht(leer: LinearRgba, partij: Option<Kleur>, sterkte: f32) -> (LinearRgba, LinearRgba) {
+    let naar = partij.map_or(leer, leer_in_de_zaal);
+    let kleur = leer.mix(&naar, sterkte);
+    // het leer is de helft van de kleur zelf (zie leer_in_de_zaal)
+    (kleur, (naar * 2.0).with_alpha(1.0) * (UITGELICHT_STRAALT * sterkte))
 }
 
 /// Laat de Stoel van de Graphic oplichten: in de Ether en de Reserve die in de Ether, in het
@@ -939,16 +972,17 @@ fn licht_stoel_op(
 ) {
     let stand = standen.huidig.as_ref().map(|s| &s.stand);
     let voorbeeld = rolinfo.is_some_and(|r| r.rol == gedeeld::Rol::Voorbeeld);
-    let gewenst = stand
-        .and_then(|s| {
-            if voorbeeld {
-                s.klaar.as_ref().map(|k| &k.graphic)
-            } else {
-                s.ether.as_ref().map(|e| &e.graphic)
-            }
-        })
-        .and_then(|g| g.uitgelichte_stoel())
-        .and_then(|s| s.index());
+    let graphic = stand.and_then(|s| {
+        if voorbeeld {
+            s.klaar.as_ref().map(|k| &k.graphic)
+        } else {
+            s.ether.as_ref().map(|e| &e.graphic)
+        }
+    });
+    let gewenst = graphic.and_then(|g| g.uitgelichte_stoel()).and_then(|s| s.index());
+    if let Some((s, g)) = stand.zip(graphic).filter(|_| gewenst.is_some()) {
+        u.kleur = partijkleur(s, g);
+    }
     let stijl = |s: &'_ gedeeld::Stand| if voorbeeld { s.stijl.snelheid } else { s.stijl_van_ether().snelheid };
     let snelheid = f32::from(stand.map_or(100, stijl).max(10)) / 100.0;
     let stap = tijd.delta_secs() * snelheid / UITLICHTEN_S;
@@ -968,7 +1002,7 @@ fn licht_stoel_op(
     if u.stoel.is_none() && u.gewoon.is_empty() {
         return;
     }
-    let gloed = UITGELICHT * u.sterkte;
+    let (sterkte, partij) = (u.sterkte, u.kleur);
     for (stoel, mut materiaal) in &mut leer {
         let gewoon = u.gewoon.get(&materiaal.0.id()).cloned().unwrap_or_else(|| materiaal.0.clone());
         let doel = if Some(stoel.index) == u.stoel {
@@ -986,8 +1020,9 @@ fn licht_stoel_op(
             };
             if let Some(mut m) = materialen.get_mut(&h) {
                 // de kleur van het leer, ook als die midden in een golf verandert
-                m.base_color = basis.base_color;
-                m.emissive = gloed;
+                let (leer, straling) = uitgelicht(LinearRgba::from(basis.base_color), partij, sterkte);
+                m.base_color = leer.into();
+                m.emissive = straling;
             }
             h
         } else {
@@ -1484,6 +1519,17 @@ mod tests {
 
     /// Een Stand met een Persoonskaart in de Ether voor het Kamerlid op `stoel`, of zonder.
     fn zet_persoonskaart(app: &mut App, volgnummer: u64, stoel: Option<Stoel>, kleuren: Vec<Kleur>) {
+        zet_persoonskaart_van(app, volgnummer, stoel, kleuren, None);
+    }
+
+    /// Idem, voor een Kamerlid van een Partij met deze kleur.
+    fn zet_persoonskaart_van(
+        app: &mut App,
+        volgnummer: u64,
+        stoel: Option<Stoel>,
+        kleuren: Vec<Kleur>,
+        partijkleur: Option<&str>,
+    ) {
         use gedeeld::persoonskaart::{Extra, Persoonsgegevens, Wie};
         use gedeeld::{Graphic, GraphicInBeeld};
         // VOORBEELDGEGEVENS
@@ -1495,7 +1541,7 @@ mod tests {
                 naam: "Proef Persoon".into(),
                 voorletters: "PP".into(),
                 foto: None,
-                partij: None,
+                partij: partijkleur.map(|_| "cda".into()),
                 functie: None,
                 stoel,
                 leeftijd: None,
@@ -1515,10 +1561,23 @@ mod tests {
             stijl: Default::default(),
             sjabloon: None,
         };
+        let mut cijfers = gedeeld::cijfers::Cijfers::default();
+        if let Some(k) = partijkleur {
+            cijfers.partijen.push(gedeeld::cijfers::Partij {
+                sleutel: "cda".into(),
+                naam: "CDA".into(),
+                kort: "CDA".into(),
+                kleur: k.into(),
+                kleur_tijdelijk: false,
+                logo: None,
+                fractie_zonder_lijst: false,
+                voorgangers: vec![],
+            });
+        }
         let mut standen = app.world_mut().resource_mut::<Standen>();
         let vorige = standen.huidig.replace(GenummerdeStand {
             volgnummer,
-            stand: Stand { ether: Some(ether), stoelkleuren: kleuren, ..default() },
+            stand: Stand { ether: Some(ether), stoelkleuren: kleuren, cijfers, ..default() },
         });
         standen.vorige = vorige;
     }
@@ -1568,5 +1627,39 @@ mod tests {
         let s = straling(&mut app);
         assert!(s.iter().all(|e| (*e - s[0]).abs() < 1e-4));
         assert!(ongeveer(leerkleuren(&mut app)[i], rood_half));
+    }
+
+    #[test]
+    fn de_stoel_van_de_persoonskaart_krijgt_de_kleur_van_de_partij_en_straalt_daarin() {
+        let (mut app, _) = zaal_zonder_gpu();
+        app.update();
+        let stoel = Stoel { vak: 2, rij: 3, nummer: 1 };
+        let i = stoel.index().unwrap();
+        // VOORBEELDGEGEVENS: alle Stoelen blauw, het Kamerlid van een groene Partij
+        zet_persoonskaart_van(&mut app, 1, Some(stoel), vec!["#1f4fd6".parse().unwrap(); 150], Some("#007c5e"));
+        wacht(&mut app, 1.0);
+        let groen: Kleur = "#007c5e".parse().unwrap();
+        assert!(ongeveer(leerkleuren(&mut app)[i], Srgba::from(leer_in_de_zaal(groen))), "het leer is groen");
+        let mut q = app.world_mut().query::<(&StoelLeer, &MeshMaterial3d<StandardMaterial>)>();
+        let h = q.iter(app.world()).find(|(s, _)| s.index == i).unwrap().1.0.clone();
+        let e = app.world().resource::<Assets<StandardMaterial>>().get(&h).unwrap().emissive;
+        assert!(e.green > e.red && e.green > e.blue, "straalt groen, geen wit: {e:?}");
+    }
+
+    #[test]
+    fn een_stoel_die_niet_meedoet_is_donker_en_straalt_niet() {
+        let (mut app, _) = zaal_zonder_gpu();
+        app.update();
+        // VOORBEELDGEGEVENS: Partij uitgelicht, 26 groene Stoelen en de rest grijs
+        let groen: Kleur = "#00ae41".parse().unwrap();
+        let kleuren: Vec<Kleur> = (0..150).map(|i| if i < 26 { groen } else { GRIJS }).collect();
+        zet_stand(&mut app, 1, kleuren);
+        app.update();
+        let leer = leerkleuren(&mut app);
+        let licht = |k: Srgba| 0.2126 * k.red + 0.7152 * k.green + 0.0722 * k.blue;
+        assert!(licht(leer[100]) < licht(leer[0]) * 0.5, "grijs is veel donkerder dan de Partij");
+        let s = straling(&mut app);
+        assert_eq!(s[100], 0.0);
+        assert!(s[0] > 0.0);
     }
 }

@@ -4,10 +4,13 @@
 use bevy::camera::{Exposure, Hdr, RenderTarget};
 use bevy::core_pipeline::tonemapping::Tonemapping;
 use bevy::post_process::bloom::{Bloom, BloomCompositeMode, BloomPrefilter};
+use bevy::post_process::effect_stack::Vignette;
 use bevy::prelude::*;
 use bevy::render::view::{ColorGrading, ColorGradingGlobal, ColorGradingSection};
 
 use crate::Rolinfo;
+use crate::occlusie::Occlusie;
+use bevy::render::render_resource::TextureUsages;
 use crate::graphic::Bron;
 use crate::volging::{Standen, Verbinding};
 
@@ -37,6 +40,13 @@ pub struct Beeldinstellingen {
     pub temperatuur: f32,
     /// Verzadiging van de middentonen.
     pub verzadiging: f32,
+    /// Hoe sterk de occlusie uit de diepte hoeken en de vloer naast bureaus donkerder maakt (0
+    /// tot 1), en binnen hoeveel meter iets afdekt (zie `occlusie.rs`).
+    pub occlusie: f32,
+    pub occlusie_straal: f32,
+    /// Hoe ver de randen van het beeld donker worden (0 tot 1), boven en onder sterker dan
+    /// opzij: daar staan de Graphics, en de Stoelen zitten in de band ertussen.
+    pub vignet: f32,
     /// Verlichtingssterkte van het daglicht door het glas, live en met schaduw.
     pub daglicht_lux: f32,
     /// Zacht licht van alle kanten, alleen voor wat niet gebakken is.
@@ -48,16 +58,21 @@ pub struct Beeldinstellingen {
 /// De instellingen van de uitzending, gekozen naast foto's van de plenaire zaal (#69): licht en
 /// fris zoals de zaal op tv, met mintgroen tapijt, honingkleurig hout en een wit daklicht.
 pub const BEELD: Beeldinstellingen = Beeldinstellingen {
-    // een halve stop lichter dan EV100 0,6 uit #8: de zaal is op foto's licht en open
-    ev100: 0.2,
+    // een halve stop lichter dan EV100 0,6 uit #8, en daarna een fractie terug: de zaal is licht
+    // en open, maar de Graphics staan op een rustige, iets donkerder achtergrond
+    ev100: 0.3,
     // TonyMcMapface houdt felle plekken (daklicht, spots) wit zonder uit te bijten
     tonemapping: Tonemapping::TonyMcMapface,
     // een zachte gloed om de spots en het daklicht, niet meer
     bloom: 0.05,
     bloom_drempel: 1.2,
-    // de bak is warm (lampen van 3000 K); iets koeler maakt het tapijt mintgroen en wit weer wit
-    temperatuur: -0.01,
-    verzadiging: 1.1,
+    // de bak is warm (lampen van 3000 K); koeler maakt wit weer wit en geeft de rustige,
+    // koele studiokleur achter de Graphics (council-ronde 1)
+    temperatuur: -0.03,
+    verzadiging: 1.05,
+    occlusie: 0.6,
+    occlusie_straal: 0.5,
+    vignet: 0.45,
     // alleen voor een oudere Zaal met live daglicht; de nieuwe Zaal heeft het daglicht in de bak
     daglicht_lux: 6.0,
     omgeving: 0.35,
@@ -73,10 +88,26 @@ impl Beeldinstellingen {
                 temperature: self.temperatuur,
                 ..default()
             },
+            // alleen de middentonen: een eigen gamma of contrast in de schaduwen gaf harde vlekken
+            // op een egale wand, en contrast werkt lineair rond 0,5 en maakt alles donker
             midtones: ColorGradingSection {
                 saturation: self.verzadiging,
                 ..default()
             },
+            ..default()
+        }
+    }
+
+    /// Een lichte vignet: de Stoelen in de band in het midden blijven zoals ze zijn, het plafond
+    /// en de voorgrond achter de Graphics worden rustig donker.
+    pub fn vignet(&self) -> Vignette {
+        Vignette {
+            intensity: self.vignet,
+            radius: 1.0,
+            smoothness: 1.5,
+            // boven en onder sterker dan opzij
+            roundness: 0.6,
+            edge_compensation: 1.0,
             ..default()
         }
     }
@@ -98,16 +129,23 @@ impl Beeldinstellingen {
 #[derive(Component)]
 pub struct HoofdCamera;
 
-/// Een camera op de Zaal: toonweergave, belichting, gloed, kleurcorrectie en MSAA (zie [`BEELD`]).
+/// Een camera op de Zaal: toonweergave, belichting, gloed, kleurcorrectie, vignet en MSAA (zie
+/// [`BEELD`]).
 pub fn zaalcamera() -> impl Bundle {
     let b = &BEELD;
     (
-        Camera3d::default(),
+        Camera3d {
+            // de occlusie leest de diepte van de hoofdpas
+            depth_texture_usages: (TextureUsages::RENDER_ATTACHMENT | TextureUsages::TEXTURE_BINDING).into(),
+            ..default()
+        },
         Hdr,
         b.tonemapping,
         Exposure { ev100: b.ev100 },
         b.gloed(),
         b.kleurcorrectie(),
+        b.vignet(),
+        Occlusie::new(b.occlusie_straal, b.occlusie),
         Msaa::Sample4,
     )
 }

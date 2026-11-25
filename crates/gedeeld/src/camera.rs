@@ -211,11 +211,14 @@ impl Standpunt {
         };
         vec![
             // Hoog tegen de wand achter de Voorzitter, met een heel wijde lens: zo staan alle
-            // 150 Stoelen in beeld, ook de voorste aan de zijkanten.
+            // 150 Stoelen in beeld, ook de voorste aan de zijkanten. Zo hoog en ver naar achteren
+            // als de ruimte toelaat en iets meer omlaag, zodat de Stoelen de band tussen de
+            // Graphics boven (tot y 330) en onder (vanaf y 640) vullen; smaller kan niet, want
+            // dan vallen de voorste Stoelen opzij uit beeld.
             vast(
                 "A",
                 "Totaal vanaf voorzitter",
-                Camerastand::uit_graden([0.0, 4.5, 4.45], 0.0, -23.0, 99.0),
+                Camerastand::uit_graden([0.0, 4.56, 4.48], 0.0, -25.0, 96.5),
             ),
             vast(
                 "S",

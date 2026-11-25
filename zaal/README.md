@@ -55,7 +55,7 @@ Zonder `omgeving.bin` start de Renderer gewoon, met een waarschuwing, en zijn me
 
 ## Licht en beeld in de Renderer
 
-Alle instelwaarden staan in `BEELD` in `crates/renderer/src/beeld.rs`: belichting (EV100 0,2), toonweergave (TonyMcMapface), een zachte gloed om spots en daklicht, iets koeler en iets verzadigder, en hoe ver de lampen live reiken (12 m). Gekozen naast foto's van de plenaire zaal aan de Bezuidenhoutseweg. Gloed, toonweergave en kleurcorrectie werken alleen op de Zaal: de Graphics komen er daarna overheen en veranderen niet. De kom van elke plafondspot straalt in de Renderer, zoals de lamp in Cycles; de lens van het model zit erachter.
+Alle instelwaarden staan in `BEELD` in `crates/renderer/src/beeld.rs`: belichting (EV100 0,3), toonweergave (TonyMcMapface), een zachte gloed om spots en daklicht, koeler en iets verzadigder, een lichte vignet (boven en onder sterker dan opzij, waar de Graphics staan), occlusie uit de diepte (`occlusie.rs`: hoeken en de vloer naast bureaus iets donkerder, ook op het gebakken licht, ongeveer 0,5 ms per beeld) en hoe ver de lampen live reiken (12 m). Na het laden werkt `afwerking.rs` de materialen af: hout een kwart minder oranje en mat, de stof van de Stoelen mat, het tapijt met minder contrast en donkerder, het plafond donkerder en koeler, en mipmaps voor alle texturen, zodat fijne patronen in de verte niet flikkeren. Gekozen naast foto's van de plenaire zaal aan de Bezuidenhoutseweg. Gloed, toonweergave en kleurcorrectie werken alleen op de Zaal: de Graphics komen er daarna overheen en veranderen niet. De kom van elke plafondspot straalt in de Renderer, zoals de lamp in Cycles; de lens van het model zit erachter.
 
 ## Vergelijken met Cycles
 
