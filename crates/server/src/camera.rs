@@ -14,8 +14,9 @@ use std::sync::{Arc, LazyLock};
 
 use gedeeld::Stand;
 use gedeeld::camera::{
-    CameraOvergang, Camerabeeld, Camerakeuze, Camerapunt, Camerastand, NaAankomst, OvergangSoort,
-    BLIJF, Partijbeweging, SCHUIVEN_S, Standpunt, Stoelbeweging, TIKKEN_PER_SECONDE, aanschuif_overgang,
+    CameraOvergang, Camerabeeld, Camerakeuze, Camerapunt, Camerastand, Coalitiebeweging,
+    NaAankomst, OvergangSoort, BLIJF, Paneelbeweging, Partijbeweging, SCHUIVEN_S, Standpunt,
+    Stoelbeweging, TIKKEN_PER_SECONDE, Zaalbeweging, aanschuif_overgang,
 };
 use gedeeld::camerarit::{Camerarit, OPNAME_MAX_S, RitBegin, Ritbaan, als_opnamepunt};
 use serde::Deserialize;
@@ -425,10 +426,22 @@ pub struct Beweging {
     naar: Camerastand,
     route: Route,
     tikken: u64,
+    /// Als > 0 start de rit meteen op `begin` en mengt de camera over zoveel tikken zacht vanaf
+    /// `van` in de ritbaan in (zoals bij `Zaalbeweging::Opbouw`, synchroon met de 3D-Opbouw).
+    inmengen_tikken: u64,
     overgang: CameraOvergang,
     na_aankomst: NaAankomst,
     /// Na de overgang rijdt de camera deze Camerarit, zonder pauze.
     rit: Option<Arc<Ritbaan>>,
+}
+
+/// Of twee camerastanden vrijwel gelijk zijn (zodat een rit meteen mag starten zonder onnodige
+/// wachttijd van 2 s).
+fn al_op_stand(a: Camerastand, b: Camerastand) -> bool {
+    len(sub(a.positie, b.positie)) < 0.05
+        && kortste_hoek(b.draai - a.draai).abs() < 0.01
+        && (b.helling - a.helling).abs() < 0.01
+        && (b.beeldhoek - a.beeldhoek).abs() < 0.01
 }
 
 impl Beweging {
@@ -442,6 +455,7 @@ impl Beweging {
                 punten: [stand.positie; 4],
             },
             tikken: 0,
+            inmengen_tikken: 0,
             overgang: CameraOvergang::default(),
             na_aankomst,
             rit: None,
@@ -456,6 +470,7 @@ impl Beweging {
             naar,
             route: Route::boog(van.positie, naar.positie, ruimte),
             tikken: (overgang.duur() * TIKKEN_PER_SECONDE as f32).round() as u64,
+            inmengen_tikken: 0,
             overgang,
             na_aankomst: NaAankomst::Stil,
             rit: None,
@@ -478,6 +493,20 @@ impl Beweging {
         }
         if let Some(i) = self.ritplek(tik) {
             let mut s = self.rit.as_ref().expect("ritplek vraagt een rit").standen[i];
+            if self.inmengen_tikken > 0 && verstreken < self.inmengen_tikken {
+                let f = gedeeld::camera::zachte_voortgang(
+                    verstreken as f32 / self.inmengen_tikken as f32,
+                    1.0,
+                    1.0,
+                );
+                let hoek = |a: f32, b: f32| a + kortste_hoek(b - a) * f;
+                s = Camerastand {
+                    positie: [0, 1, 2].map(|k| self.van.positie[k] + (s.positie[k] - self.van.positie[k]) * f),
+                    draai: hoek(self.van.draai, s.draai),
+                    helling: hoek(self.van.helling, s.helling),
+                    beeldhoek: self.van.beeldhoek + (s.beeldhoek - self.van.beeldhoek) * f,
+                };
+            }
             s.positie = ruimte.klem(s.positie);
             return s;
         }
@@ -539,13 +568,66 @@ enum Doel {
     Baan {
         sleutel: String,
         baan: Ritbaan,
+        /// Start meteen op `t = 0` met vloeiend inmengen vanaf de vorige stand (synchroon met
+        /// 3D-effecten zoals de Opbouw).
+        direct: bool,
     },
 }
 
+/// Het aantal zetels van de gekozen coalitie voor deze rol (Voorbeeld of Ether), of 76 bij gebrek.
+fn coalitie_zetels(stand: &Stand, voorbeeld: bool) -> u16 {
+    let g = if voorbeeld {
+        stand.klaar.as_ref().map(|k| &k.graphic).or_else(|| stand.ether.as_ref().map(|e| &e.graphic))
+    } else {
+        stand.ether.as_ref().map(|e| &e.graphic).or_else(|| stand.klaar.as_ref().map(|k| &k.graphic))
+    };
+    if let Some(gedeeld::Graphic::Coalitie { partijen, cijfers: Some(c), .. }) = g {
+        return gedeeld::coalitie::Telling::van(&c.set, partijen).zetels as u16;
+    }
+    76
+}
+
+/// De stoelkleuren en de duur per Opbouw-stap in seconden voor `Zaalbeweging::Opbouw`.
+fn opbouw_gegevens(stand: &Stand, voorbeeld: bool) -> (Vec<gedeeld::Kleur>, f32) {
+    let (kleuren, overgang, snelheid) = if voorbeeld {
+        let k = stand
+            .klaar
+            .as_ref()
+            .and_then(|k| k.graphic.stoelkleuren())
+            .filter(|v| !v.is_empty())
+            .unwrap_or_else(|| stand.stoelkleuren.clone());
+        let ov = stand
+            .klaar
+            .as_ref()
+            .and_then(|k| stand.sjabloon(&k.graphic.sjabloon_id()))
+            .and_then(|s| s.kleurovergang)
+            .unwrap_or_else(|| gedeeld::sjabloon::Kleurovergang::standaard(gedeeld::sjabloon::Overgangsvorm::Opbouw));
+        (k, ov, stand.stijl.snelheid)
+    } else {
+        let k = if !stand.stoelkleuren.is_empty() {
+            stand.stoelkleuren.clone()
+        } else {
+            stand
+                .ether
+                .as_ref()
+                .and_then(|e| e.graphic.stoelkleuren())
+                .unwrap_or_default()
+        };
+        let ov = if stand.kleurovergang.vorm == gedeeld::sjabloon::Overgangsvorm::Opbouw {
+            stand.kleurovergang
+        } else {
+            gedeeld::sjabloon::Kleurovergang::standaard(gedeeld::sjabloon::Overgangsvorm::Opbouw)
+        };
+        (k, ov, stand.stijl_van_ether().snelheid)
+    };
+    let per_stap = f32::from(overgang.duur_ms) / 1000.0 * 100.0 / f32::from(snelheid.max(10));
+    (kleuren, per_stap)
+}
+
 impl Doel {
-    /// Het Standpunt of de Camerarit met deze sleutel, of een gerichte beweging naar een Stoel
-    /// (Persoonskaart) of Partijblok (Partij uitgelicht).
-    fn van(stand: &Stand, letter: &str) -> Option<Doel> {
+    /// Het Standpunt of de Camerarit met deze sleutel, of een gerichte beweging naar een Stoel,
+    /// Partijblok, Zetelverdeling, Coalitie of boven het paneel.
+    fn van_voor(stand: &Stand, letter: &str, voorbeeld: bool) -> Option<Doel> {
         stand
             .standpunt(letter)
             .map(|s| Doel::Standpunt(s.clone()))
@@ -553,7 +635,7 @@ impl Doel {
             .or_else(|| {
                 let (beweging, stoel) = Stoelbeweging::uit_doelsleutel(letter)?;
                 if beweging.is_rit() {
-                    Some(Doel::Baan { sleutel: letter.into(), baan: beweging.baan(stoel)? })
+                    Some(Doel::Baan { sleutel: letter.into(), baan: beweging.baan(stoel)?, direct: false })
                 } else {
                     Some(Doel::Standpunt(Standpunt {
                         letter: letter.into(),
@@ -569,7 +651,7 @@ impl Doel {
             .or_else(|| {
                 let (beweging, van, tot) = Partijbeweging::uit_doelsleutel(letter)?;
                 if beweging.is_rit() {
-                    Some(Doel::Baan { sleutel: letter.into(), baan: beweging.baan(van, tot)? })
+                    Some(Doel::Baan { sleutel: letter.into(), baan: beweging.baan(van, tot)?, direct: false })
                 } else {
                     let overgang = match beweging {
                         Partijbeweging::Aanschuiven => aanschuif_overgang(),
@@ -587,6 +669,26 @@ impl Doel {
                 }
             })
             .or_else(|| {
+                let beweging = Zaalbeweging::uit_sleutel(letter)?;
+                let (baan, direct) = match beweging {
+                    Zaalbeweging::Opbouw => {
+                        let (kleuren, per_stap) = opbouw_gegevens(stand, voorbeeld);
+                        (Zaalbeweging::baan_voor_opbouw(&kleuren, per_stap), true)
+                    }
+                    _ => (beweging.baan(), false),
+                };
+                Some(Doel::Baan { sleutel: letter.into(), baan, direct })
+            })
+            .or_else(|| {
+                let beweging = Coalitiebeweging::uit_sleutel(letter)?;
+                let zetels = coalitie_zetels(stand, voorbeeld);
+                Some(Doel::Baan { sleutel: letter.into(), baan: beweging.baan(zetels), direct: false })
+            })
+            .or_else(|| {
+                let beweging = Paneelbeweging::uit_sleutel(letter)?;
+                Some(Doel::Baan { sleutel: letter.into(), baan: beweging.baan(), direct: false })
+            })
+            .or_else(|| {
                 (letter == gedeeld::camera::BOVEN_HET_PANEEL).then(|| {
                     Doel::Standpunt(Standpunt {
                         letter: letter.into(),
@@ -601,9 +703,18 @@ impl Doel {
             })
     }
 
+    fn van(stand: &Stand, letter: &str) -> Option<Doel> {
+        Doel::van_voor(stand, letter, false)
+    }
+
     /// Het Doel met deze sleutel, of anders Standpunt A (dat is er altijd, tenzij de Stand stuk is).
+    fn of_a_voor(stand: &Stand, letter: &str, voorbeeld: bool) -> Doel {
+        Doel::van_voor(stand, letter, voorbeeld)
+            .unwrap_or_else(|| Doel::Standpunt(standpunt_of_a(stand, "A")))
+    }
+
     fn of_a(stand: &Stand, letter: &str) -> Doel {
-        Doel::van(stand, letter).unwrap_or_else(|| Doel::Standpunt(standpunt_of_a(stand, "A")))
+        Doel::of_a_voor(stand, letter, false)
     }
 
     /// De beweging erheen vanaf `van`, en of dat een knip is.
@@ -630,11 +741,15 @@ impl Doel {
                 b.rit = Some(baan);
                 (b, knip)
             }
-            Doel::Baan { baan, .. } => {
+            Doel::Baan { baan, direct, .. } => {
                 let baan = Arc::new(baan.clone());
                 let begin = baan.standen[0];
                 let mut b = if knip {
                     Beweging::knip(tik, begin, NaAankomst::Stil)
+                } else if *direct {
+                    let mut b = Beweging::knip(tik, van, NaAankomst::Stil);
+                    b.inmengen_tikken = if al_op_stand(van, begin) { 0 } else { 75 };
+                    b
                 } else {
                     Beweging::overgang(tik, van, begin, CameraOvergang::default(), ruimte)
                 };
@@ -811,7 +926,7 @@ impl Cameraregie {
         }
         if let Some(p) = c.proef.as_ref().filter(|p| self.laatste_proef != Some(p.sinds)) {
             self.laatste_proef = Some(p.sinds);
-            if let Some(doel) = Doel::van(stand, &p.letter) {
+            if let Some(doel) = Doel::van_voor(stand, &p.letter, true) {
                 let van = self.ether.stand(tik, &self.ruimte);
                 // het Voorbeeld springt naar waar de Ether staat
                 self.voorbeeld.snede = self.voorbeeld.snede.wrapping_add(1);
@@ -846,7 +961,7 @@ impl Cameraregie {
             }
             return;
         }
-        let doel = Doel::of_a(stand, &letter);
+        let doel = Doel::of_a_voor(stand, &letter, true);
         if self.bron != Voorbeeldbron::Doel(doel.clone()) {
             self.voorbeeld.beweging = doel.beginbeeld(tik);
             self.voorbeeld.vrij = None;
@@ -2026,6 +2141,104 @@ mod tests {
         let s_eind = Stoelbeweging::Langs.stand_op(stoel, 1.0).unwrap();
         assert!(len(sub(regie.beeld(20 * T).ether.stand.positie, s_begin.positie)) < 1e-2);
         assert!(len(sub(regie.beeld(30 * T + 2).ether.stand.positie, s_eind.positie)) < 1e-2);
+    }
+
+    #[test]
+    fn alle_zaal_coalitie_en_paneelbewegingen_blijven_in_de_ruimte_en_kaderen_de_stoelen() {
+        let r = ruimte();
+        let in_beeld_aantal = |s: Camerastand| {
+            STOELPLEKKEN
+                .iter()
+                .filter(|p| s.in_beeld(**p).is_some_and(|[x, y]| x.abs() <= 0.99 && y.abs() <= 0.99))
+                .count()
+        };
+        for b in Zaalbeweging::ALLE {
+            let baan = match b {
+                Zaalbeweging::Opbouw => {
+                    let rood = gedeeld::Kleur { r: 220, g: 30, b: 30 };
+                    let blauw = gedeeld::Kleur { r: 30, g: 90, b: 220 };
+                    let groen = gedeeld::Kleur { r: 20, g: 180, b: 90 };
+                    let volgorde = gedeeld::uitslagindeling::stoelen_van_links_naar_rechts();
+                    let mut kl = vec![groen; gedeeld::AANTAL_STOELEN];
+                    for (idx, &s) in volgorde.iter().enumerate() {
+                        kl[s] = if idx < 50 { rood } else if idx < 110 { blauw } else { groen };
+                    }
+                    Zaalbeweging::baan_voor_opbouw(&kl, 1.5)
+                }
+                _ => b.baan(),
+            };
+            for (i, &s) in baan.standen.iter().enumerate().step_by(20) {
+                assert!(r.bevat(s.positie, 0.05), "{b:?} tik {i}: {:?} buiten ruimte", s.positie);
+            }
+            let eind = *baan.standen.last().unwrap();
+            assert_eq!(in_beeld_aantal(eind), 150, "{b:?} eindigt niet met alle 150 Stoelen in beeld");
+            if b == Zaalbeweging::Boog {
+                for (i, &s) in baan.standen.iter().enumerate().step_by(40) {
+                    assert_eq!(in_beeld_aantal(s), 150, "Boog tik {i} snijdt Stoelen af");
+                }
+            }
+        }
+        for b in Coalitiebeweging::ALLE {
+            for zetels in [30u16, 76, 105] {
+                let baan = b.baan(zetels);
+                for (i, &s) in baan.standen.iter().enumerate().step_by(20) {
+                    assert!(r.bevat(s.positie, 0.05), "{b:?} ({zetels}) tik {i}: {:?} buiten ruimte", s.positie);
+                }
+                let eind = *baan.standen.last().unwrap();
+                assert_eq!(in_beeld_aantal(eind), 150, "{b:?} ({zetels}) eindigt niet met 150/150");
+            }
+        }
+        for b in Paneelbeweging::ALLE {
+            let baan = b.baan();
+            for (i, &s) in baan.standen.iter().enumerate().step_by(20) {
+                assert!(r.bevat(s.positie, 0.05), "{b:?} tik {i}: {:?} buiten ruimte", s.positie);
+                assert_eq!(in_beeld_aantal(s), 150, "{b:?} tik {i}: niet alle 150 Stoelen in beeld");
+                let laagste_px_y = STOELPLEKKEN
+                    .iter()
+                    .map(|p| (1.0 - s.in_beeld(*p).unwrap()[1]) * 540.0)
+                    .fold(0.0_f32, f32::max);
+                assert!(
+                    laagste_px_y <= 430.0,
+                    "{b:?} tik {i}: Stoelen vallen achter het paneel (y={laagste_px_y:.0})"
+                );
+            }
+        }
+    }
+
+    #[test]
+    fn zaal_opbouw_start_direct_synchroon_zonder_wachttijd_en_eindigt_op_totaal() {
+        let mut stand = Stand::default();
+        let mut v = 0;
+        let invoer = gedeeld::cijfers::Invoer::uit_json(
+            r##"{
+                "partijen": [
+                    { "sleutel": "rood", "naam": "Rood", "kort": "ROOD", "kleur": "#d4202c" },
+                    { "sleutel": "blauw", "naam": "Blauw", "kort": "BLAUW", "kleur": "#1e64c8" }
+                ],
+                "sets": [
+                    { "id": "s1", "soort": "exitpoll", "label": "Exitpoll", "zetels": { "rood": 60, "blauw": 90 } }
+                ]
+            }"##,
+        );
+        doe(&mut stand, &mut v, Opdracht::LeesInvoer { bestand: "p.json".into(), ontvangen: "nu".into(), invoer });
+        let g = gedeeld::Graphic::Zetelverdeling {
+            set: "s1".into(),
+            namen: true,
+            zetels: true,
+            indeling: gedeeld::Indeling::Uitslagindeling,
+            cijfers: None,
+        };
+        let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
+        doe(&mut stand, &mut v, Opdracht::ZetKlaar { graphic: g, standpunt: None });
+        doe(&mut stand, &mut v, Opdracht::Toon { versie: None });
+        assert_eq!(stand.camera.standpunt, gedeeld::camera::ZAAL_OPBOUW);
+        regie.volg(&stand, 0);
+        let a = standpunt(&stand, "A");
+        // Begint op A en beweegt al tijdens de eerste seconde richting de grootste partij (geen 2s stilstand)
+        assert!(len(sub(regie.beeld(0).ether.stand.positie, a.positie)) < 0.05);
+        assert!(len(sub(regie.beeld(T).ether.stand.positie, a.positie)) > 0.3, "beweegt direct tijdens Opbouw");
+        // En eindigt na de opbouw weer op totaal A
+        assert!(len(sub(regie.beeld(10 * T).ether.stand.positie, a.positie)) < 0.05);
     }
 
     #[test]

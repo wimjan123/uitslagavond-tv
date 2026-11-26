@@ -254,10 +254,13 @@ impl Standpunt {
                 "Rechterflank",
                 Camerastand::uit_graden([9.8, 2.8, 0.8], 30.0, -12.0, 55.0),
             ),
+            // Hoog en steil in de virtuele studio (boven het plafond en achter de voorwand, dus
+            // zonder schil): alle 150 Stoelen staan als strakke halve cirkel in beeld (x 153 tot
+            // 1767, y 382 tot 808), vrij onder de Partijlabels en boven het Opbouwlabel.
             vast(
                 "G",
                 "Bovenaf",
-                Camerastand::uit_graden([0.0, 4.5, -3.0], 0.0, -68.0, 80.0),
+                Camerastand::uit_graden([0.0, 13.5, 4.8], 0.0, -46.0, 66.0),
             ),
             // Recht voor het spreekgestoelte (x 3,19, z 2,21, 34,9 graden gedraaid), op ooghoogte.
             vast(
@@ -273,24 +276,24 @@ impl Standpunt {
 /// [`Standpunt::vaste`]. Een Stand van een oudere versie bewaart zijn vaste Standpunten zelf;
 /// staat er een nog op een vroegere standaard, dan krijgt hij die van nu
 /// ([`ververs_vaste_standpunten`]).
-const VORIGE_STANDAARDEN: [(&str, [f32; 3], f32, f32, f32); 4] = [
+const VORIGE_STANDAARDEN: [(&str, [f32; 3], f32, f32, f32); 5] = [
     ("A", [0.0, 4.5, 4.45], 0.0, -23.0, 99.0),
     ("A", [0.0, 4.56, 4.48], 0.0, -25.0, 96.5),
     ("A", [0.0, 10.0, 9.0], 0.0, -32.0, 58.3),
     ("A", [0.0, 10.5, 12.5], 0.0, -28.0, 48.0),
+    ("G", [0.0, 4.5, -3.0], 0.0, -68.0, 80.0),
 ];
 
 /// Totaal boven het paneel: de sleutel van een vast shot voor Sjablonen met een paneel onderin
-/// (Uitslag van een Stemming vanaf y 532, Zetelbalk en Coalitiebalk vanaf y 646). Zoals Standpunt
-/// A, maar steiler, zodat alle 150 Stoelen boven het paneel staan: van x 46 tot 1874 en van y 130
-/// tot ongeveer 493 (council-ronde 3: de panelen lagen over de Stoelen tot y 740). Bovenin staat
-/// bij die Sjablonen alleen het programmalogo. Je kiest het overal waar je een Standpunt kiest;
-/// de overgang is die van een Standpunt.
+/// (Twee sets vanaf y 412, Uitslag van een Stemming vanaf y 512, Zetelbalk vanaf y 646,
+/// Coalitiebalk vanaf y 676). Alle 150 Stoelen staan boven elk paneel: van x 69 tot 1851 en van
+/// y 79 tot 404. Bovenin staat bij die Sjablonen alleen het programmalogo. Je kiest het overal
+/// waar je een Standpunt kiest; de overgang is die van een Standpunt.
 pub const BOVEN_HET_PANEEL: &str = "boven-het-paneel";
 
 /// De stand van [`BOVEN_HET_PANEEL`], in de studio zoals Standpunt A.
 pub fn boven_het_paneel() -> Camerastand {
-    Camerastand::uit_graden([0.0, 10.0, 12.0], 0.0, -39.0, 50.0)
+    Camerastand::uit_graden([0.0, 10.6, 12.2], 0.0, -42.5, 50.5)
 }
 
 /// Zet elk vast Standpunt dat nog op een vroegere standaard staat op de standaard van nu. Een vast
@@ -352,6 +355,22 @@ pub const STOEL_AANSCHUIVEN: &str = "stoel-aanschuiven";
 pub const STOEL_LANGS: &str = "stoel-langs";
 pub const STOEL_INDALEN: &str = "stoel-indalen";
 pub const STOEL_UITZOOMEN: &str = "stoel-uitzoomen";
+
+/// Gerichte camerabewegingen voor de Zetelverdeling in de Zaal (alle 150 zetels helder in beeld).
+pub const ZAAL_OPBOUW: &str = "zaal-opbouw";
+pub const ZAAL_VEEG: &str = "zaal-veeg";
+pub const ZAAL_BOVENAF: &str = "zaal-bovenaf";
+pub const ZAAL_BOOG: &str = "zaal-boog";
+pub const ZAAL_ONTHULLING: &str = "zaal-onthulling";
+
+/// Gerichte camerabewegingen voor Coalitie in de Zaal (coalitieblok en de 76-meerderheidslijn).
+pub const COALITIE_GRENS: &str = "coalitie-grens";
+pub const COALITIE_LANGS: &str = "coalitie-langs";
+pub const COALITIE_BOVENAF: &str = "coalitie-bovenaf";
+
+/// Gerichte camerabewegingen voor Graphics met een breed paneel onderin (alle 150 Stoelen erboven).
+pub const PANEEL_ZWEEF: &str = "paneel-zweef";
+pub const PANEEL_INDALEN: &str = "paneel-indalen";
 
 /// Camera blijft staan: de keuze in een Sjabloon, Graphic of Preset die de camera van de Ether
 /// laat waar hij is bij Toon en Bijwerken, ook een Vrije camera of een lopende Camerarit. Het
@@ -702,6 +721,408 @@ impl Stoelbeweging {
     }
 }
 
+/// Stand gericht van `positie` op `doel` met `beeldhoek_graden`.
+fn kijk_naar(positie: [f32; 3], doel: [f32; 3], beeldhoek_graden: f32) -> Camerastand {
+    let d = [doel[0] - positie[0], doel[1] - positie[1], doel[2] - positie[2]];
+    Camerastand {
+        positie,
+        draai: (-d[0]).atan2(-d[2]),
+        helling: d[1].atan2(d[0].hypot(d[2])),
+        beeldhoek: beeldhoek_graden.to_radians(),
+    }
+}
+
+/// Vloeiende interpolatie tussen twee camerastanden (kortste hoek voor draai).
+fn meng_stand(a: Camerastand, b: Camerastand, s: f32) -> Camerastand {
+    use std::f32::consts::{PI, TAU};
+    let draai_d = (b.draai - a.draai + PI).rem_euclid(TAU) - PI;
+    Camerastand {
+        positie: [0, 1, 2].map(|i| a.positie[i] + (b.positie[i] - a.positie[i]) * s),
+        draai: a.draai + draai_d * s,
+        helling: a.helling + (b.helling - a.helling) * s,
+        beeldhoek: a.beeldhoek + (b.beeldhoek - a.beeldhoek) * s,
+    }
+}
+
+/// Standpunt A (Totaal vanaf voorzitter) en Standpunt G (Bovenaf): de vaste eindpunten van
+/// studio-overzichten.
+fn stand_totaal_a() -> Camerastand {
+    Camerastand::uit_graden([0.0, 13.0, 11.0], 0.0, -31.5, 48.0)
+}
+
+fn stand_bovenaf_g() -> Camerastand {
+    Camerastand::uit_graden([0.0, 13.5, 4.8], 0.0, -46.0, 66.0)
+}
+
+/// Een camerabeweging ontworpen voor de Zetelverdeling in de Zaal: alle 150 Stoelen blijven helder
+/// leesbaar (tussen de kaartjes bovenin en het Opbouwlabel onderin) en links blijft altijd links.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[ts(export)]
+pub enum Zaalbeweging {
+    /// Beweegt vanuit hoog overzicht rustig mee met elke Partij die in de Opbouw oplicht en opent
+    /// op het eind naar het volledige totaaloverzicht (Standpunt A).
+    Opbouw,
+    /// Glijdt hoog van de linkerflank naar de rechterflank en eindigt op totaaloverzicht (A).
+    Veeg,
+    /// Begint steil boven alle 150 Stoelen (halve cirkel) en kantelt naar totaaloverzicht (A).
+    Bovenaf,
+    /// Rustige studioboog waarbij alle 150 Stoelen de hele tijd volledig in beeld blijven.
+    Boog,
+    /// Begint lager bij de voorste banken en stijgt de studio in tot totaaloverzicht (A).
+    Onthulling,
+}
+
+impl Zaalbeweging {
+    pub const ALLE: [Zaalbeweging; 5] = [
+        Zaalbeweging::Opbouw,
+        Zaalbeweging::Veeg,
+        Zaalbeweging::Bovenaf,
+        Zaalbeweging::Boog,
+        Zaalbeweging::Onthulling,
+    ];
+
+    pub const fn sleutel(self) -> &'static str {
+        match self {
+            Zaalbeweging::Opbouw => ZAAL_OPBOUW,
+            Zaalbeweging::Veeg => ZAAL_VEEG,
+            Zaalbeweging::Bovenaf => ZAAL_BOVENAF,
+            Zaalbeweging::Boog => ZAAL_BOOG,
+            Zaalbeweging::Onthulling => ZAAL_ONTHULLING,
+        }
+    }
+
+    pub const fn naam(self) -> &'static str {
+        match self {
+            Zaalbeweging::Opbouw => "Opbouw meebewegen",
+            Zaalbeweging::Veeg => "Overzicht links naar rechts",
+            Zaalbeweging::Bovenaf => "Hoog overzicht naar totaal",
+            Zaalbeweging::Boog => "Rustige totaalboog",
+            Zaalbeweging::Onthulling => "Studio-onthulling naar totaal",
+        }
+    }
+
+    pub const fn toelichting(self) -> &'static str {
+        match self {
+            Zaalbeweging::Opbouw => "Volgt elke oplichtende Partij vanuit hoog overzicht en opent naar alle 150 zetels",
+            Zaalbeweging::Veeg => "Glijdt hoog van links naar rechts over de fracties en eindigt op totaaloverzicht",
+            Zaalbeweging::Bovenaf => "Begint steil boven de halve cirkel (alle 150 zetels) en kantelt naar totaaloverzicht",
+            Zaalbeweging::Boog => "Zachte studiobeweging waarbij alle 150 zetels de hele tijd volledig in beeld blijven",
+            Zaalbeweging::Onthulling => "Stijgt vanuit de Zaal vloeiend de studio in naar het totaaloverzicht (150 zetels)",
+        }
+    }
+
+    pub const fn duur_s(self) -> f32 {
+        match self {
+            Zaalbeweging::Opbouw => 14.0,
+            Zaalbeweging::Veeg => 14.0,
+            Zaalbeweging::Bovenaf => 10.0,
+            Zaalbeweging::Boog => 16.0,
+            Zaalbeweging::Onthulling => 10.0,
+        }
+    }
+
+    pub fn uit_sleutel(sleutel: &str) -> Option<Self> {
+        Self::ALLE.into_iter().find(|b| b.sleutel() == sleutel)
+    }
+
+    /// De camerastand op voortgang `t` (0 tot 1). Voor [`Zaalbeweging::Opbouw`] is dit het
+    /// neutrale verloop (begin en eind op Standpunt A); met echte zetelkleuren gebruikt de server
+    /// [`Zaalbeweging::baan_voor_opbouw`].
+    pub fn stand_op(self, t: f32) -> Camerastand {
+        let s = zachte_voortgang(t, 1.0, 1.0);
+        match self {
+            Zaalbeweging::Opbouw => stand_totaal_a(),
+            Zaalbeweging::Veeg => {
+                let links = kijk_naar([-5.6, 11.8, 10.0], [-2.0, 0.75, -6.4], 49.0);
+                let midden = Camerastand::uit_graden([0.0, 12.6, 10.8], 0.0, -32.0, 48.5);
+                let rechts = kijk_naar([5.6, 11.8, 10.0], [2.0, 0.75, -6.4], 49.0);
+                let eind = stand_totaal_a();
+                if t < 0.375 {
+                    meng_stand(links, midden, zachte_voortgang(t / 0.375, 1.0, 0.2))
+                } else if t < 0.75 {
+                    meng_stand(midden, rechts, zachte_voortgang((t - 0.375) / 0.375, 0.2, 0.8))
+                } else {
+                    meng_stand(rechts, eind, zachte_voortgang((t - 0.75) / 0.25, 0.8, 1.0))
+                }
+            }
+            Zaalbeweging::Bovenaf => meng_stand(stand_bovenaf_g(), stand_totaal_a(), s),
+            Zaalbeweging::Boog => {
+                let links = Camerastand::uit_graden([-2.8, 13.0, 11.4], -8.5, -31.5, 49.0);
+                let rechts = Camerastand::uit_graden([2.8, 13.0, 11.4], 8.5, -31.5, 49.0);
+                meng_stand(links, rechts, s)
+            }
+            Zaalbeweging::Onthulling => {
+                let plek = [0.0, 3.0 + 10.0 * s, 1.0 + 10.0 * s];
+                Camerastand::uit_graden(plek, 0.0, -16.0 - 15.5 * s, 54.0 - 6.0 * s)
+            }
+        }
+    }
+
+    pub fn baan(self) -> crate::camerarit::Ritbaan {
+        let tikken = (self.duur_s() * TIKKEN_PER_SECONDE as f32).round().max(1.0) as usize;
+        let standen = (0..=tikken)
+            .map(|i| self.stand_op(i as f32 / tikken as f32))
+            .collect();
+        crate::camerarit::Ritbaan::uit_standen(standen, false)
+    }
+
+    /// De baan voor [`Zaalbeweging::Opbouw`], exact synchroon met de `Opbouw`-stappen in de
+    /// Renderer (grootste kleurgroep eerst, bij gelijke grootte meest links eerst; inleiding van
+    /// `0.5 * per_stap_s`, per stap `per_stap_s`, daarna vloeiend uitrollen naar Standpunt A).
+    pub fn baan_voor_opbouw(stoelkleuren: &[crate::Kleur], per_stap_s: f32) -> crate::camerarit::Ritbaan {
+        use crate::uitslagindeling::stoelen_van_links_naar_rechts;
+        use crate::zaalkaart::STOELPLEKKEN;
+
+        let per_stap = per_stap_s.clamp(0.2, 10.0);
+        let volgorde = stoelen_van_links_naar_rechts();
+        let mut rang = vec![0usize; crate::AANTAL_STOELEN];
+        for (r, &i) in volgorde.iter().enumerate() {
+            rang[i] = r;
+        }
+        // Zelfde volgorde als `kleurgolf::Opbouw::nieuw`: per unieke kleur aantal en meest linkse.
+        let mut groepen: Vec<(crate::Kleur, usize, usize, Vec<usize>)> = Vec::new();
+        for (i, &k) in stoelkleuren.iter().take(crate::AANTAL_STOELEN).enumerate() {
+            match groepen.iter_mut().find(|g| g.0 == k) {
+                Some(g) => {
+                    g.1 += 1;
+                    g.2 = g.2.min(rang[i]);
+                    g.3.push(i);
+                }
+                None => groepen.push((k, 1, rang[i], vec![i])),
+            }
+        }
+        if groepen.is_empty() {
+            return Zaalbeweging::Boog.baan();
+        }
+        groepen.sort_by_key(|&(_, n, links, _)| (std::cmp::Reverse(n), links));
+
+        // Doelstand per stap: hoog in de virtuele studio (alle 150 Stoelen blijven in context,
+        // vrij boven het Opbouwlabel), subtiel meeschuivend naar het oplichtende blok.
+        let doelen: Vec<Camerastand> = groepen
+            .iter()
+            .map(|(_, n, _, stoelen)| {
+                let len = stoelen.len() as f32;
+                let m: [f32; 3] = std::array::from_fn(|k| {
+                    stoelen.iter().map(|&i| STOELPLEKKEN[i][k]).sum::<f32>() / len
+                });
+                let grootte = (*n as f32 / 30.0).clamp(0.0, 1.0);
+                let pos = [
+                    (m[0] * 0.40).clamp(-4.8, 4.8),
+                    11.4 + 0.9 * grootte,
+                    9.4 + 1.0 * grootte,
+                ];
+                let kijk = [m[0] * 0.36, 0.55, -6.2 + (m[2] + 6.2) * 0.28];
+                kijk_naar(pos, kijk, 43.5 + 3.0 * grootte)
+            })
+            .collect();
+
+        let totaal_a = stand_totaal_a();
+        let inleiding = 0.5 * per_stap;
+        let alle_stappen = inleiding + doelen.len() as f32 * per_stap;
+        let finale = (0.25 * per_stap + 1.6).max(2.0);
+        let duur = alle_stappen + finale;
+        let tikken = (duur * TIKKEN_PER_SECONDE as f32).round().max(1.0) as usize;
+        let mut standen = Vec::with_capacity(tikken + 1);
+        for i in 0..=tikken {
+            let t = i as f32 / TIKKEN_PER_SECONDE as f32;
+            let stand = if t < inleiding {
+                let s = zachte_voortgang(t / inleiding.max(1e-3), 0.6, 1.0);
+                meng_stand(totaal_a, doelen[0], s)
+            } else if t < alle_stappen {
+                let na = t - inleiding;
+                let k = ((na / per_stap) as usize).min(doelen.len() - 1);
+                let u = ((na - k as f32 * per_stap) / per_stap).clamp(0.0, 1.0);
+                if k == 0 {
+                    // subtiele rustige ademhaling op de eerste (grootste) partij
+                    let mut st = doelen[0];
+                    let zacht = zachte_voortgang(u, 1.0, 1.0);
+                    st.positie[2] -= 0.18 * zacht;
+                    st
+                } else {
+                    let overgang_deel = 0.45;
+                    if u < overgang_deel {
+                        let s = zachte_voortgang(u / overgang_deel, 1.0, 1.0);
+                        meng_stand(doelen[k - 1], doelen[k], s)
+                    } else {
+                        let mut st = doelen[k];
+                        let rust = zachte_voortgang((u - overgang_deel) / (1.0 - overgang_deel), 0.5, 1.0);
+                        st.positie[2] -= 0.12 * rust;
+                        st
+                    }
+                }
+            } else {
+                let s = zachte_voortgang((t - alle_stappen) / finale, 1.0, 1.0);
+                meng_stand(*doelen.last().unwrap(), totaal_a, s)
+            };
+            standen.push(stand);
+        }
+        crate::camerarit::Ritbaan::uit_standen(standen, false)
+    }
+}
+
+/// Een camerabeweging voor Coalitie in de Zaal: richt op het coalitieblok links en de 76-grens.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[ts(export)]
+pub enum Coalitiebeweging {
+    /// Begint boven het coalitieblok links en opent naar de gloeiende 76-meerderheidslijn.
+    Grens,
+    /// Glijdt vanaf de linkerflank over de coalitiepartijen richting de 76-streep en totaaloverzicht.
+    Langs,
+    /// Steil studio-bovenaanzicht met de 76-lijn recht door het midden, kantelend naar totaaloverzicht.
+    Bovenaf,
+}
+
+impl Coalitiebeweging {
+    pub const ALLE: [Coalitiebeweging; 3] = [
+        Coalitiebeweging::Grens,
+        Coalitiebeweging::Langs,
+        Coalitiebeweging::Bovenaf,
+    ];
+
+    pub const fn sleutel(self) -> &'static str {
+        match self {
+            Coalitiebeweging::Grens => COALITIE_GRENS,
+            Coalitiebeweging::Langs => COALITIE_LANGS,
+            Coalitiebeweging::Bovenaf => COALITIE_BOVENAF,
+        }
+    }
+
+    pub const fn naam(self) -> &'static str {
+        match self {
+            Coalitiebeweging::Grens => "Coalitie richting de 76-grens",
+            Coalitiebeweging::Langs => "Langs het coalitieblok naar totaal",
+            Coalitiebeweging::Bovenaf => "Hoog op coalitie en 76-lijn",
+        }
+    }
+
+    pub const fn toelichting(self) -> &'static str {
+        match self {
+            Coalitiebeweging::Grens => "Richt op het coalitieblok links en opent naar de 76-meerderheidslijn in het midden",
+            Coalitiebeweging::Langs => "Glijdt vanaf de linkerflank langs de coalitiepartijen naar het overzicht",
+            Coalitiebeweging::Bovenaf => "Begint steil boven de halve cirkel met de 76-lijn en kantelt naar totaaloverzicht",
+        }
+    }
+
+    pub const fn duur_s(self) -> f32 {
+        match self {
+            Coalitiebeweging::Grens => 10.0,
+            Coalitiebeweging::Langs => 12.0,
+            Coalitiebeweging::Bovenaf => 10.0,
+        }
+    }
+
+    pub fn uit_sleutel(sleutel: &str) -> Option<Self> {
+        Self::ALLE.into_iter().find(|b| b.sleutel() == sleutel)
+    }
+
+    /// De camerastand op voortgang `t` (0 tot 1) voor een coalitie van `zetels` zetels (0..=150).
+    pub fn stand_op(self, zetels: u16, t: f32) -> Camerastand {
+        let s = zachte_voortgang(t, 1.0, 1.0);
+        // Hoe groter de coalitie (tot 110 zetels), hoe dichter het beginpunt bij het midden staat.
+        let deel = (f32::from(zetels.clamp(10, 120)) / 120.0).clamp(0.0, 1.0);
+        match self {
+            Coalitiebeweging::Grens => {
+                let start = kijk_naar(
+                    [-5.4 + 1.8 * deel, 10.4 + 0.8 * deel, 8.8 + 0.8 * deel],
+                    [-2.8 + 1.4 * deel, 0.75, -6.2],
+                    46.0 + 1.5 * deel,
+                );
+                let eind = kijk_naar([-0.8, 12.8, 10.8], [-0.3, 0.7, -6.4], 48.0);
+                meng_stand(start, eind, s)
+            }
+            Coalitiebeweging::Langs => {
+                let links = kijk_naar([-6.8, 10.0, 8.2], [-3.6 + 1.2 * deel, 0.8, -5.8], 47.0);
+                let midden = kijk_naar([-2.2, 12.2, 10.4], [-0.6, 0.75, -6.4], 48.0);
+                let eind = stand_totaal_a();
+                if t < 0.55 {
+                    meng_stand(links, midden, zachte_voortgang(t / 0.55, 1.0, 0.3))
+                } else {
+                    meng_stand(midden, eind, zachte_voortgang((t - 0.55) / 0.45, 0.3, 1.0))
+                }
+            }
+            Coalitiebeweging::Bovenaf => meng_stand(stand_bovenaf_g(), stand_totaal_a(), s),
+        }
+    }
+
+    pub fn baan(self, zetels: u16) -> crate::camerarit::Ritbaan {
+        let tikken = (self.duur_s() * TIKKEN_PER_SECONDE as f32).round().max(1.0) as usize;
+        let standen = (0..=tikken)
+            .map(|i| self.stand_op(zetels, i as f32 / tikken as f32))
+            .collect();
+        crate::camerarit::Ritbaan::uit_standen(standen, false)
+    }
+}
+
+/// Een camerabeweging voor Graphics met een breed paneel onderin (Zetelbalk, Twee sets,
+/// Coalitiebalk, Uitslag van een Stemming): alle 150 Stoelen blijven de hele rit boven het paneel.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[ts(export)]
+pub enum Paneelbeweging {
+    /// Zachte horizontale studiobeweging hoog boven het onderste paneel.
+    Zweef,
+    /// Daalt rustig in tot alle 150 Stoelen strak boven het paneel staan.
+    Indalen,
+}
+
+impl Paneelbeweging {
+    pub const ALLE: [Paneelbeweging; 2] = [Paneelbeweging::Zweef, Paneelbeweging::Indalen];
+
+    pub const fn sleutel(self) -> &'static str {
+        match self {
+            Paneelbeweging::Zweef => PANEEL_ZWEEF,
+            Paneelbeweging::Indalen => PANEEL_INDALEN,
+        }
+    }
+
+    pub const fn naam(self) -> &'static str {
+        match self {
+            Paneelbeweging::Zweef => "Rustig zweven boven het paneel",
+            Paneelbeweging::Indalen => "Indalen boven het paneel",
+        }
+    }
+
+    pub const fn toelichting(self) -> &'static str {
+        match self {
+            Paneelbeweging::Zweef => "Zachte studiobeweging waarbij alle 150 zetels boven het paneel blijven",
+            Paneelbeweging::Indalen => "Komt van hoger overzicht omlaag tot alle 150 zetels strak boven het paneel staan",
+        }
+    }
+
+    pub const fn duur_s(self) -> f32 {
+        match self {
+            Paneelbeweging::Zweef => 16.0,
+            Paneelbeweging::Indalen => 10.0,
+        }
+    }
+
+    pub fn uit_sleutel(sleutel: &str) -> Option<Self> {
+        Self::ALLE.into_iter().find(|b| b.sleutel() == sleutel)
+    }
+
+    pub fn stand_op(self, t: f32) -> Camerastand {
+        let s = zachte_voortgang(t, 1.0, 1.0);
+        match self {
+            Paneelbeweging::Zweef => {
+                let links = Camerastand::uit_graden([-2.4, 10.8, 12.4], -7.5, -44.0, 50.5);
+                let rechts = Camerastand::uit_graden([2.4, 10.8, 12.4], 7.5, -44.0, 50.5);
+                meng_stand(links, rechts, s)
+            }
+            Paneelbeweging::Indalen => {
+                let start = Camerastand::uit_graden([0.0, 13.4, 9.8], 0.0, -55.0, 56.0);
+                meng_stand(start, boven_het_paneel(), s)
+            }
+        }
+    }
+
+    pub fn baan(self) -> crate::camerarit::Ritbaan {
+        let tikken = (self.duur_s() * TIKKEN_PER_SECONDE as f32).round().max(1.0) as usize;
+        let standen = (0..=tikken)
+            .map(|i| self.stand_op(i as f32 / tikken as f32))
+            .collect();
+        crate::camerarit::Ritbaan::uit_standen(standen, false)
+    }
+}
+
 /// Welke Standpunten en camerabewegingen bij een soort Graphic of Sjabloon passen, zodat de Regie
 /// nooit per ongeluk een standpunt kiest dat achter een paneel valt of een uitgelichte Partij of
 /// persoon mist.
@@ -769,8 +1190,8 @@ impl CameraProfiel {
         match self {
             CameraProfiel::Partij | CameraProfiel::PersoonMetStoel => &[],
             CameraProfiel::PersoonZonderStoel | CameraProfiel::PersoonSjabloon => &["W", "T", "E"],
-            CameraProfiel::HeleZaal | CameraProfiel::CoalitieZaal => &["Q", "Y", "E"],
-            CameraProfiel::BovenPaneel => &["Y", "E"],
+            CameraProfiel::HeleZaal | CameraProfiel::CoalitieZaal => &["Q", "Y"],
+            CameraProfiel::BovenPaneel => &[],
             CameraProfiel::GrootPaneel => &["E", "W", "T"],
             CameraProfiel::Algemeen | CameraProfiel::AlgemeenMetPartij => &["Q", "W", "E", "T", "Y", "U"],
         }
@@ -788,6 +1209,18 @@ impl CameraProfiel {
         matches!(self, CameraProfiel::PersoonMetStoel | CameraProfiel::PersoonSjabloon)
     }
 
+    pub const fn mag_zaalbeweging(self) -> bool {
+        matches!(self, CameraProfiel::HeleZaal)
+    }
+
+    pub const fn mag_coalitiebeweging(self) -> bool {
+        matches!(self, CameraProfiel::CoalitieZaal)
+    }
+
+    pub const fn mag_paneelbeweging(self) -> bool {
+        matches!(self, CameraProfiel::BovenPaneel)
+    }
+
     /// Of eigen Standpunten en eigen Cameraritten bij dit profiel mogen. Bij een uitgelichte
     /// Partij of Persoonskaart met Stoel niet: die moeten de gekozen Partij of Stoel volgen.
     pub const fn mag_eigen(self) -> bool {
@@ -801,9 +1234,9 @@ impl CameraProfiel {
             CameraProfiel::PersoonMetStoel => "kies een beweging naar de Stoel van het Kamerlid",
             CameraProfiel::PersoonZonderStoel => "kies een rustig Zaal-standpunt zonder katheder of paneelstandpunt",
             CameraProfiel::PersoonSjabloon => "kies een beweging naar de Stoel of een rustig Zaal-standpunt",
-            CameraProfiel::HeleZaal => "kies een overzicht van de hele Zaal",
-            CameraProfiel::CoalitieZaal => "kies een overzicht van de Zaal of de Linkerflank",
-            CameraProfiel::BovenPaneel => "kies Totaal boven het paneel of een hoog overzicht",
+            CameraProfiel::HeleZaal => "kies een Zetelverdeling-beweging of een volledig overzicht van de Zaal (A, G, Q of Y)",
+            CameraProfiel::CoalitieZaal => "kies een Coalitie-beweging, een overzicht van de Zaal of de Linkerflank",
+            CameraProfiel::BovenPaneel => "kies Totaal boven het paneel, een beweging boven het paneel of Bovenaf (G)",
             CameraProfiel::GrootPaneel => "kies een overzicht of rustige rit voor achter het paneel",
             CameraProfiel::Algemeen => "kies een algemeen Standpunt of een Camerarit",
             CameraProfiel::AlgemeenMetPartij => "kies een beweging naar de Partij, een Standpunt of een Camerarit",
@@ -1496,43 +1929,68 @@ mod tests {
         }
     }
 
-    /// Schrijft de gerichte bewegingen (Partij en Stoel) en cameraprofielen naar het dashboard
-    /// (`dashboard/src/typen/cameraBewegingen.ts`), zodat Rust en TypeScript altijd gelijk lopen.
+    #[test]
+    fn bovenaf_en_boven_het_paneel_tonen_alle_150_stoelen() {
+        let g = Standpunt::vaste().into_iter().find(|s| s.letter == "G").unwrap().stand;
+        let paneel = boven_het_paneel();
+        for (naam, stand, max_px_y) in [("G (Bovenaf)", g, 840.0), ("Boven het paneel", paneel, 412.0)] {
+            for (i, p) in STOELPLEKKEN.iter().enumerate() {
+                for dx in [-0.45f32, 0.0, 0.45] {
+                    let [x, y] = stand
+                        .in_beeld([p[0] + dx, p[1], p[2]])
+                        .unwrap_or_else(|| panic!("{naam}: Stoel {i} achter camera"));
+                    assert!(x.abs() <= 0.98 && y.abs() <= 0.98, "{naam}: Stoel {i} buiten beeld ({x:.2}, {y:.2})");
+                    let px_y = (1.0 - y) * 540.0;
+                    assert!(px_y <= max_px_y, "{naam}: Stoel {i} te laag op y={px_y:.0} (max {max_px_y})");
+                }
+            }
+        }
+    }
+
+    /// Schrijft de gerichte bewegingen (Partij, Stoel, Zaal, Coalitie, Paneel) en cameraprofielen
+    /// naar het dashboard (`dashboard/src/typen/cameraBewegingen.ts`), zodat Rust en TypeScript
+    /// altijd gelijk lopen.
     #[test]
     fn schrijf_de_camerabewegingen_voor_het_dashboard() {
         let Some(map) = std::env::var_os("TS_RS_EXPORT_DIR") else {
             return;
         };
-        let mut partij = Vec::new();
-        for b in Partijbeweging::ALLE {
-            partij.push(format!(
-                "  {{ sleutel: {:?}, naam: {:?}, toelichting: {:?}, duur_s: {} }},",
-                b.sleutel(),
-                b.naam(),
-                b.toelichting(),
-                b.duur_s(),
-            ));
-        }
-        let mut stoel = Vec::new();
-        for b in Stoelbeweging::ALLE {
-            stoel.push(format!(
-                "  {{ sleutel: {:?}, naam: {:?}, toelichting: {:?}, duur_s: {} }},",
-                b.sleutel(),
-                b.naam(),
-                b.toelichting(),
-                b.duur_s(),
-            ));
-        }
+        let regel = |sleutel: &str, naam: &str, toelichting: &str, duur_s: f32| {
+            format!("  {{ sleutel: {sleutel:?}, naam: {naam:?}, toelichting: {toelichting:?}, duur_s: {duur_s} }},")
+        };
+        let partij: Vec<String> = Partijbeweging::ALLE
+            .into_iter()
+            .map(|b| regel(b.sleutel(), b.naam(), b.toelichting(), b.duur_s()))
+            .collect();
+        let stoel: Vec<String> = Stoelbeweging::ALLE
+            .into_iter()
+            .map(|b| regel(b.sleutel(), b.naam(), b.toelichting(), b.duur_s()))
+            .collect();
+        let zaal: Vec<String> = Zaalbeweging::ALLE
+            .into_iter()
+            .map(|b| regel(b.sleutel(), b.naam(), b.toelichting(), b.duur_s()))
+            .collect();
+        let coalitie: Vec<String> = Coalitiebeweging::ALLE
+            .into_iter()
+            .map(|b| regel(b.sleutel(), b.naam(), b.toelichting(), b.duur_s()))
+            .collect();
+        let paneel: Vec<String> = Paneelbeweging::ALLE
+            .into_iter()
+            .map(|b| regel(b.sleutel(), b.naam(), b.toelichting(), b.duur_s()))
+            .collect();
         let mut profielen = Vec::new();
         for p in CameraProfiel::ALLE {
             let naam = serde_json::to_string(&p).unwrap();
             let vaste_s = serde_json::to_string(p.vaste_standpunten()).unwrap();
             let vaste_r = serde_json::to_string(p.vaste_ritten()).unwrap();
             profielen.push(format!(
-                "  {naam}: {{ vasteStandpunten: {vaste_s}, vasteRitten: {vaste_r}, bovenHetPaneel: {}, partij: {}, stoel: {}, eigen: {} }},",
+                "  {naam}: {{ vasteStandpunten: {vaste_s}, vasteRitten: {vaste_r}, bovenHetPaneel: {}, partij: {}, stoel: {}, zaal: {}, coalitie: {}, paneel: {}, eigen: {} }},",
                 p.mag_boven_het_paneel(),
                 p.mag_partijbeweging(),
                 p.mag_stoelbeweging(),
+                p.mag_zaalbeweging(),
+                p.mag_coalitiebeweging(),
+                p.mag_paneelbeweging(),
                 p.mag_eigen(),
             ));
         }
@@ -1551,16 +2009,28 @@ mod tests {
                bovenHetPaneel: boolean;\n\
                partij: boolean;\n\
                stoel: boolean;\n\
+               zaal: boolean;\n\
+               coalitie: boolean;\n\
+               paneel: boolean;\n\
                eigen: boolean;\n\
              }}\n\n\
              /** De gerichte camerabewegingen naar het blok van de gekozen Partij. */\n\
              export const PARTIJBEWEGINGEN: readonly GerichteBeweging[] = [\n{}\n];\n\n\
              /** De gerichte camerabewegingen naar de Stoel van het Kamerlid. */\n\
              export const STOELBEWEGINGEN: readonly GerichteBeweging[] = [\n{}\n];\n\n\
+             /** De gerichte camerabewegingen voor de Zetelverdeling in de Zaal. */\n\
+             export const ZAALBEWEGINGEN: readonly GerichteBeweging[] = [\n{}\n];\n\n\
+             /** De gerichte camerabewegingen voor Coalitie in de Zaal. */\n\
+             export const COALITIEBEWEGINGEN: readonly GerichteBeweging[] = [\n{}\n];\n\n\
+             /** De gerichte camerabewegingen voor Graphics met een breed paneel onderin. */\n\
+             export const PANEELBEWEGINGEN: readonly GerichteBeweging[] = [\n{}\n];\n\n\
              /** Welke vaste Standpunten, vaste Cameraritten en bewegingen bij elk CameraProfiel passen. */\n\
              export const CAMERA_PROFIELEN: Readonly<Record<CameraProfiel, ProfielRegels>> = {{\n{}\n}};\n",
             partij.join("\n"),
             stoel.join("\n"),
+            zaal.join("\n"),
+            coalitie.join("\n"),
+            paneel.join("\n"),
             profielen.join("\n"),
         );
         let pad = std::path::Path::new(&map).join("cameraBewegingen.ts");

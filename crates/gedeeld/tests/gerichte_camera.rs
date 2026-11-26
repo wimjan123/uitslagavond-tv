@@ -173,9 +173,39 @@ fn zetelbalk_zetelverdeling_en_winst_en_verlies_weigeren_niet_passende_standpunt
         indeling: gedeeld::Indeling::Uitslagindeling,
         cijfers: None,
     };
+    for b in camera::Zaalbeweging::ALLE {
+        assert!(
+            p.doe(Opdracht::ZetKlaar { graphic: verdeling.clone(), standpunt: Some(b.sleutel().into()) }).is_ok(),
+            "{b:?} moet bij Zetelverdeling passen"
+        );
+    }
     assert!(p.doe(Opdracht::ZetKlaar { graphic: verdeling.clone(), standpunt: Some("Q".into()) }).is_ok());
     assert!(matches!(
+        p.doe(Opdracht::ZetKlaar { graphic: verdeling.clone(), standpunt: Some("E".into()) }),
+        Err(Weigering::StandpuntPastNiet { .. })
+    ));
+    assert!(matches!(
         p.doe(Opdracht::ZetKlaar { graphic: verdeling, standpunt: Some("H".into()) }),
+        Err(Weigering::StandpuntPastNiet { .. })
+    ));
+
+    // Paneelbewegingen passen bij Zetelbalk, maar niet bij Zetelverdeling of Coalitie
+    let balk2 = Graphic::Zetelbalk { set: "exitpoll".into(), grootste: None, cijfers: None };
+    for b in camera::Paneelbeweging::ALLE {
+        assert!(p.doe(Opdracht::ZetKlaar { graphic: balk2.clone(), standpunt: Some(b.sleutel().into()) }).is_ok());
+    }
+    assert!(matches!(
+        p.doe(Opdracht::ZetKlaar { graphic: balk2, standpunt: Some(camera::ZAAL_OPBOUW.into()) }),
+        Err(Weigering::StandpuntPastNiet { .. })
+    ));
+
+    // Coalitiebewegingen passen bij Coalitie in de Zaal
+    let coal = Graphic::Coalitie { set: "exitpoll".into(), partijen: vec!["rood".into()], cijfers: None };
+    for b in camera::Coalitiebeweging::ALLE {
+        assert!(p.doe(Opdracht::ZetKlaar { graphic: coal.clone(), standpunt: Some(b.sleutel().into()) }).is_ok());
+    }
+    assert!(matches!(
+        p.doe(Opdracht::ZetKlaar { graphic: coal, standpunt: Some(camera::PANEEL_ZWEEF.into()) }),
         Err(Weigering::StandpuntPastNiet { .. })
     ));
 

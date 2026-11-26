@@ -162,11 +162,35 @@ test("passendeCameraKeuzes geeft per profiel alleen bijpassende bewegingen en St
 
   const bovenPaneel = passendeCameraKeuzes(standpunten, ritten, "BovenPaneel").map((k) => k.letter);
   assert.ok(bovenPaneel.includes("boven-het-paneel"));
+  assert.ok(bovenPaneel.includes("paneel-zweef"));
+  assert.ok(bovenPaneel.includes("paneel-indalen"));
   assert.ok(bovenPaneel.includes("G"));
-  assert.ok(bovenPaneel.includes("Y"));
   assert.ok(bovenPaneel.includes("E1"));
+  assert.ok(!bovenPaneel.includes("Y"), "Kraan valt deels achter een onderste paneel");
   assert.ok(!bovenPaneel.includes("A"));
   assert.ok(!bovenPaneel.includes("H"));
+
+  const heleZaal = passendeCameraKeuzes(standpunten, ritten, "HeleZaal").map((k) => k.letter);
+  assert.ok(heleZaal.includes("zaal-opbouw"));
+  assert.ok(heleZaal.includes("zaal-veeg"));
+  assert.ok(heleZaal.includes("zaal-bovenaf"));
+  assert.ok(heleZaal.includes("zaal-boog"));
+  assert.ok(heleZaal.includes("zaal-onthulling"));
+  assert.ok(heleZaal.includes("A"));
+  assert.ok(heleZaal.includes("G"));
+  assert.ok(heleZaal.includes("Q"));
+  assert.ok(heleZaal.includes("Y"));
+
+  const coalitie = passendeCameraKeuzes(standpunten, ritten, "CoalitieZaal").map((k) => k.letter);
+  assert.ok(coalitie.includes("coalitie-grens"));
+  assert.ok(coalitie.includes("coalitie-langs"));
+  assert.ok(coalitie.includes("coalitie-bovenaf"));
+  assert.ok(coalitie.includes("A"));
+  assert.ok(coalitie.includes("D"));
+
+  assert.equal(gerichteBewegingNaam("zaal-opbouw"), "Opbouw meebewegen");
+  assert.equal(gerichteBewegingNaam("coalitie-grens"), "Coalitie richting de 76-grens");
+  assert.equal(gerichteBewegingNaam("paneel-zweef"), "Rustig zweven boven het paneel");
 
   assert.equal(
     cameraProfielVanGraphic({ sjabloon: "PartijUitgelicht", set: "s", partij: "p" }),

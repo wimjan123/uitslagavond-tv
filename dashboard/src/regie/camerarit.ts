@@ -9,7 +9,14 @@ import type { Sjabloon } from "../typen/Sjabloon";
 import type { Stand } from "../typen/Stand";
 import type { Standpunt } from "../typen/Standpunt";
 import type { Stoel } from "../typen/Stoel";
-import { CAMERA_PROFIELEN, PARTIJBEWEGINGEN, STOELBEWEGINGEN } from "../typen/cameraBewegingen.ts";
+import {
+  CAMERA_PROFIELEN,
+  COALITIEBEWEGINGEN,
+  PANEELBEWEGINGEN,
+  PARTIJBEWEGINGEN,
+  STOELBEWEGINGEN,
+  ZAALBEWEGINGEN,
+} from "../typen/cameraBewegingen.ts";
 import { RITSTAP, STANDAARD_RITTEN, VASTE_OPNAMES } from "../typen/vasteRitten.ts";
 import { sjabloonId, standaardStandpunt } from "../graphic.ts";
 import { benodigd, geldendSjabloon } from "../vormgeving/sjablonen.ts";
@@ -29,7 +36,14 @@ export interface Camerakeus {
   naam: string;
   /** Zoals de Regie het in een keuzelijst ziet: "J · Close-up", "Boog om de Partij · 12 s", of alleen de naam. */
   tekst: string;
-  soort: "Partijbeweging" | "Stoelbeweging" | "Standpunt" | "Camerarit";
+  soort:
+    | "Partijbeweging"
+    | "Stoelbeweging"
+    | "Zaalbeweging"
+    | "Coalitiebeweging"
+    | "Paneelbeweging"
+    | "Standpunt"
+    | "Camerarit";
   /** Korte toelichting onder de keuze, voor gerichte bewegingen. */
   toelichting?: string;
 }
@@ -101,6 +115,22 @@ export function passendeCameraKeuzes(
   if (r.stoel) {
     for (const b of STOELBEWEGINGEN) {
       uit.push(keus(b.sleutel, null, b.naam, "Stoelbeweging", b.toelichting, `${b.naam} · ${duur(b.duur_s)}`));
+    }
+  }
+  if (r.zaal) {
+    for (const b of ZAALBEWEGINGEN) {
+      const tekst = b.sleutel === "zaal-opbouw" ? `${b.naam} · synchroon` : `${b.naam} · ${duur(b.duur_s)}`;
+      uit.push(keus(b.sleutel, null, b.naam, "Zaalbeweging", b.toelichting, tekst));
+    }
+  }
+  if (r.coalitie) {
+    for (const b of COALITIEBEWEGINGEN) {
+      uit.push(keus(b.sleutel, null, b.naam, "Coalitiebeweging", b.toelichting, `${b.naam} · ${duur(b.duur_s)}`));
+    }
+  }
+  if (r.paneel) {
+    for (const b of PANEELBEWEGINGEN) {
+      uit.push(keus(b.sleutel, null, b.naam, "Paneelbeweging", b.toelichting, `${b.naam} · ${duur(b.duur_s)}`));
     }
   }
   if (r.bovenHetPaneel) {
@@ -203,6 +233,9 @@ export function gerichteBewegingNaam(letter: string): string | null {
     const m = new RegExp(`^${b.sleutel}-(\\d+-\\d+-\\d+)$`).exec(letter);
     if (m) return `${b.naam} · Stoel ${m[1]}`;
   }
+  for (const b of [...ZAALBEWEGINGEN, ...COALITIEBEWEGINGEN, ...PANEELBEWEGINGEN]) {
+    if (letter === b.sleutel) return b.naam;
+  }
   return null;
 }
 
@@ -218,6 +251,9 @@ export function isGerichteRit(letter: string): boolean {
     "stoel-langs",
     "stoel-indalen",
     "stoel-uitzoomen",
+    ...ZAALBEWEGINGEN.map((b) => b.sleutel),
+    ...COALITIEBEWEGINGEN.map((b) => b.sleutel),
+    ...PANEELBEWEGINGEN.map((b) => b.sleutel),
   ];
   return ritten.some((r) => letter === r || letter.startsWith(`${r}-`));
 }
@@ -241,6 +277,8 @@ export function standaardCameraTekst(s: Stand, g: Graphic, stoelOverride?: Stoel
   }
   const pb = PARTIJBEWEGINGEN.find((b) => b.sleutel === letter);
   if (pb) return `${pb.naam} · ${duur(pb.duur_s)}`;
+  const zb = [...ZAALBEWEGINGEN, ...COALITIEBEWEGINGEN, ...PANEELBEWEGINGEN].find((b) => b.sleutel === letter);
+  if (zb) return zb.sleutel === "zaal-opbouw" ? `${zb.naam} · synchroon` : `${zb.naam} · ${duur(zb.duur_s)}`;
   if (letter === BOVEN_HET_PANEEL) return BOVEN_HET_PANEEL_NAAM;
   if (letter === BLIJF) return BLIJF_NAAM;
   const sp = s.standpunten.find((p) => p.letter === letter);

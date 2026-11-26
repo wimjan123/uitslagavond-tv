@@ -4,6 +4,7 @@
 import { useMemo, useState } from "react";
 import { AlertTriangle, Check, Save, Send, Sparkles } from "lucide-react";
 import { meerderheidSlaatOm } from "../coalitie/coalitie";
+import { BOVEN_HET_PANEEL, passendeCameraKeuzes } from "../regie/camerarit";
 import { useRegie } from "../regie/regie";
 import { CAMERA, zetStoelbeeldKlaar } from "../regie/take";
 import type { Graphic } from "../typen/Graphic";
@@ -15,8 +16,8 @@ export function CoalitieWerkruimte() {
   const stand = regie.stand?.stand;
   const [setId, setSetId] = useState<string>("");
   const [vorm, setVorm] = useState<"Coalitie" | "Coalitiebalk">("Coalitie");
-  // Standaard blijft de lopende camera (bijv. een pannetje/Camerarit) doorlopen!
-  const [cameraBlijft, setCameraBlijft] = useState<boolean>(true);
+  const [cameraBlijft, setCameraBlijft] = useState<boolean>(false);
+  const [cameraKeuze, setCameraKeuze] = useState<string>("coalitie-grens");
 
   const gekozenSet = useMemo(() => {
     if (!stand) return undefined;
@@ -31,6 +32,15 @@ export function CoalitieWerkruimte() {
 
   const [lokaal, setLokaal] = useState<string[]>([]);
   const partijen = lokaal.length > 0 ? lokaal : gekozen;
+
+  const cameraProfiel = vorm === "Coalitie" ? "CoalitieZaal" : "BovenPaneel";
+  const passendeOpties = useMemo(() => {
+    if (!stand) return [];
+    return passendeCameraKeuzes(stand.standpunten, stand.cameraritten, cameraProfiel).filter((k) => k.letter !== "blijf");
+  }, [stand?.standpunten, stand?.cameraritten, cameraProfiel]);
+  const standaardCamera = vorm === "Coalitie" ? "coalitie-grens" : BOVEN_HET_PANEEL;
+  const geldigeCamera = passendeOpties.some((o) => o.letter === cameraKeuze) ? cameraKeuze : standaardCamera;
+  const effectiefStandpunt = cameraBlijft ? "blijf" : geldigeCamera;
 
   if (!stand) return null;
 
@@ -91,9 +101,24 @@ export function CoalitieWerkruimte() {
               onMouseDown={(e) => e.preventDefault()}
               onClick={() => setCameraBlijft(false)}
             >
-              Standpunt A
+              {vorm === "Coalitie" ? "Coalitie & 76" : "Boven paneel"}
             </button>
           </div>
+          {!cameraBlijft && (
+            <select
+              className="select sm"
+              style={{ width: 250 }}
+              value={geldigeCamera}
+              onChange={(e) => setCameraKeuze(e.target.value)}
+              aria-label="Passende camerabeweging voor coalitie"
+            >
+              {passendeOpties.map((o) => (
+                <option key={o.letter} value={o.letter}>
+                  {o.tekst}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -119,7 +144,7 @@ export function CoalitieWerkruimte() {
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               const g = maakGraphic();
-              if (g) void regie.stuur({ soort: "BewaarPreset", graphic: g, standpunt: cameraBlijft ? "blijf" : undefined }, BIJ);
+              if (g) void regie.stuur({ soort: "BewaarPreset", graphic: g, standpunt: effectiefStandpunt }, BIJ);
             }}
           >
             <Save size={13} /> Bewaar Preset
@@ -131,7 +156,7 @@ export function CoalitieWerkruimte() {
             onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               const g = maakGraphic();
-              if (g) void regie.stuur({ soort: "ZetKlaar", graphic: g, standpunt: cameraBlijft ? "blijf" : undefined }, BIJ);
+              if (g) void regie.stuur({ soort: "ZetKlaar", graphic: g, standpunt: effectiefStandpunt }, BIJ);
             }}
           >
             <Send size={13} /> Zet in Preview

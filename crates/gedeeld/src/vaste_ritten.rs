@@ -26,11 +26,11 @@ struct Vast {
 }
 
 const VAST: [Vast; 6] = [
-    Vast { letter: "Q", naam: "Onthulling", seconden: 16, eind: RitEind::Stoppen, stand: onthulling },
+    Vast { letter: "Q", naam: "Onthulling", seconden: 12, eind: RitEind::Stoppen, stand: onthulling },
     Vast { letter: "W", naam: "Zwenk linkerflank naar rechterflank", seconden: 24, eind: RitEind::Stoppen, stand: zwenk },
     Vast { letter: "E", naam: "Rondje boven de zaal", seconden: 50, eind: RitEind::Herhalen, stand: rondje },
     Vast { letter: "T", naam: "Panorama vanuit het midden", seconden: 20, eind: RitEind::Stoppen, stand: panorama },
-    Vast { letter: "Y", naam: "Kraan omhoog naar overzicht", seconden: 14, eind: RitEind::Stoppen, stand: kraan },
+    Vast { letter: "Y", naam: "Kraan omhoog naar overzicht", seconden: 12, eind: RitEind::Stoppen, stand: kraan },
     Vast { letter: "U", naam: "Naar de katheder", seconden: 14, eind: RitEind::Stoppen, stand: katheder },
 ];
 
@@ -43,13 +43,14 @@ fn mix(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
     std::array::from_fn(|i| a[i] + (b[i] - a[i]) * t)
 }
 
-/// Dichtbij boven de voorste banken, dan terug en omhoog tot de hele halve cirkel in beeld is:
-/// zo eindigt hij met elke Partij in beeld.
+/// Begint dichter bij de voorste banken en klimt vloeiend de virtuele studio in tot exact
+/// Standpunt A (alle 150 Stoelen scherp zonder groothoekvervorming).
 fn onthulling(t: f32) -> ([f32; 3], [f32; 3], f32) {
-    let t = zacht(t);
-    let plek = mix([0.0, 2.6, -1.0], [0.0, 4.0, 4.35], t);
-    let doel = mix([0.0, 0.8, -6.0], [0.0, 0.5, -5.0], t);
-    (plek, doel, 50.0 + 54.0 * t)
+    let s = zacht(t);
+    let plek = [0.0, 3.0 + 10.0 * s, 1.0 + 10.0 * s];
+    let helling = (-16.0 - 15.5 * s).to_radians();
+    let doel = [plek[0], plek[1] + 10.0 * helling.sin(), plek[2] - 10.0 * helling.cos()];
+    (plek, doel, 54.0 - 6.0 * s)
 }
 
 /// Van de linkerflank in een boog voor de Voorzitter langs naar de rechterflank.
@@ -77,12 +78,14 @@ fn panorama(t: f32) -> ([f32; 3], [f32; 3], f32) {
     (plek, doel, 48.0)
 }
 
-/// Van laag achter de Voorzitter omhoog en naar voren, tot het overzicht van bovenaf.
+/// Van laag achter de Voorzitter vloeiend omhoog de virtuele studio in, tot het steile
+/// bovenaanzicht (Standpunt G) met alle 150 Stoelen in beeld.
 fn kraan(t: f32) -> ([f32; 3], [f32; 3], f32) {
-    let t = zacht(t);
-    let plek = [0.0, 1.9 + 2.2 * t, 3.6 - 6.0 * t];
-    let doel = [0.0, 1.2 - 0.6 * t, -9.0 + 3.0 * t];
-    (plek, doel, 58.0 + 12.0 * t)
+    let s = zacht(t);
+    let plek = [0.0, 2.2 + 11.3 * s, 3.6 + 1.2 * s];
+    let helling = (-10.0 - 36.0 * s).to_radians();
+    let doel = [plek[0], plek[1] + 10.0 * helling.sin(), plek[2] - 10.0 * helling.cos()];
+    (plek, doel, 54.0 + 12.0 * s)
 }
 
 /// Van ver achter in de Zaal over de banken naar de katheder, steeds dichterbij.

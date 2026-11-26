@@ -2138,8 +2138,8 @@ fn zetelverdeling() -> Sjabloon {
         snelheid: 100,
         achtergrond: Achtergrond::Zaal,
         stoelen: Stoelen::Gegevens,
-        // Standpunt A, zoals elke zetelgraphic: geen beweging tijdens de Opbouw
-        standpunt: None,
+        // Beweegt vanuit hoog overzicht rustig mee met elke Partij van de Opbouw en opent naar totaal A
+        standpunt: Some(crate::camera::ZAAL_OPBOUW.into()),
         blokken: vec![
             naambalk(plek(96, 54, 1100, 166), vec![2, 3]),
             streepje,
@@ -2774,7 +2774,8 @@ fn coalitie_in_de_zaal() -> Sjabloon {
         snelheid: 100,
         achtergrond: Achtergrond::Zaal,
         stoelen: Stoelen::Gegevens,
-        standpunt: None,
+        // Richt op het coalitieblok links en opent naar de gloeiende 76-meerderheidslijn
+        standpunt: Some(crate::camera::COALITIE_GRENS.into()),
         blokken,
         kleurovergang: None,
     }
