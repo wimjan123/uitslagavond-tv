@@ -164,6 +164,8 @@ impl Server {
             .route("/ws", get(websocket))
             .route("/api/stand", get(stand))
             .route("/api/opdracht", post(opdracht))
+            .route("/api/zaalbeeld", get(zaalbeeld))
+            .route("/api/conceptbeeld", post(conceptbeeld))
             .route("/api/knoppen", get(knoppen::alle_velden))
             .route("/api/knoppen/{veld}", get(knoppen::een_veld))
             .route("/api/vrije-camera/wissel", post(knoppen::wissel_vrije_camera))
@@ -528,6 +530,129 @@ fn gelijk(a: &[u8], b: &[u8]) -> bool {
 
 async fn stand(State(g): State<Arc<Gedeeld>>) -> Json<GenummerdeStand> {
     Json(g.uitzending.borrow().clone())
+}
+
+#[derive(Deserialize)]
+struct ZaalbeeldVraag {
+    monitor: Option<String>,
+}
+
+/// Het laatste 720p JPEG-beeld van de Zaal uit de Voorbeeld-renderer, voor de Studio-editor en
+/// het Conceptbeeld. Geeft 204 terug als er nog geen Voorbeeld-renderer verbonden is.
+async fn zaalbeeld(
+    State(g): State<Arc<Gedeeld>>,
+    Query(q): Query<ZaalbeeldVraag>,
+) -> Response {
+    let voorkeur = match q.monitor.as_deref() {
+        Some("voorbeeld") => [0, 1],
+        _ => [1, 0], // standaard Ether (1), fallback Voorbeeld (0)
+    };
+    for i in voorkeur {
+        let beeld = g.beelden[i].borrow().clone();
+        if beeld.len() > 1 {
+            return (
+                [
+                    (header::CONTENT_TYPE, "image/jpeg"),
+                    (header::CACHE_CONTROL, "no-cache"),
+                ],
+                beeld.slice(1..),
+            )
+                .into_response();
+        }
+    }
+    StatusCode::NO_CONTENT.into_response()
+}
+
+#[derive(Deserialize)]
+struct ConceptVraag {
+    graphic: Option<gedeeld::Graphic>,
+    stoelbeeld: Option<gedeeld::Stoelbeeld>,
+    sjabloon: Option<gedeeld::sjabloon::Sjabloon>,
+    stijl: Option<gedeeld::sjabloon::Stijl>,
+}
+
+/// Rekent een privé-Conceptbeeld uit voor één Werkplek zonder de gedeelde Stand te wijzigen
+/// (ADR 0001 / ADR 0005): geeft de ingevulde Blokken (1920×1080) en eventuele stoelkleuren terug.
+async fn conceptbeeld(
+    State(g): State<Arc<Gedeeld>>,
+    Json(vraag): Json<ConceptVraag>,
+) -> Response {
+    let stand = g.uitzending.borrow().stand.clone();
+    let stijl = vraag.stijl.unwrap_or_else(|| stand.stijl.clone());
+    let mut stoelkleuren: Vec<gedeeld::Kleur> = Vec::new();
+    if let Some(sb) = &vraag.stoelbeeld {
+        match sb.bereken_kleuren(&stand) {
+            Ok(k) => stoelkleuren = k,
+            Err(e) => {
+                return (
+                    StatusCode::UNPROCESSABLE_ENTITY,
+                    Json(serde_json::json!({ "fout": e.to_string() })),
+                )
+                    .into_response();
+            }
+        }
+    }
+    let blokken = if let Some(graphic) = &vraag.graphic {
+        if let Err(e) = graphic.controleer() {
+            return (
+                StatusCode::UNPROCESSABLE_ENTITY,
+                Json(serde_json::json!({ "fout": e.to_string() })),
+            )
+                .into_response();
+        }
+        let invulling = graphic.invulling();
+        let sjabloon = vraag
+            .sjabloon
+            .or_else(|| stand.sjabloon(&graphic.sjabloon_id()).map(|s| s.into_owned()));
+        match sjabloon {
+            Some(s) => {
+                let cijfers = graphic.cijfers().unwrap_or_else(|| stand.cijfers.clone());
+                s.met_achtergrond().vul_in(&invulling, &cijfers, &stijl)
+            }
+            None => Vec::new(),
+        }
+    } else if let Some(s) = &vraag.sjabloon {
+        let g = gedeeld::Graphic::Titelkaart { kop: s.naam.clone(), regel: "Voorbeeldtekst".into() };
+        let invulling = g.invulling();
+        s.met_achtergrond().vul_in(&invulling, &stand.cijfers, &stijl)
+    } else {
+        Vec::new()
+    };
+    let blokken_json: Vec<serde_json::Value> = blokken
+        .into_iter()
+        .map(|b| {
+            let (soort, tekst) = match &b.inhoud {
+                gedeeld::sjabloon::Inhoud::Vlak { .. } => ("Vlak", String::new()),
+                gedeeld::sjabloon::Inhoud::Tekst { tekst, .. } => ("Tekst", tekst.clone()),
+                gedeeld::sjabloon::Inhoud::Getal { waarde, .. } => ("Getal", waarde.tekst()),
+                gedeeld::sjabloon::Inhoud::Lijn { .. } => ("Lijn", String::new()),
+                gedeeld::sjabloon::Inhoud::Zetelbalk { .. } => ("Zetelbalk", String::new()),
+                gedeeld::sjabloon::Inhoud::Uitslaggrafiek { .. } => ("Uitslaggrafiek", String::new()),
+                gedeeld::sjabloon::Inhoud::Partijlogo { kort, .. } => ("Partijlogo", kort.clone()),
+                gedeeld::sjabloon::Inhoud::Foto { naam, .. } => ("Foto", naam.clone()),
+                gedeeld::sjabloon::Inhoud::Partijregel { kort, tekst, .. } => ("Partijregel", format!("{kort} {tekst}")),
+                gedeeld::sjabloon::Inhoud::Programmalogo { tekst, .. } => ("Programmalogo", tekst.clone()),
+                gedeeld::sjabloon::Inhoud::Afbeelding { bestand, .. } => ("Afbeelding", bestand.clone()),
+                gedeeld::sjabloon::Inhoud::Partijlabels { .. } => ("Partijlabels", String::new()),
+                gedeeld::sjabloon::Inhoud::Opbouwlabel { .. } => ("Opbouwlabel", String::new()),
+                gedeeld::sjabloon::Inhoud::Stemmingsbalk { voor, tegen, .. } => ("Stemmingsbalk", format!("{voor} / {tegen}")),
+                gedeeld::sjabloon::Inhoud::Uitkomst { tekst, .. } => ("Uitkomst", tekst.clone()),
+                gedeeld::sjabloon::Inhoud::Fractielijst { .. } => ("Fractielijst", String::new()),
+                gedeeld::sjabloon::Inhoud::Namenlijst { .. } => ("Namenlijst", String::new()),
+            };
+            serde_json::json!({
+                "plek": b.plek,
+                "kleur": b.kleur,
+                "soort": soort,
+                "tekst": tekst,
+            })
+        })
+        .collect();
+    Json(serde_json::json!({
+        "blokken": blokken_json,
+        "stoelkleuren": stoelkleuren,
+    }))
+    .into_response()
 }
 
 /// Een lettertype, logo of foto voor een Renderer. Alleen namen die in de map blijven.

@@ -1,22 +1,20 @@
-// Toon, Bijwerken, Uit beeld, Kleur uit en Standpunten: dezelfde handelingen voor de knoppen en de sneltoetsen.
+// Toon, Bijwerken, Uit beeld, Kleur uit, Alles uit en Camera/Stoelbeeld-lagen: dezelfde handelingen
+// voor knoppen en sneltoetsen (ADR 0005).
 import { meerderheidSlaatOm } from "../coalitie/coalitie";
 import { graphicTekst, nieuwereCijfers, sjabloonId, sjabloonNaam } from "../graphic";
 import { biedHerstel, herstel } from "./herstel";
 import { geldendSjabloon, gewijzigdSjabloon } from "../vormgeving/sjablonen";
+import type { OvergangSoort } from "../typen/OvergangSoort";
 import type { Stand } from "../typen/Stand";
+import type { Stoelbeeld } from "../typen/Stoelbeeld";
 import type { Regie } from "./regie";
 import { standpuntVoorToets } from "./toetsen";
 import type { Actie, TakeActie } from "./toetsen";
 
 export const TAKE = "take";
-/** Waar een weigering bij een Standpunt komt te staan: in het camerablok. */
 export const CAMERA = "camera";
-/** Waar een weigering bij een Preset komt te staan: in het onderdeel Presets. */
 export const PRESETS = "presets";
 
-/** Of precies wat klaarstaat ook in de Ether staat, in dezelfde Stijl en hetzelfde Sjabloon (gelijk
- * aan `Stand::staat_klaar_in_beeld`). Beide Stijlen komen uit dezelfde serde-uitvoer, dus de JSON is gelijk
- * als de Stijlen gelijk zijn. */
 export function klaarStaatInBeeld(s: Stand): boolean {
   return (
     !!s.klaar &&
@@ -28,41 +26,41 @@ export function klaarStaatInBeeld(s: Stand): boolean {
   );
 }
 
-/** Of de Graphic in Live het Sjabloon heeft dat nu geldt voor wat klaarstaat. */
 function zelfdeSjabloon(s: Stand): boolean {
   const kopie = s.ether?.sjabloon;
   const nu = s.klaar && geldendSjabloon(s.sjablonen, sjabloonId(s.klaar.graphic));
   return !kopie || (!!nu && !gewijzigdSjabloon(kopie, nu));
 }
 
-/** Of de klaargezette Graphic een nieuwere versie is van die in de Ether, of nieuwere cijfers heeft
- * (gelijk aan `Stand::kan_bijwerken`). */
 export function kanBijwerken(s: Stand): boolean {
   return !!s.klaar && !!s.ether && s.klaar.id === s.ether.id && (s.klaar.versie !== s.ether.versie || nieuwereCijfers(s, s.klaar.graphic));
+}
+
+/** Of er minstens één laag (Graphic, Stoelbeeld of Camera) klaarstaat voor Take. */
+export function heeftIetsKlaar(s: Stand | undefined): boolean {
+  if (!s) return false;
+  const graphicVerandert = !!s.klaar && !klaarStaatInBeeld(s);
+  return graphicVerandert || !!s.klaar_stoelbeeld || !!s.camera.klaar_standpunt;
 }
 
 export function kan(actie: TakeActie, s: Stand | undefined): boolean {
   if (!s) return false;
   switch (actie) {
     case "Toon":
-      return !!s.klaar && !klaarStaatInBeeld(s);
+      return heeftIetsKlaar(s);
     case "Bijwerken":
-      // Een live coalitie die met de cijfers van nu over of onder de meerderheid gaat, werkt Update niet
-      // stil bij: zet een kopie klaar, zodat de omslag eerst in Preview te zien is.
       return kanBijwerken(s) && !meerderheidSlaatOm(s);
     case "UitBeeld":
       return !!s.ether;
     case "KleurUit":
       return s.stoelkleuren.length > 0;
     case "SlaOpbouwOver":
-      // gelijk aan de Weigering GeenOpbouw; of de Opbouw al klaar is, weet alleen de Renderer
       return s.stoelkleuren.length > 0 && s.kleurovergang.vorm === "Opbouw";
     case "Ververs":
       return !!s.klaar && nieuwereCijfers(s, s.klaar.graphic);
   }
 }
 
-/** Voert de handeling uit. Toon stuurt mee welke versie dit scherm liet zien. */
 export function voerUit(regie: Regie, actie: Actie): void {
   const s = regie.stand?.stand;
   if (typeof actie === "object") {
@@ -85,12 +83,11 @@ export function voerUit(regie: Regie, actie: Actie): void {
       if (s) void regie.stuur({ soort: "ZetOefenen", aan: !s.camera.oefenen }, CAMERA);
       return;
     case "Opnemen":
-      // stoppen: de server vult zelf in wat hij opnam
       if (s) void regie.stuur({ soort: "ZetOpnemen", aan: !s.camera.opname }, CAMERA);
       return;
     case "Toon":
-      if (!s?.klaar) return;
-      void regie.stuur({ soort: "Toon", versie: s.klaar.versie }, TAKE);
+      if (!s || !heeftIetsKlaar(s)) return;
+      void regie.stuur({ soort: "Toon", versie: s.klaar?.versie }, TAKE);
       return;
     case "Bijwerken":
       void regie.stuur({ soort: "Bijwerken" }, TAKE);
@@ -105,7 +102,6 @@ export function voerUit(regie: Regie, actie: Actie): void {
       void regie.stuur({ soort: "SlaOpbouwOver" }, TAKE);
       return;
     case "Ververs":
-      // Een Preset houdt de cijfers van het moment van bewaren; WijzigKlaar zet de cijfers van nu erin.
       if (s?.klaar && kan("Ververs", s)) {
         void regie.stuur({ soort: "WijzigKlaar", id: s.klaar.id, graphic: s.klaar.graphic, standpunt: s.klaar.standpunt }, TAKE);
       }
@@ -113,14 +109,44 @@ export function voerUit(regie: Regie, actie: Actie): void {
   }
 }
 
-/** Stuur de Live-camera naar het Standpunt of de Camerarit met deze sleutel; zet de Vrije camera uit. */
 export function kiesStandpunt(regie: Regie, letter: string, knip = false): void {
   void regie.stuur({ soort: "KiesStandpunt", letter, knip }, CAMERA);
 }
 
-/** Haalt de Graphic uit Live en biedt "Terug in beeld" aan. Dat zet precies dezelfde Graphic terug,
- * met de cijfers die erin zaten, en laat wat klaarstaat ongemoeid (Opdracht TerugInBeeld). Het geldt
- * zolang Live leeg is; toont iemand intussen iets, dan vervalt het. */
+export function zetCameraKlaar(regie: Regie, letter: string | null): void {
+  void regie.stuur({ soort: "ZetCameraKlaar", letter: letter ?? undefined }, CAMERA);
+}
+
+export function zetOvergang(regie: Regie, overgang: OvergangSoort | null, overvloei_ms?: number): void {
+  void regie.stuur({ soort: "ZetOvergang", overgang: overgang ?? undefined, overvloei_ms }, TAKE);
+}
+
+export function zetStoelbeeldKlaar(regie: Regie, stoelbeeld: Stoelbeeld | null): void {
+  void regie.stuur({ soort: "ZetStoelbeeldKlaar", stoelbeeld: stoelbeeld ?? undefined }, CAMERA);
+}
+
+export function zetStoelbeeldDirect(regie: Regie, stoelbeeld: Stoelbeeld): void {
+  void regie.stuur({ soort: "ZetStoelbeeldDirect", stoelbeeld }, CAMERA);
+}
+
+export function wisKlaar(regie: Regie): void {
+  void regie.stuur({ soort: "WisKlaar" }, TAKE);
+}
+
+export async function allesUit(regie: Regie): Promise<void> {
+  const s = regie.stand?.stand;
+  const ether = s?.ether;
+  const a = await regie.stuur({ soort: "AllesUit" }, TAKE);
+  if (!a.uitgevoerd || !ether || !s) return;
+  biedHerstel({
+    tekst: "Alles uit",
+    wat: `${sjabloonNaam(ether.graphic, s.sjablonen)} · ${graphicTekst(ether.graphic)}`,
+    knop: "Terug in beeld",
+    geldig: (nu) => !nu.ether,
+    doe: (r) => void r.stuur({ soort: "TerugInBeeld", graphic: ether.graphic, standpunt: ether.standpunt }, TAKE),
+  });
+}
+
 async function uitBeeld(regie: Regie): Promise<void> {
   const s = regie.stand?.stand;
   const ether = s?.ether;

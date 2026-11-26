@@ -15,6 +15,7 @@ const stemming: Graphic = {
 const preset = (nummer: number, graphic: Graphic, extra: Partial<Preset> = {}): Preset => ({
   nummer,
   graphic,
+  zonder_graphic: false,
   op_tablet: false,
   bewaard_ms: 0,
   bewaard_door: "Regie links",

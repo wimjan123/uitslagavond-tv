@@ -13,6 +13,7 @@ import type { Preset } from "./Preset";
 import type { Standpunt } from "./Standpunt";
 import type { Stemmingen } from "./Stemmingen";
 import type { Stijl } from "./Stijl";
+import type { Stoelbeeld } from "./Stoelbeeld";
 import type { Uitslagvolgorde } from "./Uitslagvolgorde";
 import type { Volgorde } from "./Volgorde";
 import type { Zaalindeling } from "./Zaalindeling";
@@ -104,4 +105,20 @@ persoonskaart_extra: Extra,
  * De Sjablonen die de omroep bewerkte: aangepaste vaste Sjablonen en eigen Sjablonen. Een
  * vast Sjabloon dat hier niet staat, is de standaard van deze versie van de software.
  */
-sjablonen: Array<BewerktSjabloon>, };
+sjablonen: Array<BewerktSjabloon>, 
+/**
+ * Een los klaargezet Stoelbeeld in het Voorbeeld (ADR 0005).
+ */
+klaar_stoelbeeld?: Stoelbeeld, 
+/**
+ * De uitgerekende 150 stoelkleuren van het klaargezette Stoelbeeld, voor de Preview-renderer.
+ */
+klaar_stoelkleuren?: Array<string>, 
+/**
+ * Het actieve losse Stoelbeeld in de Ether, voor weergave op de Live-laagchip.
+ */
+ether_stoelbeeld?: Stoelbeeld, 
+/**
+ * Eventuele eigen Kleurkracht van het actieve Stoelbeeld in de Ether (0..=100).
+ */
+ether_kleurkracht?: number, };

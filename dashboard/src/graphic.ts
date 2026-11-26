@@ -3,7 +3,7 @@ import type { BewerktSjabloon } from "./typen/BewerktSjabloon";
 import type { Graphic } from "./typen/Graphic";
 import type { Stand } from "./typen/Stand";
 import type { Stemmingsuitslag } from "./typen/Stemmingsuitslag";
-import { coalitieTekst } from "./coalitie/coalitie";
+import { coalitieTekst } from "./coalitie/coalitie.ts";
 
 /** De naam van het Sjabloon. Een eigen Sjabloon heet zoals in `sjablonen` (de bewerkte Sjablonen van de Stand). */
 export function sjabloonNaam(g: Graphic, sjablonen: readonly BewerktSjabloon[] = []): string {

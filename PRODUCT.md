@@ -28,7 +28,9 @@ A broadcast graphics system built around the real Zaal of the Tweede Kamer, with
 - Live broadcast, under time pressure, in a dim control room.
 - **The Regie works on a laptop** (owner answer, 2026-11-20). Compact screen, mouse/trackpad and keyboard.
 - Fastest actions, in the owner's words: putting a Preset ready and showing it, entering or updating figures, and camera and Standpunten.
-- Flow: the Regie puts one Graphic ready, sees it in the small Voorbeeld, and presses "toon". One Graphic on air at a time. No rundown.
+- Flow: drie zelfstandige, koppelbare lagen op zowel Preview als Live — **Camera** (Standpunt of Camerarit), **Stoelbeeld** (alleen de 150 Stoelen met eigen Kleurovergang en Kleurkracht) en **Graphic** (2D-overlay). De Regie zet één of meer lagen klaar in Preview, kiest de overgang (**Beweeg**, **Fade** of **Knip**), en drukt "Take". Ongewijzigde lagen lopen op Live door (zodat een Graphic of Stoelbeeld over een lopende Camerarit heen kan starten). Geen rundown.
+- Twee hoofdwerkruimtes: **Regie** (grote 720p Preview + Take + Live in OBS-stijl, met daaronder Presets, Zaal & Camera, Stemmingen, Coalitie en Cijfers) en **Studio** (volle schermhoogte voor Sjablonen, Programmastijl en Camera-opnames, met alleen een smalle Live-balk bovenin). **Systeem** zit achter de statusindicator rechtsboven.
+- Tijdens het invullen van een Graphic of het bewerken van een Sjabloon toont het scherm een persoonlijk on-demand 720p **Conceptbeeld** uit de Preview-renderer, zonder de gedeelde Preview van een andere Werkplek te overschrijven.
 - Ether and Reserve follow the same Stand from one server. Renderers can drop out; the dashboard must show that.
 
 ## Capabilities and Constraints
@@ -36,14 +38,15 @@ A broadcast graphics system built around the real Zaal of the Tweede Kamer, with
 - Twelve Sjablonen in four groups (Uitslagavond, Coalitiebouwer, Stemmingen, Algemeen); see issue #6.
 - Five kinds of figure sets: peiling, exitpoll, prognose, tussenstand, uitslag. Sets and Stemmingen can be locked.
 - Stemmingen are entered by hand per Fractie, following the Voorzitter: tap the named Fracties, then "Overige tegen"; single Kamerleden voting otherwise via Afwijkende stem. The system calculates the outcome. "Vastleggen en klaarzetten" puts the Graphic ready and jumps to the next open motie. After the broadcast the system fetches the official result and shows differences; the Regie decides (issue #27).
-- Camera: fixed Standpunten with smooth moves, plus a Vrije camera on a gamepad. A position can be saved as a Standpunt. A recorded move is a Camerarit; it is recorded while Oefenen, so only the Voorbeeld moves. The server computes the camera for every Renderer (issue #23).
-- Vormgeving tab: adjust Sjablonen (place, size, colour, font, speed); no timeline editor.
-- Tablet for the Presentator: chosen variant T2 (two large tabs, Presets and Coalitiebouwer; a tap puts a Preset ready, the Regie shows it).
-- Terminology: use the words in GLOSSARY.md (Stand, Opdracht, Ether, Reserve, Voorbeeld, Graphic, Preset, Standpunt).
+- Camera: fixed Standpunten and Cameraritten can be staged in Preview (default, starting on Take via Beweeg, Fade or Knip) or fired Direct live via a clear mode toggle; plus Vrije camera on a gamepad and Oefenen/recording. The server computes the camera for every Renderer (issue #23).
+- Presets: visual 16:9 cards (with 1-click list view), drag-and-drop ordering (top 9 get keys 1–9), direct creation/editing/duplicating/renaming/deleting without leaving Regie, saving any combination of Camera, Stoelbeeld and Graphic.
+- Studio (Vormgeving): intuitive drag-and-snap Sjabloon editor over the real 3D Zaal image (with title-safe guides, anchor presets, undo/redo, live animation preview, and a compact 4-section collapsible inspector); no timeline editor.
+- Tablet for the Presentator: chosen variant T2 (two large tabs, Presets and Coalitiebouwer; a tap puts a Preset ready, the Regie shows it), styled in the same visual system as the Regie dashboard.
+- Terminology: use the words in GLOSSARY.md (Stand, Opdracht, Ether, Reserve, Voorbeeld, Conceptbeeld, Stoelbeeld, Overvloeien, Graphic, Preset, Standpunt, Camerarit).
 
 ## Brand Commitments
 
-None yet. The system is for one tv programme with a configurable style (colours, fonts, logo); the dashboard itself has no brand.
+None for the broadcast itself (configurable programme Stijl); for the Regie dashboard and tablet, the owner wants a calm, solid, high-craft studio production tool inspired by **DaVinci Resolve** and **OBS Studio** — significantly simpler than Figma, never crowded with tiny buttons, with at most one level of progressive disclosure, and letting the 16:9 broadcast imagery lead.
 
 ## Evidence on Hand
 

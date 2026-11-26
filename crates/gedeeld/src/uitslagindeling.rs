@@ -430,4 +430,16 @@ impl Zetelstand {
             (kleur, self.set.zetels_van(&p.sleutel))
         }))
     }
+
+    /// De kleur per Stoel voor één of meer uitgelichte Partijen; alle andere Stoelen grijs.
+    pub fn stoelkleuren_van_partijen(&self, gekozen: &[String]) -> Vec<Kleur> {
+        verdeel(self.partijen.iter().map(|p| {
+            let kleur = if gekozen.iter().any(|g| g == &p.sleutel) {
+                p.kleur.parse().unwrap_or(GRIJS)
+            } else {
+                GRIJS
+            };
+            (kleur, self.set.zetels_van(&p.sleutel))
+        }))
+    }
 }
