@@ -555,7 +555,7 @@ pub struct AfwijkendInUitslag {
 }
 
 impl Stemmingsuitslag {
-    fn van(
+    pub(crate) fn van(
         s: &Stemming,
         kamer: &Kamer,
         cijfers: &Cijfers,

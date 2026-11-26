@@ -32,6 +32,10 @@ _Avoid_: stoelen uit, reset
 Hoe sterk gekleurde Stoelen opvallen: hoe hoger, hoe voller de kleur van het leer en hoe donkerder de rest van de Zaal eromheen.
 _Avoid_: intensiteit, contrast
 
+**Stoelbeeld**:
+Een losse kleuring van de 150 Stoelen in de Zaal — uit een cijferset, één of meer Partijen, een Coalitie, een Stemming of losse Stoelen — met eigen Kleurovergang en Kleurkracht, zonder 2D-Graphic eroverheen.
+_Avoid_: stoelstand, stoelgraphic, zaalkleuring
+
 **Zaalindeling**:
 De koppeling van Kamerleden aan Stoelen zoals de Kamer zelf de plekken in de echte zaal toewijst. Een Stoel krijgt de kleur van de Fractie van het Kamerlid dat er zit. Toont alleen de Kamer die nu zit: na een verkiezing is dat de oude Kamer tot de nieuwe beëdigd is.
 _Avoid_: plattegrond, zitplan
@@ -83,8 +87,12 @@ Een uitzending rond een Tweede Kamerverkiezing, van prognose tot uitslag.
 _Avoid_: verkiezingsavond
 
 **Stand**:
-Alles wat op een moment vastligt over de uitzending: de cijfers, welke Graphic klaarstaat, welke Graphic live is en waar de camera staat.
+Alles wat op een moment vastligt over de uitzending: de cijfers, en voor zowel het Voorbeeld als de Ether de drie lagen — camera (Standpunt, Camerarit of Vrije camera), Stoelbeeld en Graphic — plus de gekozen overgang.
 _Avoid_: status, state, toestand
+
+**Overvloeien**:
+Een overgang bij Toon of een camerawissel waarbij het huidige beeld in de Ether zacht vervaagt naar het nieuwe beeld, naast Bewegen (3D-vlucht) en Knippen (directe snede). In de UI heet dit Fade.
+_Avoid_: crossfade, dissolve (buiten de UI)
 
 **Opdracht**:
 Eén handeling van de Regie, de Presentator, een knop of de Videowand die de Stand verandert, zoals een Graphic klaarzetten of tonen.
@@ -110,9 +118,13 @@ Een groot aanraakscherm in de studio met een eigen beeld, waarop de Presentator 
 _Avoid_: touchscreen, touchwall
 
 **Voorbeeld**:
-Het kleine beeld in het regie-dashboard dat laat zien hoe de klaargezette Graphic eruitziet, voordat die live gaat.
+Het gedeelde beeld in het regie-dashboard dat laat zien wat er klaarstaat (Graphic, Stoelbeeld en/of Standpunt of Camerarit), voordat het live gaat.
 In de UI van het dashboard en de tablet heet dit Preview (de vakterm), en de Renderer ervan Preview-renderer; in de code en deze woordenlijst blijft het Voorbeeld.
 _Avoid_: preview, PVW (buiten de UI)
+
+**Conceptbeeld**:
+Het persoonlijke proefbeeld van de Preview-renderer dat één Werkplek ziet tijdens het invullen van een Graphic of het bewerken van een Sjabloon, zonder het gedeelde Voorbeeld te overschrijven.
+_Avoid_: draft, lokale preview, schets
 
 **Coalitiebouwer**:
 Een onderdeel waarin partijen worden samengevoegd tot een mogelijke coalitie, met een teller naar een meerderheid van 76 Zetels. Twee Sjablonen: Coalitie in de Zaal (de coalitie als één blok links in de Uitslagindeling, de rest donker, met een lijn bij Zetel 76) en de Coalitiebalk (een gestapelde balk met de coalitie vooraan en een streep bij 76). Werkt met elke set, ook met de Zetels van de huidige Kamer. Uitzondering op Bijwerken: elke Partij die erbij komt of eraf gaat, werkt direct bij, ook in de Ether.
@@ -143,7 +155,7 @@ Een Sjabloon dat één persoon toont: een Kamerlid, of iemand die de Regie zelf 
 _Avoid_: Kamerlid-kaart, naamkaart
 
 **Preset**:
-Een opgeslagen Graphic die de Regie met één klik klaarzet, met de gegevens zoals ze waren bij het opslaan.
+Een opgeslagen combinatie van een Graphic, een Stoelbeeld en/of een Standpunt of Camerarit die de Regie met één klik klaarzet, met de gegevens zoals ze waren bij het opslaan.
 _Avoid_: knop, favoriet (en nooit voor een camerapositie: dat is een Standpunt)
 
 **Standpunt**:

@@ -1,20 +1,21 @@
-// De algemene stijl eerst, zodat de stijl van elk onderdeel erna komt en hem kan aanvullen
-// (zoals de groene knop "Vastleggen en klaarzetten" boven de gewone knop).
-import "@fontsource-variable/geist";
-import "./stijl.css";
+// DaVinci Deck entrypoint: self-hosted Archivo + JetBrains Mono, één ontwerpbestand (deck.css),
+// ondersteunt Regie (/), Presentator Tablet (/tablet) en losse monitoren (/monitors).
+import "@fontsource-variable/archivo";
+import "@fontsource-variable/jetbrains-mono";
+import "./deck.css";
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
 import { TabletApp } from "./tablet/Tablet";
-// Het ontwerp als laatste, zodat het boven de stijl van elk onderdeel komt (DESIGN.md).
-import "./ontwerp.css";
 
-// De tablet van de Presentator heeft een eigen adres in dezelfde webapp.
-const opTablet = /^\/tablet\/?$/.test(location.pathname);
+const pad = location.pathname;
+const opTablet = /^\/tablet\/?$/.test(pad);
+const opMonitors = /^\/monitors\/?$/.test(pad);
 if (opTablet) document.title = "Tablet · uitslagavond-tv";
+if (opMonitors) document.title = "Monitoren · uitslagavond-tv";
 
 createRoot(document.getElementById("root")!).render(
   <StrictMode>
-    {opTablet ? <TabletApp /> : <App />}
+    {opTablet ? <TabletApp /> : <App popoutMonitors={opMonitors} />}
   </StrictMode>,
 );

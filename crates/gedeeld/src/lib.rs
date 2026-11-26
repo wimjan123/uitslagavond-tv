@@ -19,6 +19,7 @@ pub mod kamer;
 pub mod persoonskaart;
 pub mod presets;
 pub mod sjabloon;
+pub mod stoelbeeld;
 mod tablet;
 pub mod stemmingen;
 pub mod uitslagindeling;
@@ -30,7 +31,8 @@ pub mod zetelbalk;
 pub mod volger;
 
 use crate::camera::{
-    CameraOvergang, Camerabeeld, Camerakeuze, Camerastand, MAX_STANDPUNTNAAM, NaAankomst, Standpunt,
+    CameraOvergang, Camerabeeld, Camerakeuze, Camerastand, MAX_STANDPUNTNAAM, NaAankomst,
+    OVERVLOEI_MAX_MS, OVERVLOEI_MIN_MS, OvergangSoort, Standpunt,
 };
 use crate::camerarit::{Bijschaving, Camerarit, RIT_MIN_S};
 use crate::cijfers::{Aanvulling, Bewerking, CijferWeigering, Cijfers, Invoer, Soort};
@@ -42,6 +44,7 @@ use crate::persoonskaart::{EigenPersoon, Extra};
 use crate::kamer::{Foto, Fractie, Kamer, KamerWeigering, Kamerlid};
 use crate::presets::Preset;
 use crate::stemmingen::{Lijstpunt, OpgehaaldeUitslag, Stemgedrag, StemmingWeigering, Stemmingen};
+pub use crate::stoelbeeld::{Stoelbeeld, Stoelbron};
 use crate::uitslagindeling::{Uitslagvolgorde, Volgorde, Zetelstand};
 use crate::zaalindeling::{ZaalWeigering, Zaalindeling, Zaalmelding};
 
@@ -118,6 +121,22 @@ pub struct Stand {
     /// vast Sjabloon dat hier niet staat, is de standaard van deze versie van de software.
     #[serde(default)]
     pub sjablonen: Vec<sjabloon::BewerktSjabloon>,
+    /// Een los klaargezet Stoelbeeld in het Voorbeeld (ADR 0005).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub klaar_stoelbeeld: Option<Stoelbeeld>,
+    /// De uitgerekende 150 stoelkleuren van het klaargezette Stoelbeeld, voor de Preview-renderer.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    #[ts(type = "Array<string>")]
+    pub klaar_stoelkleuren: Vec<Kleur>,
+    /// Het actieve losse Stoelbeeld in de Ether, voor weergave op de Live-laagchip.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ether_stoelbeeld: Option<Stoelbeeld>,
+    /// Eventuele eigen Kleurkracht van het actieve Stoelbeeld in de Ether (0..=100).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub ether_kleurkracht: Option<u8>,
 }
 
 impl Default for Stand {
@@ -142,6 +161,10 @@ impl Default for Stand {
             personen: Vec::new(),
             persoonskaart_extra: Extra::default(),
             sjablonen: Vec::new(),
+            klaar_stoelbeeld: None,
+            klaar_stoelkleuren: Vec::new(),
+            ether_stoelbeeld: None,
+            ether_kleurkracht: None,
         }
     }
 }
@@ -484,6 +507,82 @@ pub enum Opdracht {
     /// Een aangepast vast Sjabloon houden zoals het is, ook al is er een nieuwe standaard: de
     /// melding verdwijnt.
     HoudSjabloon { id: String },
+
+    // Drie lagen, Overvloeien (Fade) en uitgebreid Preset-beheer (ADR 0005).
+    /// Zet een los Standpunt of een losse Camerarit klaar in het Voorbeeld (`None` haalt hem weg).
+    ZetCameraKlaar {
+        #[serde(default)]
+        #[ts(optional)]
+        letter: Option<String>,
+    },
+    /// Kiest de overgang (Bewegen, Overvloeien/Fade of Knippen) en optioneel de duur van Fade in ms.
+    ZetOvergang {
+        #[serde(default)]
+        #[ts(optional)]
+        overgang: Option<OvergangSoort>,
+        #[serde(default)]
+        #[ts(optional)]
+        overvloei_ms: Option<u16>,
+    },
+    /// Zet een los Stoelbeeld klaar in het Voorbeeld (`None` haalt het weg).
+    ZetStoelbeeldKlaar {
+        #[serde(default)]
+        #[ts(optional)]
+        stoelbeeld: Option<Stoelbeeld>,
+    },
+    /// Past een Stoelbeeld direct toe in de Ether (Live), zonder 2D-Graphic aan te raken.
+    ZetStoelbeeldDirect { stoelbeeld: Stoelbeeld },
+    /// Maakt het Voorbeeld leeg (Graphic, los Stoelbeeld en los klaargezette camera).
+    WisKlaar,
+    /// Haalt zowel de 2D-Graphic uit de Ether als alle stoelkleuren weg.
+    AllesUit,
+    /// Bewaart een uitgebreide Preset: Graphic, Stoelbeeld, camera, overgang en/of eigen naam.
+    BewaarPresetUitgebreid {
+        #[serde(default)]
+        #[ts(optional)]
+        naam: Option<String>,
+        #[serde(default)]
+        #[ts(optional)]
+        graphic: Option<Graphic>,
+        #[serde(default)]
+        #[ts(optional)]
+        standpunt: Option<String>,
+        #[serde(default)]
+        #[ts(optional)]
+        stoelbeeld: Option<Stoelbeeld>,
+        #[serde(default)]
+        #[ts(optional)]
+        overgang: Option<OvergangSoort>,
+        #[serde(default)]
+        #[ts(optional)]
+        overvloei_ms: Option<u16>,
+    },
+    /// Werkt een bestaande Preset bij (naam, lagen en overgang) zonder zijn nummer te verliezen.
+    BewerkPreset {
+        nummer: u16,
+        #[serde(default)]
+        #[ts(optional)]
+        naam: Option<String>,
+        #[serde(default)]
+        #[ts(optional)]
+        graphic: Option<Graphic>,
+        #[serde(default)]
+        zonder_graphic: bool,
+        #[serde(default)]
+        #[ts(optional)]
+        standpunt: Option<String>,
+        #[serde(default)]
+        #[ts(optional)]
+        stoelbeeld: Option<Stoelbeeld>,
+        #[serde(default)]
+        #[ts(optional)]
+        overgang: Option<OvergangSoort>,
+        #[serde(default)]
+        #[ts(optional)]
+        overvloei_ms: Option<u16>,
+    },
+    /// Verplaatst Preset `nummer` naar positie `naar` (1-gebaseerd) en hernummert 1..=N voor sneltoetsen 1–9.
+    VerplaatsPreset { nummer: u16, naar: u16 },
 }
 
 /// Waarom de server een Opdracht niet uitvoert.
@@ -581,6 +680,10 @@ pub enum Weigering {
     NietVanafTablet,
     #[error("Preset {0} staat niet op de tablet")]
     NietOpTablet(u16),
+    #[error("kleurkracht is {0}; kies tussen 0 en 100")]
+    KleurkrachtOngeldig(u8),
+    #[error("een Preset heeft minstens een Graphic, Stoelbeeld of Standpunt nodig")]
+    PresetLeeg,
 }
 
 /// Wie een Opdracht gaf, en wanneer. De server vult dit in.
@@ -624,16 +727,51 @@ impl Stand {
                 self.zet_standpunt_van_sjabloon();
             }
             Opdracht::Toon { versie } => {
-                let klaar = self.klaar.as_ref().ok_or(Weigering::NietsKlaar)?;
-                if versie.is_some_and(|v| v != klaar.versie) {
-                    return Err(Weigering::GewijzigdDoor(klaar.gewijzigd_door.clone()));
+                let heeft_graphic = self.klaar.is_some();
+                let heeft_stoelen = self.klaar_stoelbeeld.is_some();
+                let heeft_camera = self.camera.klaar_standpunt.is_some();
+                if !heeft_graphic && !heeft_stoelen && !heeft_camera {
+                    return Err(Weigering::NietsKlaar);
                 }
-                if self.staat_klaar_in_beeld() {
+                let graphic_verandert = if let Some(klaar) = self.klaar.as_ref() {
+                    if versie.is_some_and(|v| v != klaar.versie) {
+                        return Err(Weigering::GewijzigdDoor(klaar.gewijzigd_door.clone()));
+                    }
+                    !self.staat_klaar_in_beeld()
+                } else {
+                    false
+                };
+                if !graphic_verandert && !heeft_stoelen && !heeft_camera {
                     return Err(Weigering::AlInBeeld);
                 }
-                let ether = self.in_beeld(klaar.id, klaar.versie, &klaar.graphic, &klaar.standpunt, h);
-                self.presets.iter_mut().for_each(|p| p.getoond(&ether));
-                self.zet_in_ether(ether, h);
+                let overgang = self.camera.overgang;
+                let knip = matches!(overgang, Some(OvergangSoort::Knippen | OvergangSoort::Overvloeien));
+                let fade = matches!(overgang, Some(OvergangSoort::Overvloeien));
+                if fade {
+                    self.camera.overvloei_sinds = h.volgnummer;
+                }
+                if graphic_verandert {
+                    let klaar = self.klaar.as_ref().expect("graphic_verandert");
+                    let ether = self.in_beeld(klaar.id, klaar.versie, &klaar.graphic, &klaar.standpunt, h);
+                    self.presets.iter_mut().for_each(|p| p.getoond(&ether));
+                    self.zet_in_ether_met_knip(ether, knip, !heeft_camera, !heeft_stoelen, h);
+                }
+                if let Some(sb) = self.klaar_stoelbeeld.take() {
+                    let kleuren = if !self.klaar_stoelkleuren.is_empty() || matches!(sb.bron, Stoelbron::Uit) {
+                        std::mem::take(&mut self.klaar_stoelkleuren)
+                    } else {
+                        sb.bereken_kleuren(self)?
+                    };
+                    self.stoelkleuren = kleuren;
+                    self.kleurovergang = sb.overgang.unwrap_or_else(|| self.stijl_van_ether().kleurovergang);
+                    self.ether_kleurkracht = sb.kleurkracht;
+                    self.ether_stoelbeeld = if matches!(sb.bron, Stoelbron::Uit) { None } else { Some(sb) };
+                }
+                if let Some(letter) = self.camera.klaar_standpunt.take() {
+                    if letter != camera::BLIJF {
+                        self.kies_standpunt(&letter, knip, h);
+                    }
+                }
             }
             Opdracht::TerugInBeeld { graphic, standpunt } => {
                 if self.ether.is_some() {
@@ -682,6 +820,8 @@ impl Stand {
                     return Err(Weigering::KleurAlUit);
                 }
                 self.stoelkleuren.clear();
+                self.ether_stoelbeeld = None;
+                self.ether_kleurkracht = None;
                 self.kleurovergang = self.stijl_van_ether().kleurovergang;
             }
             Opdracht::SlaOpbouwOver => {
@@ -841,8 +981,13 @@ impl Stand {
                 });
                 self.presets.push(Preset {
                     nummer,
+                    naam: None,
                     graphic: graphic.clone(),
+                    zonder_graphic: false,
                     standpunt: standpunt.clone(),
+                    stoelbeeld: None,
+                    overgang: None,
+                    overvloei_ms: None,
                     op_tablet: false,
                     bewaard_ms: h.tijd_ms,
                     bewaard_door: h.door.into(),
@@ -860,11 +1005,35 @@ impl Stand {
                 }
             }
             Opdracht::ZetPresetKlaar { nummer } => {
-                let p = self.preset(*nummer)?;
+                let p = self.preset(*nummer)?.clone();
                 self.controleer_standpunt(p.standpunt.as_deref())?;
-                let (graphic, standpunt) = (p.graphic.clone(), p.standpunt.clone());
-                self.zet_klaar(graphic, standpunt, h);
-                self.preset_mut(*nummer)?.klaargezet_als = Some(h.volgnummer);
+                if let Some(ov) = p.overgang {
+                    self.camera.overgang = Some(ov);
+                }
+                if let Some(ms) = p.overvloei_ms {
+                    self.camera.overvloei_ms = ms.clamp(OVERVLOEI_MIN_MS, OVERVLOEI_MAX_MS);
+                }
+                if let Some(sb) = p.stoelbeeld.clone() {
+                    let kleuren = sb.bereken_kleuren(self)?;
+                    self.klaar_stoelbeeld = Some(sb);
+                    self.klaar_stoelkleuren = kleuren;
+                } else if p.zonder_graphic {
+                    self.klaar_stoelbeeld = None;
+                    self.klaar_stoelkleuren.clear();
+                }
+                if p.zonder_graphic {
+                    self.klaar = None;
+                    self.camera.klaar_standpunt = p.standpunt.clone();
+                    self.camera.proef = None;
+                } else {
+                    self.camera.klaar_standpunt = None;
+                    if p.stoelbeeld.is_none() {
+                        self.klaar_stoelbeeld = None;
+                        self.klaar_stoelkleuren.clear();
+                    }
+                    self.zet_klaar(p.graphic.clone(), p.standpunt.clone(), h);
+                    self.preset_mut(*nummer)?.klaargezet_als = Some(h.volgnummer);
+                }
             }
             Opdracht::ZetPresetOpTablet { nummer, aan } => self.preset_mut(*nummer)?.op_tablet = *aan,
             Opdracht::ZetUitslagvolgorde { volgorde } => self.uitslagvolgorde = volgorde.clone(),
@@ -884,6 +1053,182 @@ impl Stand {
                 let b = b.ok_or_else(|| Weigering::NietAangepast(id.clone()))?;
                 let vast = sjabloon::vast_sjabloon(id).ok_or_else(|| Weigering::OnbekendSjabloon(id.clone()))?;
                 b.standaard = Some(sjabloon::vingerafdruk(&vast));
+            }
+            Opdracht::ZetCameraKlaar { letter } => {
+                self.controleer_standpunt(letter.as_deref())?;
+                self.camera.klaar_standpunt = letter.clone();
+                self.camera.proef = None;
+            }
+            Opdracht::ZetOvergang { overgang, overvloei_ms } => {
+                self.camera.overgang = *overgang;
+                if let Some(ms) = overvloei_ms {
+                    self.camera.overvloei_ms = (*ms).clamp(OVERVLOEI_MIN_MS, OVERVLOEI_MAX_MS);
+                }
+            }
+            Opdracht::ZetStoelbeeldKlaar { stoelbeeld } => match stoelbeeld {
+                Some(sb) => {
+                    let kleuren = sb.bereken_kleuren(self)?;
+                    self.klaar_stoelbeeld = Some(sb.clone());
+                    self.klaar_stoelkleuren = kleuren;
+                }
+                None => {
+                    self.klaar_stoelbeeld = None;
+                    self.klaar_stoelkleuren.clear();
+                }
+            },
+            Opdracht::ZetStoelbeeldDirect { stoelbeeld } => {
+                let kleuren = stoelbeeld.bereken_kleuren(self)?;
+                self.stoelkleuren = kleuren;
+                self.kleurovergang = stoelbeeld
+                    .overgang
+                    .unwrap_or_else(|| self.stijl_van_ether().kleurovergang);
+                self.ether_kleurkracht = stoelbeeld.kleurkracht;
+                self.ether_stoelbeeld = if matches!(stoelbeeld.bron, Stoelbron::Uit) {
+                    None
+                } else {
+                    Some(stoelbeeld.clone())
+                };
+            }
+            Opdracht::WisKlaar => {
+                self.klaar = None;
+                self.klaar_stoelbeeld = None;
+                self.klaar_stoelkleuren.clear();
+                self.camera.klaar_standpunt = None;
+                self.camera.proef = None;
+            }
+            Opdracht::AllesUit => {
+                if self.ether.is_none() && self.stoelkleuren.is_empty() {
+                    return Err(Weigering::NietsInBeeld);
+                }
+                self.ether = None;
+                self.stoelkleuren.clear();
+                self.ether_stoelbeeld = None;
+                self.ether_kleurkracht = None;
+                self.kleurovergang = self.stijl_van_ether().kleurovergang;
+            }
+            Opdracht::BewaarPresetUitgebreid {
+                naam,
+                graphic,
+                standpunt,
+                stoelbeeld,
+                overgang,
+                overvloei_ms,
+            } => {
+                if graphic.is_none() && stoelbeeld.is_none() && standpunt.is_none() {
+                    return Err(Weigering::PresetLeeg);
+                }
+                self.controleer_standpunt(standpunt.as_deref())?;
+                if let Some(sb) = stoelbeeld {
+                    sb.bereken_kleuren(self)?;
+                }
+                let (zonder_graphic, g) = match graphic {
+                    Some(g) => {
+                        g.controleer()?;
+                        self.controleer_sjabloon_van(g)?;
+                        let ingevuld = self.vul_cijfers_in(g, h.tijd_ms)?;
+                        self.controleer_standpunt_voor(self.camera_profiel(&ingevuld), standpunt.as_deref())?;
+                        (false, ingevuld)
+                    }
+                    None => (
+                        true,
+                        Graphic::Titelkaart {
+                            kop: naam.clone().unwrap_or_else(|| "Stoelbeeld".into()),
+                            regel: String::new(),
+                        },
+                    ),
+                };
+                let nummer = presets::eerste_vrije_nummer(&self.presets);
+                let schoon_naam = naam
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.chars().take(80).collect());
+                let schoon_sb = stoelbeeld.clone().map(|mut sb| {
+                    sb.label = sb
+                        .label
+                        .as_deref()
+                        .map(str::trim)
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.chars().take(80).collect());
+                    sb
+                });
+                self.presets.push(Preset {
+                    nummer,
+                    naam: schoon_naam,
+                    graphic: g,
+                    zonder_graphic,
+                    standpunt: standpunt.clone(),
+                    stoelbeeld: schoon_sb,
+                    overgang: *overgang,
+                    overvloei_ms: overvloei_ms.map(|ms| ms.clamp(OVERVLOEI_MIN_MS, OVERVLOEI_MAX_MS)),
+                    op_tablet: false,
+                    bewaard_ms: h.tijd_ms,
+                    bewaard_door: h.door.into(),
+                    klaargezet_als: None,
+                    getoond_als: None,
+                    laatst_live_ms: None,
+                });
+                self.presets.sort_by_key(|p| p.nummer);
+            }
+            Opdracht::BewerkPreset {
+                nummer,
+                naam,
+                graphic,
+                zonder_graphic,
+                standpunt,
+                stoelbeeld,
+                overgang,
+                overvloei_ms,
+            } => {
+                self.controleer_standpunt(standpunt.as_deref())?;
+                if let Some(sb) = stoelbeeld {
+                    sb.bereken_kleuren(self)?;
+                }
+                let ingevuld = match graphic {
+                    Some(g) if !zonder_graphic => {
+                        g.controleer()?;
+                        self.controleer_sjabloon_van(g)?;
+                        let g = self.vul_cijfers_in(g, h.tijd_ms)?;
+                        self.controleer_standpunt_voor(self.camera_profiel(&g), standpunt.as_deref())?;
+                        Some(g)
+                    }
+                    _ => None,
+                };
+                let p = self.preset_mut(*nummer)?;
+                p.naam = naam
+                    .as_deref()
+                    .map(str::trim)
+                    .filter(|s| !s.is_empty())
+                    .map(|s| s.chars().take(80).collect());
+                p.zonder_graphic = *zonder_graphic;
+                if let Some(g) = ingevuld {
+                    p.graphic = g;
+                }
+                p.standpunt = standpunt.clone();
+                p.stoelbeeld = stoelbeeld.clone().map(|mut sb| {
+                    sb.label = sb
+                        .label
+                        .as_deref()
+                        .map(str::trim)
+                        .filter(|s| !s.is_empty())
+                        .map(|s| s.chars().take(80).collect());
+                    sb
+                });
+                p.overgang = *overgang;
+                p.overvloei_ms = overvloei_ms.map(|ms| ms.clamp(OVERVLOEI_MIN_MS, OVERVLOEI_MAX_MS));
+                p.bewaard_ms = h.tijd_ms;
+                p.bewaard_door = h.door.into();
+            }
+            Opdracht::VerplaatsPreset { nummer, naar } => {
+                let Some(van_i) = self.presets.iter().position(|p| p.nummer == *nummer) else {
+                    return Err(Weigering::OnbekendePreset(*nummer));
+                };
+                let p = self.presets.remove(van_i);
+                let doel = usize::from(naar.saturating_sub(1)).min(self.presets.len());
+                self.presets.insert(doel, p);
+                for (i, preset) in self.presets.iter_mut().enumerate() {
+                    preset.nummer = (i + 1) as u16;
+                }
             }
         }
         self.uitslagindeling = self.uitslagvolgorde.bepaal(&self.cijfers);
@@ -1155,13 +1500,28 @@ impl Stand {
     /// Zet een Graphic in de Ether, als wissel: de camera gaat naar haar Standpunt (behalve als
     /// de camera blijft staan) en de Stoelen krijgen haar kleuren.
     fn zet_in_ether(&mut self, ether: GraphicInBeeld, h: &Herkomst) {
-        let letter = ether.standpunt();
-        if letter != camera::BLIJF {
-            self.kies_standpunt(&letter, false, h);
+        self.zet_in_ether_met_knip(ether, false, true, true, h);
+    }
+
+    fn zet_in_ether_met_knip(
+        &mut self,
+        ether: GraphicInBeeld,
+        knip: bool,
+        met_camera: bool,
+        met_stoelen: bool,
+        h: &Herkomst,
+    ) {
+        if met_camera {
+            let letter = ether.standpunt();
+            if letter != camera::BLIJF {
+                self.kies_standpunt(&letter, knip, h);
+            }
         }
-        if let Some(k) = ether.stoelkleuren() {
+        if met_stoelen && let Some(k) = ether.stoelkleuren() {
             self.stoelkleuren = k;
             self.kleurovergang = ether.kleurovergang();
+            self.ether_stoelbeeld = None;
+            self.ether_kleurkracht = None;
         }
         if let Some(id) = ether.graphic.stemming() {
             self.stemmingen.in_ether(id, ether.sinds_ms);
@@ -1528,8 +1888,8 @@ impl Monitor {
     }
 }
 
-/// Grootste klein beeld dat de server doorstuurt, in bytes.
-pub const MAX_BEELD: usize = 1 << 20;
+/// Grootste klein beeld dat de server doorstuurt, in bytes (ruim voor 720p JPEG).
+pub const MAX_BEELD: usize = 4 << 20;
 
 #[cfg(test)]
 mod tests {

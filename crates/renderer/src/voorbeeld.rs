@@ -19,17 +19,15 @@ use crate::graphic::Bron;
 use crate::opname::maak_doel;
 use crate::volging::Zender;
 
-/// Grootte van de kleine beelden: een derde van 1080p.
-pub const KLEIN: (u32, u32) = (640, 360);
-/// Hoe vaak het Voorbeeld een beeld vangt: elk beeld, 50 keer per seconde, zoals de uitzending.
-/// Een bewegend beeld kost dan een JPEG van ongeveer 64 kB per beeld, 3 MB per seconde per
-/// Monitor en Werkplek; een stilstaand beeld gaat niet opnieuw weg.
-const ELKE: Duration = Duration::from_millis(20);
-/// Zoveel vangsten per Monitor mogen tegelijk onderweg zijn. Een vangst duurt ongeveer twee
-/// beelden (40 ms), dus met één tegelijk viel het grootste deel van de tikken weg.
+/// Grootte van de beelden voor het dashboard: scherp 720p (ADR 0005).
+pub const KLEIN: (u32, u32) = (1280, 720);
+/// Hoe vaak het Voorbeeld een beeld vangt: 25 keer per seconde. Een stilstaand beeld gaat
+/// dankzij de vingerafdruk niet opnieuw weg.
+const ELKE: Duration = Duration::from_millis(40);
+/// Zoveel vangsten per Monitor mogen tegelijk onderweg zijn.
 const ONDERWEG: u8 = 4;
 /// Kwaliteit van de JPEG (1 tot 100).
-const KWALITEIT: u8 = 80;
+const KWALITEIT: u8 = 84;
 
 pub struct VoorbeeldPlugin;
 

@@ -206,6 +206,22 @@ export function gerichteBewegingNaam(letter: string): string | null {
   return null;
 }
 
+/** Of deze sleutel een geanimeerde gerichte beweging is (zodat "Test rit" hem kan proefdraaien). */
+export function isGerichteRit(letter: string): boolean {
+  const ritten = [
+    "aanschuiven",
+    "partij-boog",
+    "partij-indalen",
+    "partij-langs",
+    "partij-uitzoomen",
+    "stoel-aanschuiven",
+    "stoel-langs",
+    "stoel-indalen",
+    "stoel-uitzoomen",
+  ];
+  return ritten.some((r) => letter === r || letter.startsWith(`${r}-`));
+}
+
 /** De effectieve standaard camera-omschrijving voor een Graphic (van het bewerkte of vaste
  * Sjabloon, of de standaard van de soort Graphic). */
 export function standaardCameraTekst(s: Stand, g: Graphic, stoelOverride?: Stoel | null): string | null {

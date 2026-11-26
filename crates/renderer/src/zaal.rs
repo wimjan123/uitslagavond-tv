@@ -69,7 +69,7 @@ impl Plugin for ZaalPlugin {
                 Update,
                 (
                     stel_stof_en_hout_bij,
-                    ((herken_stoelen, kleur_stoelen, licht_stoel_op, kleur_de_bies, verlicht_de_opbouw, zet_sleutellicht, zet_titellicht).chain(), dim_zaal, geef_stoelen_licht),
+                    ((herken_stoelen, maak_voorbeeld_stoelen, kleur_stoelen, kleur_voorbeeld_stoelen, licht_stoel_op, kleur_de_bies, verlicht_de_opbouw, zet_sleutellicht, zet_titellicht).chain(), dim_zaal, geef_stoelen_licht),
                 )
                     .chain()
                     .after(Afgewerkt),
@@ -112,10 +112,123 @@ fn meld_klaar(model: Res<ModelGeladen>, reflecties: Res<Reflecties>, mut klaar: 
 #[derive(Component, Debug)]
 pub struct ZaalStoel;
 
-/// Het leer van een Stoel: dit deel krijgt de kleur uit de Stand.
+/// Het leer van een Stoel: dit deel krijgt de kleur uit de Stand (Ether / Live).
 #[derive(Component, Debug)]
 pub struct StoelLeer {
     pub index: usize,
+}
+
+/// Schaduw-leer alleen zichtbaar voor de Preview-camera (`Rol::Voorbeeld`, ADR 0005), zodat een
+/// klaargezet Stoelbeeld of Graphic al echt in 3D-Preview te zien is zonder Live te raken.
+#[derive(Component, Debug)]
+struct StoelLeerVoorbeeld {
+    index: usize,
+}
+
+/// Markeert een `StoelLeer` waarvan de Preview-kopie al bestaat.
+#[derive(Component)]
+struct HeeftVoorbeeldKopie;
+
+#[allow(clippy::type_complexity)]
+fn maak_voorbeeld_stoelen(
+    mut commands: Commands,
+    rolinfo: Option<Res<crate::Rolinfo>>,
+    stoelen: Query<
+        (
+            Entity,
+            &StoelLeer,
+            &Mesh3d,
+            &MeshMaterial3d<StandardMaterial>,
+            &Transform,
+            Option<&ChildOf>,
+            Option<&Lightmap>,
+        ),
+        Without<HeeftVoorbeeldKopie>,
+    >,
+) {
+    let is_voorbeeld = rolinfo.is_some_and(|r| r.rol == gedeeld::Rol::Voorbeeld);
+    for (e, stoel, mesh, mat, transform, ouder, lightmap) in &stoelen {
+        commands.entity(e).insert(HeeftVoorbeeldKopie);
+        if !is_voorbeeld {
+            commands.entity(e).insert(bevy::camera::visibility::RenderLayers::layer(crate::schil::STOEL_ETHER_LAAG));
+            continue;
+        }
+        // Origineel alleen op de Live-laag; kopie alleen op de Preview-laag
+        commands.entity(e).insert(bevy::camera::visibility::RenderLayers::layer(crate::schil::STOEL_ETHER_LAAG));
+        let mut kopie = commands.spawn((
+            StoelLeerVoorbeeld { index: stoel.index },
+            mesh.clone(),
+            mat.clone(),
+            *transform,
+            bevy::camera::visibility::RenderLayers::layer(crate::schil::STOEL_KLAAR_LAAG),
+        ));
+        if let Some(o) = ouder {
+            kopie.insert(ChildOf(o.parent()));
+        }
+        if let Some(lm) = lightmap {
+            kopie.insert(lm.clone());
+        }
+    }
+}
+
+/// Kleurt de Preview-stoelen direct (zonder golf) op basis van `klaar_stoelkleuren`, een
+/// klaargezette Graphic met stoelkleuren, of anders de huidige Live-stoelkleuren.
+fn kleur_voorbeeld_stoelen(
+    standen: Res<Standen>,
+    mut leer: Query<(&StoelLeerVoorbeeld, &mut MeshMaterial3d<StandardMaterial>)>,
+    nieuw: Query<(), Added<StoelLeerVoorbeeld>>,
+    mut materialen: ResMut<Assets<StandardMaterial>>,
+    mut pm: ResMut<StoelMaterialen>,
+) {
+    if leer.is_empty() || (!standen.is_changed() && nieuw.is_empty()) {
+        return;
+    }
+    let Some(origineel) = pm.origineel.clone() else { return };
+    let Some(huidig) = &standen.huidig else { return };
+    let stand = &huidig.stand;
+
+    let kleuren: Vec<Kleur> = if let Some(sb) = &stand.klaar_stoelbeeld {
+        if matches!(sb.bron, gedeeld::Stoelbron::Uit) {
+            Vec::new()
+        } else {
+            stand.klaar_stoelkleuren.clone()
+        }
+    } else if let Some(klaar) = &stand.klaar {
+        if let Some(g_kleuren) = klaar.graphic.stoelkleuren() {
+            g_kleuren
+        } else {
+            stand.stoelkleuren.clone()
+        }
+    } else {
+        stand.stoelkleuren.clone()
+    };
+
+    let kracht_u8 = stand
+        .klaar_stoelbeeld
+        .as_ref()
+        .and_then(|sb| sb.kleurkracht)
+        .unwrap_or(stand.stijl.kleurkracht);
+    let kracht = f32::from(kracht_u8.min(100)) / 100.0;
+
+    for (stoel, mut mat) in &mut leer {
+        let gewenst = match kleuren.get(stoel.index).copied() {
+            None => origineel.clone(),
+            Some(kleur) => match pm.per_kleur.get(&kleur) {
+                Some(h) => h.clone(),
+                None => {
+                    let Some(mut m) = materialen.get(&origineel).cloned() else { continue };
+                    m.base_color = leer_bij(kleur, 0.0).into();
+                    m.emissive = straling_bij(kleur, kracht, 0.0);
+                    let h = materialen.add(m);
+                    pm.per_kleur.insert(kleur, h.clone());
+                    h
+                }
+            },
+        };
+        if mat.0 != gewenst {
+            mat.0 = gewenst;
+        }
+    }
 }
 
 /// De bies langs de rand van de rugleuning en de naad over de rugleuning: een donkere tint van het
@@ -830,9 +943,11 @@ const NAGLOED_STRAALT: f32 = 0.16;
 /// banken die wegzakten (council-ronde 6); de gekleurde Stoelen springen er nog steeds uit.
 const MINSTE_LICHT: f32 = 0.16;
 
-/// De Kleurkracht van de Ether, van 0 tot 1.
+/// De Kleurkracht van de Ether, van 0 tot 1 (inclusief losse Stoelbeeld-override uit ADR 0005).
 fn kleurkracht(standen: &Standen) -> f32 {
-    let k = standen.huidig.as_ref().map_or(gedeeld::sjabloon::KLEURKRACHT, |s| s.stand.stijl_van_ether().kleurkracht);
+    let k = standen.huidig.as_ref().map_or(gedeeld::sjabloon::KLEURKRACHT, |s| {
+        s.stand.ether_kleurkracht.unwrap_or_else(|| s.stand.stijl_van_ether().kleurkracht)
+    });
     f32::from(k.min(100)) / 100.0
 }
 

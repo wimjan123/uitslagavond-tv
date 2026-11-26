@@ -403,13 +403,29 @@ impl Stand {
     }
 
     pub(crate) fn probeer(&mut self, letter: &str, h: &Herkomst) -> Result<(), Weigering> {
-        if self.standpunt(letter).is_none() && self.camerarit(letter).is_none() {
-            return Err(Weigering::OnbekendStandpunt(letter.into()));
-        }
+        let opgelost = if crate::camera::Partijbeweging::uit_sleutel(letter).is_some()
+            || crate::camera::Stoelbeweging::uit_sleutel(letter).is_some()
+        {
+            self.klaar
+                .as_ref()
+                .map(|k| k.graphic.standpunt_bij(Some(letter)).into_owned())
+                .or_else(|| self.ether.as_ref().map(|e| e.graphic.standpunt_bij(Some(letter)).into_owned()))
+                .ok_or_else(|| Weigering::OnbekendStandpunt(letter.into()))?
+        } else {
+            let bekend = self.standpunt(letter).is_some()
+                || self.camerarit(letter).is_some()
+                || letter == crate::camera::BOVEN_HET_PANEEL
+                || crate::camera::Partijbeweging::uit_doelsleutel(letter).is_some()
+                || crate::camera::Stoelbeweging::uit_doelsleutel(letter).is_some();
+            if !bekend {
+                return Err(Weigering::OnbekendStandpunt(letter.into()));
+            }
+            letter.into()
+        };
         if self.camera.opname.is_some() {
             return Err(Weigering::OpnameLoopt);
         }
-        self.camera.proef = Some(Proef { letter: letter.into(), sinds: h.volgnummer });
+        self.camera.proef = Some(Proef { letter: opgelost, sinds: h.volgnummer });
         Ok(())
     }
 

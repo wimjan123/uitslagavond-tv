@@ -1,5 +1,5 @@
-// Presets in het dashboard: groep, stempels en filters (DESIGN.md, Preset Table). Een Preset is een
-// kopie van een Graphic met de gegevens van het moment van bewaren; de server houdt hem bij.
+// Presets in het dashboard: groep, stempels, filters en titels (ook voor Stoelbeeld-/camera-presets).
+import { graphicTekst, sjabloonNaam } from "../graphic.ts";
 import type { Graphic } from "../typen/Graphic";
 import type { Preset } from "../typen/Preset";
 import type { Stand } from "../typen/Stand";
@@ -31,22 +31,48 @@ export function groepVan(g: Graphic): Groep {
   }
 }
 
+export function groepVanPreset(p: Preset): Groep {
+  if (p.zonder_graphic) {
+    if (p.stoelbeeld?.bron.soort === "Coalitie") return "Coalitiebouwer";
+    if (p.stoelbeeld?.bron.soort === "Stemming") return "Stemmingen";
+    if (p.stoelbeeld) return "Uitslagavond";
+    return "Algemeen";
+  }
+  return groepVan(p.graphic);
+}
+
+export function presetTitel(p: Preset, stand?: Stand): string {
+  if (p.naam?.trim()) return p.naam.trim();
+  if (p.zonder_graphic) {
+    if (p.stoelbeeld?.label?.trim()) return p.stoelbeeld.label.trim();
+    if (p.stoelbeeld) return "Stoelbeeld";
+    return p.standpunt ? `Camera ${p.standpunt}` : `Preset ${p.nummer}`;
+  }
+  const tekst = graphicTekst(p.graphic).trim();
+  return tekst || sjabloonNaam(p.graphic, stand?.sjablonen);
+}
+
 export interface PresetStatus {
-  /** De Graphic die klaarstaat komt uit deze Preset. */
   klaar: boolean;
-  /** De Graphic in de Ether komt uit deze Preset. */
   live: boolean;
-  /** Wanneer een Graphic uit deze Preset het laatst getoond werd. */
   wasLiveOm: number | null;
 }
 
-/** Of deze Graphic de ongewijzigde uit de Preset is: id en versie gelijk aan `als`. */
 function ongewijzigd(g: { id: number; versie: number } | null | undefined, als: number | undefined): boolean {
   return als !== undefined && !!g && g.id === als && g.versie === als;
 }
 
-/** Gelijk aan `Stand::preset_staat_klaar` en `Stand::preset_in_beeld`: een gewijzigde Graphic is de Preset niet meer. */
 export function statusVan(p: Preset, s: Stand): PresetStatus {
+  if (p.zonder_graphic) {
+    const zelfdeStoel = !!p.stoelbeeld && JSON.stringify(s.klaar_stoelbeeld) === JSON.stringify(p.stoelbeeld);
+    const zelfdeCam = !!p.standpunt && s.camera.klaar_standpunt === p.standpunt;
+    const liveStoel = !!p.stoelbeeld && JSON.stringify(s.ether_stoelbeeld) === JSON.stringify(p.stoelbeeld);
+    return {
+      klaar: !s.klaar && (zelfdeStoel || zelfdeCam),
+      live: liveStoel,
+      wasLiveOm: p.laatst_live_ms ?? null,
+    };
+  }
   return {
     klaar: ongewijzigd(s.klaar, p.klaargezet_als),
     live: ongewijzigd(s.ether, p.getoond_als),
@@ -54,13 +80,11 @@ export function statusVan(p: Preset, s: Stand): PresetStatus {
   };
 }
 
-/** De Presets van één groep (of alle, bij `null`), eventueel alleen die op de tablet. */
 export function filterPresets(lijst: Preset[], groep: Groep | null, opTablet: boolean): Preset[] {
-  return lijst.filter((p) => (groep === null || groepVan(p.graphic) === groep) && (!opTablet || p.op_tablet));
+  return lijst.filter((p) => (groep === null || groepVanPreset(p) === groep) && (!opTablet || p.op_tablet));
 }
 
-/** Het nummer van de Preset die deze Graphic met dit Standpunt al bewaart, of `null`. */
 export function bewaardAls(lijst: Preset[], graphic: Graphic, standpunt: string | undefined): number | null {
   const g = JSON.stringify(graphic);
-  return lijst.find((p) => JSON.stringify(p.graphic) === g && (p.standpunt ?? null) === (standpunt ?? null))?.nummer ?? null;
+  return lijst.find((p) => !p.zonder_graphic && JSON.stringify(p.graphic) === g && (p.standpunt ?? null) === (standpunt ?? null))?.nummer ?? null;
 }

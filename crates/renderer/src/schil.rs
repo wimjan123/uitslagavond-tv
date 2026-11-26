@@ -17,6 +17,10 @@ use bevy::prelude::*;
 
 /// De laag van de schil.
 const SCHIL_LAAG: usize = 1;
+/// De laag voor Stoelen van de Preview-camera (`Rol::Voorbeeld`, ADR 0005).
+pub const STOEL_KLAAR_LAAG: usize = 2;
+/// De laag voor Stoelen van de Ether-camera (Live).
+pub const STOEL_ETHER_LAAG: usize = 3;
 
 /// Boven deze hoogte (meter) hoort alles bij de schil: het plafond hangt op 5,15 tot 5,2 meter,
 /// de hanglampen, de spots en het daklicht daarboven.
@@ -185,19 +189,23 @@ fn splits_af(
 /// elke camera naar.
 fn kies_kant(
     mut commands: Commands,
-    camera: Query<(Entity, &GlobalTransform, Option<&RenderLayers>), With<ZietSchil>>,
+    camera: Query<(Entity, &GlobalTransform, Option<&RenderLayers>, Option<&crate::graphic::Bron>), With<ZietSchil>>,
     mut delen: Query<(&Gesplitst, &mut Mesh3d, &mut Visibility)>,
     mut zicht: Query<&mut Visibility, Without<Gesplitst>>,
     mut kant_nu: ResMut<Kant>,
 ) {
     let mut plekken = Vec::new();
-    for (e, plek, lagen) in &camera {
+    for (e, plek, lagen, bron) in &camera {
         let b = buiten(plek.translation());
         plekken.push(b);
+        let stoellaag = match bron {
+            Some(crate::graphic::Bron::Klaar) => STOEL_KLAAR_LAAG,
+            _ => STOEL_ETHER_LAAG,
+        };
         let nodig = if b {
-            RenderLayers::layer(0)
+            RenderLayers::from_layers(&[0, stoellaag])
         } else {
-            RenderLayers::from_layers(&[0, SCHIL_LAAG])
+            RenderLayers::from_layers(&[0, SCHIL_LAAG, stoellaag])
         };
         if lagen != Some(&nodig) {
             commands.entity(e).insert(nodig);

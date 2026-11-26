@@ -8,20 +8,41 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
+use crate::camera::OvergangSoort;
+use crate::stoelbeeld::Stoelbeeld;
 use crate::{Graphic, GraphicInBeeld, KlaargezetteGraphic};
 
-/// Een opgeslagen Graphic.
+/// Een opgeslagen combinatie van Graphic, Stoelbeeld en/of Standpunt of Camerarit (ADR 0005).
 #[derive(Serialize, Deserialize, TS, Clone, Debug, PartialEq, Eq)]
 #[ts(export)]
 pub struct Preset {
     /// Vast nummer, vanaf 1. De cijfertoetsen 1 tot 9 zetten de Preset met dat nummer klaar.
     pub nummer: u16,
+    /// Eigen naam voor de Preset (optioneel; anders gebruikt het dashboard de naam van het Sjabloon).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub naam: Option<String>,
     /// De Graphic met de gegevens van het moment van bewaren.
     pub graphic: Graphic,
-    /// Een ander Standpunt dan dat van het Sjabloon, als letter. Zie [`Preset::standpunt`].
+    /// `true` als deze Preset alleen een Stoelbeeld en/of Standpunt bewaart (zonder 2D-Graphic).
+    #[serde(default)]
+    pub zonder_graphic: bool,
+    /// Een ander Standpunt of Camerarit dan dat van het Sjabloon, als letter. Zie [`Preset::standpunt`].
     #[serde(default)]
     #[ts(optional)]
     pub standpunt: Option<String>,
+    /// Een los Stoelbeeld dat deze Preset klaarzet.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub stoelbeeld: Option<Stoelbeeld>,
+    /// Gewenste overgang (Bewegen, Overvloeien/Fade of Knippen) bij deze Preset.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub overgang: Option<OvergangSoort>,
+    /// Duur van Overvloeien (Fade) in milliseconden, als `overgang` Overvloeien is.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub overvloei_ms: Option<u16>,
     /// Of de Presentator deze Preset op de tablet ziet.
     #[serde(default)]
     pub op_tablet: bool,
@@ -48,9 +69,19 @@ pub struct Preset {
 }
 
 impl Preset {
-    /// De letter van het Standpunt: de keuze voor deze Preset, anders die van het Sjabloon.
+    /// De letter van het Standpunt: de keuze voor deze Preset, anders die van het Sjabloon
+    /// (of `BLIJF` bij een Preset zonder Graphic zonder eigen Standpunt).
     pub fn standpunt(&self) -> std::borrow::Cow<'_, str> {
-        self.standpunt.as_deref().map_or_else(|| self.graphic.standaard_standpunt(), std::borrow::Cow::Borrowed)
+        self.standpunt.as_deref().map_or_else(
+            || {
+                if self.zonder_graphic {
+                    std::borrow::Cow::Borrowed(crate::camera::BLIJF)
+                } else {
+                    self.graphic.standaard_standpunt()
+                }
+            },
+            std::borrow::Cow::Borrowed,
+        )
     }
 
     /// Of deze klaargezette Graphic uit deze Preset komt.
