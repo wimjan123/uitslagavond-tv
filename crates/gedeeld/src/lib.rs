@@ -614,6 +614,8 @@ pub enum Weigering {
     GeenOpbouw,
     #[error("er is geen Standpunt {0}")]
     OnbekendStandpunt(String),
+    #[error("{standpunt} past niet bij deze Graphic: {reden}")]
+    StandpuntPastNiet { standpunt: String, reden: String },
     #[error("Standpunt {0} is vast")]
     VastStandpunt(String),
     #[error("Camerarit {0} is vast: bijschaven en hernoemen kan, wissen of opnieuw opnemen niet")]
@@ -704,6 +706,7 @@ impl Stand {
                 self.controleer_sjabloon_van(graphic)?;
                 self.controleer_standpunt(standpunt.as_deref())?;
                 let graphic = self.vul_cijfers_in(graphic, h.tijd_ms)?;
+                self.controleer_standpunt_voor(self.camera_profiel(&graphic), standpunt.as_deref())?;
                 self.zet_klaar(graphic, standpunt.clone(), h);
             }
             Opdracht::WijzigKlaar { id, graphic, standpunt } => {
@@ -711,6 +714,7 @@ impl Stand {
                 self.controleer_sjabloon_van(graphic)?;
                 self.controleer_standpunt(standpunt.as_deref())?;
                 let graphic = &self.vul_cijfers_in(graphic, h.tijd_ms)?;
+                self.controleer_standpunt_voor(self.camera_profiel(graphic), standpunt.as_deref())?;
                 let klaar = self.klaar.as_mut().ok_or(Weigering::NietsKlaar)?;
                 if klaar.id != *id {
                     return Err(Weigering::AndereGraphicKlaar(klaar.klaargezet_door.clone()));
@@ -775,7 +779,7 @@ impl Stand {
                 }
                 graphic.controleer()?;
                 self.controleer_sjabloon_van(graphic)?;
-                self.controleer_standpunt(standpunt.as_deref())?;
+                self.controleer_standpunt_voor(self.camera_profiel(graphic), standpunt.as_deref())?;
                 // Een nieuw id: wat klaarstaat is niet deze Graphic, dus Bijwerken of de stempels
                 // van een Preset horen er niet bij.
                 let ether = self.in_beeld(h.volgnummer, h.volgnummer, graphic, standpunt, h);
@@ -833,11 +837,27 @@ impl Stand {
                     return Err(Weigering::OnbekendStandpunt(letter.clone()));
                 }
                 self.controleer_standpunt(Some(letter))?;
-                // Aanschuiven gaat naar de Partij van de Graphic in de Ether
-                let letter = match (letter.as_str(), &self.ether) {
-                    (camera::AANSCHUIVEN, Some(e)) => e.graphic.standpunt_bij(Some(camera::AANSCHUIVEN)).into_owned(),
-                    (camera::AANSCHUIVEN, None) => return Err(Weigering::NietsInBeeld),
-                    _ => letter.clone(),
+                // Gerichte partij- en stoelbewegingen gaan naar de Graphic in de Ether
+                let letter = if let Some(b) = camera::Partijbeweging::uit_sleutel(letter) {
+                    let e = self.ether.as_ref().ok_or(Weigering::NietsInBeeld)?;
+                    if e.graphic.partij().is_none() {
+                        return Err(Weigering::StandpuntPastNiet {
+                            standpunt: b.naam().into(),
+                            reden: "de Graphic in de Ether heeft geen gekozen Partij".into(),
+                        });
+                    }
+                    e.graphic.standpunt_bij(Some(letter)).into_owned()
+                } else if let Some(b) = camera::Stoelbeweging::uit_sleutel(letter) {
+                    let e = self.ether.as_ref().ok_or(Weigering::NietsInBeeld)?;
+                    if e.graphic.uitgelichte_stoel().is_none() {
+                        return Err(Weigering::StandpuntPastNiet {
+                            standpunt: b.naam().into(),
+                            reden: "de Graphic in de Ether heeft geen uitgelichte Stoel".into(),
+                        });
+                    }
+                    e.graphic.standpunt_bij(Some(letter)).into_owned()
+                } else {
+                    letter.clone()
                 };
                 self.kies_standpunt(&letter, *knip, h);
             }
@@ -949,6 +969,7 @@ impl Stand {
                 self.controleer_sjabloon_van(graphic)?;
                 self.controleer_standpunt(standpunt.as_deref())?;
                 let graphic = &self.vul_cijfers_in(graphic, h.tijd_ms)?;
+                self.controleer_standpunt_voor(self.camera_profiel(graphic), standpunt.as_deref())?;
                 let nummer = presets::eerste_vrije_nummer(&self.presets);
                 // Bewaar je wat klaarstaat of in beeld staat, dan krijgt de Preset meteen de
                 // stempel Klaar of Live, alsof hij uit deze Preset kwam.
@@ -1104,7 +1125,9 @@ impl Stand {
                     Some(g) => {
                         g.controleer()?;
                         self.controleer_sjabloon_van(g)?;
-                        (false, self.vul_cijfers_in(g, h.tijd_ms)?)
+                        let ingevuld = self.vul_cijfers_in(g, h.tijd_ms)?;
+                        self.controleer_standpunt_voor(self.camera_profiel(&ingevuld), standpunt.as_deref())?;
+                        (false, ingevuld)
                     }
                     None => (
                         true,
@@ -1165,7 +1188,9 @@ impl Stand {
                     Some(g) if !zonder_graphic => {
                         g.controleer()?;
                         self.controleer_sjabloon_van(g)?;
-                        Some(self.vul_cijfers_in(g, h.tijd_ms)?)
+                        let g = self.vul_cijfers_in(g, h.tijd_ms)?;
+                        self.controleer_standpunt_voor(self.camera_profiel(&g), standpunt.as_deref())?;
+                        Some(g)
                     }
                     _ => None,
                 };
@@ -1336,7 +1361,7 @@ impl Stand {
     /// Opslaan van een Sjabloon uit de vormgevingstab ([`Opdracht::ZetSjabloon`]).
     fn zet_sjabloon(&mut self, nieuw: &sjabloon::Sjabloon, h: &Herkomst) -> Result<(), Weigering> {
         nieuw.controleer()?;
-        self.controleer_standpunt(nieuw.standpunt.as_deref())?;
+        self.controleer_standpunt_voor(nieuw.camera_profiel(), nieuw.standpunt.as_deref())?;
         if self.sjabloon(&nieuw.id).is_some_and(|s| *s == *nieuw) {
             return Ok(());
         }
@@ -1528,31 +1553,128 @@ impl Stand {
         self.cameraritten.iter().find(|r| r.letter == letter)
     }
 
-    /// Waar de camera staat bij dit Standpunt, aan het begin van deze Camerarit, of bij het shot
-    /// van deze Stoel ([`camera::stoelsleutel`]). Bij [`camera::BLIJF`]: die van het Standpunt van
-    /// de Ether.
+    /// Waar de camera staat bij dit Standpunt, aan het begin van deze Camerarit, of bij een
+    /// gerichte beweging naar een Partij of Stoel. Bij [`camera::BLIJF`]: die van het Standpunt
+    /// van de Ether.
     pub fn camerastand_van(&self, letter: &str) -> Option<Camerastand> {
         let letter = if letter == camera::BLIJF { self.camera.standpunt.as_str() } else { letter };
         self.standpunt(letter)
             .map(|s| s.stand)
             .or_else(|| self.camerarit(letter).and_then(Camerarit::beginstand))
-            .or_else(|| camera::stoel_uit_sleutel(letter).and_then(camera::shot_op_stoel))
-            .or_else(|| camera::aanschuif_uit_sleutel(letter).and_then(|(van, tot)| camera::aanschuif_stand(van, tot)))
+            .or_else(|| camera::Stoelbeweging::uit_doelsleutel(letter).and_then(|(b, s)| b.stand_op(s, 0.0)))
+            .or_else(|| camera::Partijbeweging::uit_doelsleutel(letter).and_then(|(b, van, tot)| b.stand_op(van, tot, 0.0)))
             .or_else(|| (letter == camera::BOVEN_HET_PANEEL).then(camera::boven_het_paneel))
     }
 
-    /// Of er een Standpunt, Camerarit of Stoel met deze sleutel is, of Aanschuiven of Camera
-    /// blijft staan (geen sleutel mag ook).
+    /// Het [`camera::CameraProfiel`] van een Graphic: welke Standpunten en bewegingen erbij passen.
+    pub fn camera_profiel(&self, graphic: &Graphic) -> camera::CameraProfiel {
+        use camera::CameraProfiel;
+        match graphic {
+            Graphic::PartijUitgelicht { .. } => CameraProfiel::Partij,
+            Graphic::Persoonskaart { .. } => {
+                if graphic.uitgelichte_stoel().is_some() {
+                    CameraProfiel::PersoonMetStoel
+                } else {
+                    CameraProfiel::PersoonZonderStoel
+                }
+            }
+            Graphic::Zetelverdeling { .. } => CameraProfiel::HeleZaal,
+            Graphic::Coalitie { .. } => CameraProfiel::CoalitieZaal,
+            Graphic::Zetelbalk { .. }
+            | Graphic::TweeSets { .. }
+            | Graphic::Coalitiebalk { .. }
+            | Graphic::UitslagStemming { .. } => CameraProfiel::BovenPaneel,
+            Graphic::UitslagPerPartij { .. }
+            | Graphic::WinstEnVerlies { .. }
+            | Graphic::FractiesVoorEnTegen { .. }
+            | Graphic::HoofdelijkeStemming { .. } => CameraProfiel::GrootPaneel,
+            Graphic::Titelkaart { .. } => CameraProfiel::Algemeen,
+            Graphic::Eigen { id, partij, .. } => match self.sjabloon(id) {
+                Some(s) => s.camera_profiel(),
+                None if partij.is_some() => CameraProfiel::AlgemeenMetPartij,
+                None => CameraProfiel::Algemeen,
+            },
+        }
+    }
+
+    /// Of een Standpunt, Camerarit of gerichte beweging bij dit [`camera::CameraProfiel`] past.
+    pub fn standpunt_past_bij(&self, profiel: camera::CameraProfiel, letter: &str) -> bool {
+        if letter == camera::BLIJF {
+            return true;
+        }
+        if letter == camera::BOVEN_HET_PANEEL {
+            return profiel.mag_boven_het_paneel();
+        }
+        if camera::Partijbeweging::uit_sleutel(letter).is_some()
+            || camera::Partijbeweging::uit_doelsleutel(letter).is_some()
+        {
+            return profiel.mag_partijbeweging();
+        }
+        if camera::Stoelbeweging::uit_sleutel(letter).is_some()
+            || camera::Stoelbeweging::uit_doelsleutel(letter).is_some()
+        {
+            return profiel.mag_stoelbeweging();
+        }
+        if let Some(s) = self.standpunt(letter) {
+            return if s.vast { profiel.vaste_standpunten().contains(&s.letter.as_str()) } else { profiel.mag_eigen() };
+        }
+        if let Some(r) = self.camerarit(letter) {
+            return if r.vast { profiel.vaste_ritten().contains(&r.letter.as_str()) } else { profiel.mag_eigen() };
+        }
+        false
+    }
+
+    /// Een leesbare naam voor een Standpunt-sleutel (voor in een weigering).
+    fn standpunt_label(&self, letter: &str) -> String {
+        if letter == camera::BOVEN_HET_PANEEL {
+            return "Totaal boven het paneel".into();
+        }
+        if let Some(b) = camera::Partijbeweging::uit_sleutel(letter)
+            .or_else(|| camera::Partijbeweging::uit_doelsleutel(letter).map(|(b, _, _)| b))
+        {
+            return b.naam().into();
+        }
+        if let Some(b) = camera::Stoelbeweging::uit_sleutel(letter)
+            .or_else(|| camera::Stoelbeweging::uit_doelsleutel(letter).map(|(b, _)| b))
+        {
+            return b.naam().into();
+        }
+        if let Some(s) = self.standpunt(letter) {
+            return s.naam.clone();
+        }
+        if let Some(r) = self.camerarit(letter) {
+            return r.naam.clone();
+        }
+        letter.into()
+    }
+
+    /// Controleert of het Standpunt bestaat én bij het profiel van de Graphic of het Sjabloon past.
+    fn controleer_standpunt_voor(&self, profiel: camera::CameraProfiel, letter: Option<&str>) -> Result<(), Weigering> {
+        self.controleer_standpunt(letter)?;
+        if let Some(l) = letter
+            && !self.standpunt_past_bij(profiel, l)
+        {
+            return Err(Weigering::StandpuntPastNiet {
+                standpunt: self.standpunt_label(l),
+                reden: profiel.uitleg().into(),
+            });
+        }
+        Ok(())
+    }
+
+    /// Of er een Standpunt, Camerarit of gerichte beweging met deze sleutel is, of Camera blijft
+    /// staan (geen sleutel mag ook).
     fn controleer_standpunt(&self, letter: Option<&str>) -> Result<(), Weigering> {
         match letter {
             Some(l)
                 if self.standpunt(l).is_none()
                     && self.camerarit(l).is_none()
-                    && camera::stoel_uit_sleutel(l).is_none()
-                    && l != camera::AANSCHUIVEN
                     && l != camera::BLIJF
                     && l != camera::BOVEN_HET_PANEEL
-                    && camera::aanschuif_uit_sleutel(l).is_none() =>
+                    && camera::Partijbeweging::uit_sleutel(l).is_none()
+                    && camera::Partijbeweging::uit_doelsleutel(l).is_none()
+                    && camera::Stoelbeweging::uit_sleutel(l).is_none()
+                    && camera::Stoelbeweging::uit_doelsleutel(l).is_none() =>
             {
                 Err(Weigering::OnbekendStandpunt(l.into()))
             }

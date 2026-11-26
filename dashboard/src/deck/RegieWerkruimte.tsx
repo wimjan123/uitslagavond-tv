@@ -22,14 +22,23 @@ import {
   Tablet,
   Trash2,
 } from "lucide-react";
-import { graphicTekst, sjabloonNaam } from "../graphic";
+import { graphicTekst, sjabloonId, sjabloonNaam, standaardStandpunt } from "../graphic";
+import { stoelVan } from "../persoonskaart/persoonskaart";
 import { filterPresets, GROEPEN, presetTitel, statusVan } from "../presets/presets";
 import type { Groep } from "../presets/presets";
 import { Schets } from "../presets/Schets";
+import {
+  BOVEN_HET_PANEEL,
+  BOVEN_HET_PANEEL_NAAM,
+  cameraProfielVanGraphic,
+  gerichteBewegingNaam,
+  passendeCameraKeuzes,
+} from "../regie/camerarit";
+import type { Camerakeus } from "../regie/camerarit";
 import { biedHerstel } from "../regie/herstel";
 import { useRegie } from "../regie/regie";
 import { PRESETS } from "../regie/take";
-import { benodigd, lijst as sjablonenLijst } from "../vormgeving/sjablonen";
+import { benodigd, geldendSjabloon, lijst as sjablonenLijst } from "../vormgeving/sjablonen";
 import type { Graphic } from "../typen/Graphic";
 import type { Indeling } from "../typen/Indeling";
 import type { OvergangSoort } from "../typen/OvergangSoort";
@@ -39,6 +48,26 @@ import type { Stoelbeeld } from "../typen/Stoelbeeld";
 
 const BLIJF = "blijf";
 const KLAAR_BIJ = "inspector";
+
+const CAMERA_GROEPEN: { soort: Camerakeus["soort"]; label: string }[] = [
+  { soort: "Partijbeweging", label: "Bewegingen naar de Partij" },
+  { soort: "Stoelbeweging", label: "Bewegingen naar de Stoel" },
+  { soort: "Standpunt", label: "Standpunten" },
+  { soort: "Camerarit", label: "Cameraritten" },
+];
+
+function cameraLabelKort(stand: Stand, letter: string | undefined): string {
+  if (!letter) return "";
+  if (letter === BLIJF) return "Loopt door";
+  if (letter === BOVEN_HET_PANEEL) return BOVEN_HET_PANEEL_NAAM;
+  const gericht = gerichteBewegingNaam(letter);
+  if (gericht) return gericht;
+  const sp = stand.standpunten.find((p) => p.letter === letter);
+  if (sp) return sp.toets ?? sp.letter;
+  const rit = stand.cameraritten.find((r) => r.letter === letter);
+  if (rit) return rit.toets ?? rit.letter;
+  return letter;
+}
 
 type TemplateKeuze =
   | "Titelkaart"
@@ -154,8 +183,6 @@ export function RegieWerkruimte({ opGaNaarZaal }: { opGaNaarZaal: () => void }) 
     );
   }, [stand?.presets, stand?.sjablonen, groep, alleenTablet, zoek]);
 
-  const effectiefStandpunt = cameraModus === "blijf" ? BLIJF : standpuntKeuze || "A";
-
   const conceptGraphic: Graphic | undefined = useMemo(() => {
     if (zonderGraphic) return undefined;
     const gekozenSet = setId || stand?.cijfers.sets[0]?.id || "";
@@ -195,6 +222,49 @@ export function RegieWerkruimte({ opGaNaarZaal }: { opGaNaarZaal: () => void }) 
         };
     }
   }, [zonderGraphic, sjabloonKeuze, kop, regel, setId, tweedeSetId, partijSleutel, indeling, wieId, wieSoort, eigenVelden, stand?.cijfers, stand?.persoonskaart_extra]);
+
+  const persoonHeeftStoel = useMemo(() => {
+    if (!stand || sjabloonKeuze !== "Persoonskaart" || wieSoort !== "Kamerlid" || !wieId) return false;
+    return !!stoelVan(stand, wieId);
+  }, [stand, sjabloonKeuze, wieSoort, wieId]);
+
+  const cameraProfiel = useMemo(() => {
+    if (!conceptGraphic) return "Algemeen" as const;
+    return cameraProfielVanGraphic(conceptGraphic, stand?.sjablonen ?? [], persoonHeeftStoel);
+  }, [conceptGraphic, stand?.sjablonen, persoonHeeftStoel]);
+
+  const passendeOpties = useMemo(() => {
+    if (!stand) return [];
+    return passendeCameraKeuzes(stand.standpunten, stand.cameraritten, cameraProfiel).filter((k) => k.letter !== BLIJF);
+  }, [stand?.standpunten, stand?.cameraritten, cameraProfiel]);
+
+  const standaardVoorConcept = useMemo(() => {
+    if (!stand || !conceptGraphic) return passendeOpties[0]?.letter ?? "A";
+    const sj = geldendSjabloon(stand.sjablonen, sjabloonId(conceptGraphic))?.standpunt;
+    if (sj && passendeOpties.some((o) => o.letter === sj)) return sj;
+    const basis = standaardStandpunt(conceptGraphic);
+    if (basis.startsWith("stoel-")) return "stoel-shot";
+    if (passendeOpties.some((o) => o.letter === basis)) return basis;
+    return passendeOpties[0]?.letter ?? "A";
+  }, [stand, conceptGraphic, passendeOpties]);
+
+  const geldigeStandpuntKeuze = passendeOpties.some((o) => o.letter === standpuntKeuze)
+    ? standpuntKeuze
+    : standaardVoorConcept;
+
+  const effectiefStandpunt = cameraModus === "blijf" ? BLIJF : geldigeStandpuntKeuze;
+
+  function kiesSjabloon(id: TemplateKeuze) {
+    setSjabloonKeuze(id);
+    // Bij Partij uitgelicht of Persoonskaart richt de camera zich standaard meteen op de Partij/Stoel.
+    if (id === "PartijUitgelicht") {
+      setCameraModus("kies");
+      setStandpuntKeuze("aanschuiven");
+    } else if (id === "Persoonskaart") {
+      setCameraModus("kies");
+      setStandpuntKeuze("stoel-shot");
+    }
+  }
 
   function openMenuVoor(e: React.MouseEvent<HTMLButtonElement>, p: Preset, titel: string) {
     e.stopPropagation();
@@ -612,9 +682,9 @@ export function RegieWerkruimte({ opGaNaarZaal }: { opGaNaarZaal: () => void }) 
                     </div>
                     <div style={{ minWidth: 0 }}>
                       <div className="preset-title" title={titel}>{titel}</div>
-                      <div className="preset-meta" title={p.standpunt ?? ""}>
+                      <div className="preset-meta" title={cameraLabelKort(stand, p.standpunt)}>
                         {p.zonder_graphic ? "Stoelbeeld / Camera" : sjabloonNaam(p.graphic, stand.sjablonen)}
-                        {p.standpunt ? ` · ${p.standpunt === BLIJF ? "Camera loopt door" : p.standpunt}` : ""}
+                        {p.standpunt ? ` · ${p.standpunt === BLIJF ? "Camera loopt door" : cameraLabelKort(stand, p.standpunt)}` : ""}
                       </div>
                     </div>
                     <div style={{ display: "flex", gap: 4, flexShrink: 0 }}>
@@ -671,7 +741,7 @@ export function RegieWerkruimte({ opGaNaarZaal }: { opGaNaarZaal: () => void }) 
         <div className="inspector-scroll">
           {regie.melding?.bij === KLAAR_BIJ && <div className="melding-balk">{regie.melding.tekst}</div>}
 
-          {/* Zichtbare 1-klik schakelaar: Camera blijft lopen (over lopend pannetje) vs. Standpunt kiezen */}
+          {/* Zichtbare 1-klik schakelaar: Camera blijft lopen vs. passende beweging/Standpunt */}
           <div className="field">
             <label>Camera bij deze Graphic</label>
             <div className="seg" style={{ width: "100%" }}>
@@ -690,35 +760,48 @@ export function RegieWerkruimte({ opGaNaarZaal }: { opGaNaarZaal: () => void }) 
                 style={{ flex: 1 }}
                 className={cameraModus === "kies" ? "active amber" : ""}
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => setCameraModus("kies")}
-                title="Schakel bij Take mee naar een gekozen Standpunt of Camerarit"
+                onClick={() => {
+                  setCameraModus("kies");
+                  if (!passendeOpties.some((o) => o.letter === standpuntKeuze)) {
+                    setStandpuntKeuze(standaardVoorConcept);
+                  }
+                }}
+                title="Schakel bij Take mee naar een passende beweging, Standpunt of Camerarit"
               >
-                Wissel camera
+                {cameraProfiel === "Partij"
+                  ? "Naar Partij"
+                  : cameraProfiel === "PersoonMetStoel"
+                    ? "Naar Stoel"
+                    : "Wissel camera"}
               </button>
             </div>
             {cameraModus === "kies" && (
-              <select
-                className="select sm"
-                style={{ marginTop: 4 }}
-                value={standpuntKeuze}
-                onChange={(e) => setStandpuntKeuze(e.target.value)}
-                aria-label="Kies Standpunt of Camerarit"
-              >
-                <optgroup label="Standpunten">
-                  {stand.standpunten.map((sp) => (
-                    <option key={sp.letter} value={sp.letter}>
-                      {sp.toets ?? sp.letter} · {sp.naam}
-                    </option>
+              <>
+                <select
+                  className="select sm"
+                  style={{ marginTop: 4 }}
+                  value={geldigeStandpuntKeuze}
+                  onChange={(e) => setStandpuntKeuze(e.target.value)}
+                  aria-label="Kies passende camerabeweging of Standpunt"
+                >
+                  {CAMERA_GROEPEN.filter((g) => passendeOpties.some((o) => o.soort === g.soort)).map((g) => (
+                    <optgroup key={g.soort} label={g.label}>
+                      {passendeOpties
+                        .filter((o) => o.soort === g.soort)
+                        .map((o) => (
+                          <option key={o.letter} value={o.letter}>
+                            {o.tekst}
+                          </option>
+                        ))}
+                    </optgroup>
                   ))}
-                </optgroup>
-                <optgroup label="Cameraritten">
-                  {stand.cameraritten.map((r) => (
-                    <option key={r.letter} value={r.letter}>
-                      {r.toets ?? r.letter} · {r.naam}
-                    </option>
-                  ))}
-                </optgroup>
-              </select>
+                </select>
+                {passendeOpties.find((o) => o.letter === geldigeStandpuntKeuze)?.toelichting && (
+                  <span style={{ fontSize: 11.5, color: "var(--text-3)", marginTop: 2 }}>
+                    {passendeOpties.find((o) => o.letter === geldigeStandpuntKeuze)?.toelichting}
+                  </span>
+                )}
+              </>
             )}
           </div>
 
@@ -733,7 +816,7 @@ export function RegieWerkruimte({ opGaNaarZaal }: { opGaNaarZaal: () => void }) 
                     type="button"
                     className={`tpl-tile${sjabloonKeuze === t.id ? " active" : ""}`}
                     onMouseDown={(e) => e.preventDefault()}
-                    onClick={() => setSjabloonKeuze(t.id)}
+                    onClick={() => kiesSjabloon(t.id)}
                   >
                     <span className="tpl-tile-name">{t.naam}</span>
                     <span className="tpl-tile-sub">{t.groep}</span>
@@ -747,7 +830,7 @@ export function RegieWerkruimte({ opGaNaarZaal }: { opGaNaarZaal: () => void }) 
                       type="button"
                       className={`tpl-tile${sjabloonKeuze === id ? " active" : ""}`}
                       onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => setSjabloonKeuze(id)}
+                      onClick={() => kiesSjabloon(id)}
                     >
                       <span className="tpl-tile-name">{s.naam}</span>
                       <span className="tpl-tile-sub">Eigen sjabloon</span>
@@ -1207,12 +1290,12 @@ const PresetKaart = memo(function PresetKaart({
           </button>
         </div>
 
-        <div className="preset-meta" title={p.standpunt ? `Camera: ${p.standpunt}` : undefined}>
+        <div className="preset-meta" title={p.standpunt ? `Camera: ${cameraLabelKort(stand, p.standpunt)}` : undefined}>
           <span>{p.zonder_graphic ? "Zaal" : sjabloonNaam(p.graphic, stand.sjablonen)}</span>
           {p.standpunt && (
             <>
               <span>·</span>
-              <span className="mono">{p.standpunt === BLIJF ? "Loopt door" : p.standpunt}</span>
+              <span className="mono">{cameraLabelKort(stand, p.standpunt)}</span>
             </>
           )}
           {p.overgang === "Overvloeien" && (

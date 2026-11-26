@@ -27,6 +27,8 @@ import {
   Undo2,
 } from "lucide-react";
 import { graphicTekst, sjabloonNaam } from "../graphic";
+import { cameraProfielVanSjabloon, passendeCameraKeuzes } from "../regie/camerarit";
+import type { Camerakeus } from "../regie/camerarit";
 import { useRegie } from "../regie/regie";
 import { CAMERA, kan, voerUit } from "../regie/take";
 import {
@@ -632,15 +634,22 @@ function SjabloonEditor() {
                 value={concept.achtergrond.soort}
                 onChange={(e) => {
                   const v = e.target.value as Achtergrond["soort"];
-                  pasAan((s) => ({
-                    ...s,
-                    achtergrond:
-                      v === "Kleur"
-                        ? { soort: "Kleur", kleur: { Stijl: "Achtergrond" } }
-                        : v === "Afbeelding"
-                          ? { soort: "Afbeelding", bestand: "" }
-                          : { soort: v },
-                  }));
+                  pasAan((s) => {
+                    const nieuw: Sjabloon = {
+                      ...s,
+                      achtergrond:
+                        v === "Kleur"
+                          ? { soort: "Kleur", kleur: { Stijl: "Achtergrond" } }
+                          : v === "Afbeelding"
+                            ? { soort: "Afbeelding", bestand: "" }
+                            : { soort: v },
+                    };
+                    if (nieuw.standpunt) {
+                      const opties = passendeCameraKeuzes(stand.standpunten, stand.cameraritten, cameraProfielVanSjabloon(nieuw));
+                      if (!opties.some((o) => o.letter === nieuw.standpunt)) nieuw.standpunt = undefined;
+                    }
+                    return nieuw;
+                  });
                 }}
               >
                 {ACHTERGRONDEN.map((a) => (
@@ -655,7 +664,16 @@ function SjabloonEditor() {
               <select
                 className="select sm"
                 value={concept.stoelen}
-                onChange={(e) => pasAan((s) => ({ ...s, stoelen: e.target.value as Stoelen }))}
+                onChange={(e) =>
+                  pasAan((s) => {
+                    const nieuw: Sjabloon = { ...s, stoelen: e.target.value as Stoelen };
+                    if (nieuw.standpunt) {
+                      const opties = passendeCameraKeuzes(stand.standpunten, stand.cameraritten, cameraProfielVanSjabloon(nieuw));
+                      if (!opties.some((o) => o.letter === nieuw.standpunt)) nieuw.standpunt = undefined;
+                    }
+                    return nieuw;
+                  })
+                }
               >
                 {STOEL_OPTIES.map((o) => (
                   <option key={o.stoelen} value={o.stoelen}>
@@ -664,6 +682,41 @@ function SjabloonEditor() {
                 ))}
               </select>
             </div>
+          </div>
+
+          <div className="field">
+            <label>Standaard camera</label>
+            <select
+              className="select sm"
+              value={concept.standpunt ?? ""}
+              onChange={(e) => pasAan((s) => ({ ...s, standpunt: e.target.value || undefined }))}
+            >
+              <option value="">Zoals de soort Graphic</option>
+              {(
+                [
+                  { soort: "Partijbeweging", label: "Bewegingen naar de Partij" },
+                  { soort: "Stoelbeweging", label: "Bewegingen naar de Stoel" },
+                  { soort: "Standpunt", label: "Standpunten" },
+                  { soort: "Camerarit", label: "Cameraritten" },
+                ] as { soort: Camerakeus["soort"]; label: string }[]
+              ).map((g) => {
+                const keuzes = passendeCameraKeuzes(
+                  stand.standpunten,
+                  stand.cameraritten,
+                  cameraProfielVanSjabloon(concept),
+                ).filter((k) => k.soort === g.soort);
+                if (keuzes.length === 0) return null;
+                return (
+                  <optgroup key={g.soort} label={g.label}>
+                    {keuzes.map((k) => (
+                      <option key={k.letter} value={k.letter}>
+                        {k.tekst}
+                      </option>
+                    ))}
+                  </optgroup>
+                );
+              })}
+            </select>
           </div>
 
           {actiefBlok && (

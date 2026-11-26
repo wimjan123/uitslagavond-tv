@@ -5,9 +5,11 @@
 // - 1-klik vergroten, pop-out (/monitors), ▶ Test rit en versleepbare hoogte
 import { useEffect, useRef, useState } from "react";
 import { Camera, ExternalLink, Layers, Maximize2, Minimize2, Play, Sparkles } from "lucide-react";
-import { graphicTekst, sjabloonNaam, standaardStandpunt } from "../graphic";
+import { graphicTekst, sjabloonId, sjabloonNaam, standaardStandpunt } from "../graphic";
+import { BOVEN_HET_PANEEL, BOVEN_HET_PANEEL_NAAM, gerichteBewegingNaam, isGerichteRit } from "../regie/camerarit";
 import { CAMERA, heeftIetsKlaar, klaarStaatInBeeld } from "../regie/take";
 import { useRegie } from "../regie/regie";
+import { geldendSjabloon } from "../vormgeving/sjablonen";
 import type { Stand } from "../typen/Stand";
 import { Schets } from "../presets/Schets";
 
@@ -16,8 +18,9 @@ const BLIJF = "blijf";
 function cameraNaam(stand: Stand, letter: string | undefined): { naam: string; isRit: boolean; letter: string } {
   const l = letter || stand.camera.standpunt;
   if (l === BLIJF) return { naam: "Camera loopt door", isRit: false, letter: l };
-  if (l === "aanschuiven" || l.startsWith("aanschuiven-")) return { naam: "Aanschuiven", isRit: false, letter: l };
-  if (l.startsWith("stoel-")) return { naam: "Shot op Stoel", isRit: false, letter: l };
+  if (l === BOVEN_HET_PANEEL) return { naam: BOVEN_HET_PANEEL_NAAM, isRit: false, letter: l };
+  const gericht = gerichteBewegingNaam(l);
+  if (gericht) return { naam: gericht, isRit: isGerichteRit(l), letter: l };
   const sp = stand.standpunten.find((p) => p.letter === l);
   if (sp) return { naam: `${sp.toets ?? sp.letter} · ${sp.naam}`, isRit: false, letter: l };
   const rit = stand.cameraritten.find((r) => r.letter === l);
@@ -99,7 +102,10 @@ export function Monitoren({ hoogte, opHoogte, popout = false }: MonitorenProps) 
   const pCamLetter =
     stand?.camera.klaar_standpunt ??
     stand?.klaar?.standpunt ??
-    (stand?.klaar ? standaardStandpunt(stand.klaar.graphic) : BLIJF);
+    stand?.klaar?.standpunt_van_sjabloon ??
+    (stand?.klaar
+      ? geldendSjabloon(stand.sjablonen, sjabloonId(stand.klaar.graphic))?.standpunt ?? standaardStandpunt(stand.klaar.graphic)
+      : BLIJF);
   const cameraVerandert =
     !!stand &&
     ((!!stand.camera.klaar_standpunt && stand.camera.klaar_standpunt !== BLIJF) ||
