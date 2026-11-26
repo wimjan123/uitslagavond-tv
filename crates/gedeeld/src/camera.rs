@@ -91,14 +91,22 @@ fn kruis(a: [f32; 3], b: [f32; 3]) -> [f32; 3] {
     ]
 }
 
-/// Bewegen of knippen naar een Standpunt.
+/// Bewegen, knippen of overvloeien (Fade) naar een Standpunt of Camerarit.
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq, Default)]
 #[ts(export)]
 pub enum OvergangSoort {
     #[default]
     Bewegen,
     Knippen,
+    /// Zachte overvloeier (Fade) tussen het oude en nieuwe beeld (ADR 0005).
+    Overvloeien,
 }
+
+/// Standaardduur van een overvloeier (Fade), in milliseconden.
+pub const OVERVLOEI_STANDAARD_MS: u16 = 600;
+/// Kortste en langste overvloeier, in milliseconden.
+pub const OVERVLOEI_MIN_MS: u16 = 150;
+pub const OVERVLOEI_MAX_MS: u16 = 3000;
 
 /// Hoe de camera naar een Standpunt gaat.
 #[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq)]
@@ -474,6 +482,8 @@ pub enum StandpuntGebruik {
     Preset { nummer: u16, naam: String },
     /// De camera van de Ether staat erop of gaat erheen (niet als de Vrije camera aan staat).
     CameraVanDeEther,
+    /// De camera van het Voorbeeld staat erop klaar voor Take.
+    CameraVanHetVoorbeeld,
 }
 
 impl std::fmt::Display for StandpuntGebruik {
@@ -483,6 +493,7 @@ impl std::fmt::Display for StandpuntGebruik {
             StandpuntGebruik::GraphicInEther { naam } => write!(f, "de Graphic in de Ether {naam}"),
             StandpuntGebruik::Preset { nummer, naam } => write!(f, "Preset {nummer} {naam}"),
             StandpuntGebruik::CameraVanDeEther => write!(f, "de camera van de Ether"),
+            StandpuntGebruik::CameraVanHetVoorbeeld => write!(f, "de klaargezette camera van het Voorbeeld"),
         }
     }
 }
@@ -543,10 +554,18 @@ impl Stand {
             gebruik.push(StandpuntGebruik::GraphicInEther { naam: graphic_naam(&e.graphic) });
         }
         for p in self.presets.iter().filter(|p| p.standpunt() == letter) {
-            gebruik.push(StandpuntGebruik::Preset { nummer: p.nummer, naam: graphic_naam(&p.graphic) });
+            let naam = if p.zonder_graphic {
+                p.naam.clone().unwrap_or_else(|| "Stoelbeeld".into())
+            } else {
+                graphic_naam(&p.graphic)
+            };
+            gebruik.push(StandpuntGebruik::Preset { nummer: p.nummer, naam });
         }
         if !self.camera.vrij && self.camera.standpunt == letter {
             gebruik.push(StandpuntGebruik::CameraVanDeEther);
+        }
+        if self.camera.klaar_standpunt.as_deref() == Some(letter) {
+            gebruik.push(StandpuntGebruik::CameraVanHetVoorbeeld);
         }
         gebruik
     }
@@ -700,6 +719,27 @@ pub struct Camerakeuze {
     #[serde(default, skip_serializing_if = "Option::is_none")]
     #[ts(optional)]
     pub proef: Option<Proef>,
+    /// Een los klaargezet Standpunt of Camerarit in het Voorbeeld (ADR 0005). Wacht op zijn
+    /// beginpunt tot Toon (Take) hem in de Ether start.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub klaar_standpunt: Option<String>,
+    /// Overgang die de Regie kiest bij Toon (Bewegen, Overvloeien/Fade of Knippen); `None` volgt
+    /// het Standpunt.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    #[ts(optional)]
+    pub overgang: Option<OvergangSoort>,
+    /// Duur van Overvloeien (Fade) in milliseconden.
+    #[serde(default = "standaard_overvloei_ms")]
+    pub overvloei_ms: u16,
+    /// Het volgnummer waarop voor het laatst een Overvloeien (Fade) op de Ether is gestart.
+    #[serde(default)]
+    #[ts(type = "number")]
+    pub overvloei_sinds: u64,
+}
+
+fn standaard_overvloei_ms() -> u16 {
+    OVERVLOEI_STANDAARD_MS
 }
 
 /// Een opname die loopt.
@@ -735,6 +775,10 @@ impl Default for Camerakeuze {
             oefenen: false,
             opname: None,
             proef: None,
+            klaar_standpunt: None,
+            overgang: None,
+            overvloei_ms: OVERVLOEI_STANDAARD_MS,
+            overvloei_sinds: 0,
         }
     }
 }

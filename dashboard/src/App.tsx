@@ -1,206 +1,254 @@
-import { useCallback, useEffect, useState } from "react";
-import type { FormEvent } from "react";
-import { Multiviewer } from "./multiviewer/vakken";
-import { ONDERDELEN } from "./onderdelen";
+// uitslagavond-tv — DaVinci Deck Shell:
+// - Twin 720p Preview & Live viewers bovenaan (ingeklapt in Studio-modus)
+// - Horizontale OBS/DaVinci Transportbalk eronder
+// - Actieve werkruimte in het midden (Regie, Zaal & Camera, Stemmingen, Coalitie, Cijfers, Studio)
+// - DaVinci onderste paginabalk + Systeem slide-over lade vanuit de statuspil
+// - Pop-out monitor-venster op /monitors
+import { useEffect, useState } from "react";
+import { BarChart3, Camera, Layers, Palette, PieChart, Vote } from "lucide-react";
 import { RegieBron, useRegie } from "./regie/regie";
-import { statusVan } from "./regie/systeem";
 import type { Toegang } from "./regie/regie";
 import { voerUit } from "./regie/take";
 import { actieVoorToets, doelVan } from "./regie/toetsen";
+import { Monitoren } from "./deck/Monitoren";
+import { TransportBalk } from "./deck/TransportBalk";
+import { RegieWerkruimte } from "./deck/RegieWerkruimte";
+import { ZaalCameraWerkruimte } from "./deck/ZaalCameraWerkruimte";
+import { StemmingenWerkruimte } from "./deck/StemmingenWerkruimte";
+import { CoalitieWerkruimte } from "./deck/CoalitieWerkruimte";
+import { CijfersWerkruimte } from "./deck/CijfersWerkruimte";
+import { StudioWerkruimte } from "./deck/StudioWerkruimte";
+import { SysteemDrawer } from "./deck/SysteemDrawer";
+
+type Pagina = "regie" | "zaal" | "stemmingen" | "coalitie" | "cijfers" | "studio";
 
 const OPSLAG = "uitslagavond.toegang";
+const HOOGTE_KEY = "uitslagavond.monitorHoogte";
 
 function leesToegang(): Toegang | null {
   try {
     const t = JSON.parse(localStorage.getItem(OPSLAG) ?? "null") as Toegang | null;
-    return t?.sleutel && t.werkplek ? t : null;
+    if (t?.sleutel && t.werkplek) return t;
   } catch {
-    return null;
+    // negeer ongeldige JSON
   }
+  const sleutel = sessionStorage.getItem("uitslagavond.sleutel") || localStorage.getItem("uitslagavond.sleutel") || "";
+  const werkplek = localStorage.getItem("uitslagavond.werkplek") || "";
+  return sleutel && werkplek ? { sleutel, werkplek } : null;
 }
 
-export function App() {
+export function App({ popoutMonitors = false }: { popoutMonitors?: boolean }) {
   const [toegang, setToegang] = useState<Toegang | null>(leesToegang);
-  const afmelden = useCallback(() => {
-    localStorage.removeItem(OPSLAG);
-    setToegang(null);
-  }, []);
-  if (!toegang) {
-    return (
-      <Aanmelden
-        klaar={(t) => {
-          localStorage.setItem(OPSLAG, JSON.stringify(t));
-          setToegang(t);
-        }}
-      />
-    );
+
+  function meldAan(t: Toegang) {
+    localStorage.setItem(OPSLAG, JSON.stringify(t));
+    setToegang(t);
   }
+
+  function afmelden() {
+    localStorage.removeItem(OPSLAG);
+    sessionStorage.removeItem("uitslagavond.sleutel");
+    localStorage.removeItem("uitslagavond.sleutel");
+    setToegang(null);
+  }
+
+  if (!toegang) {
+    return <AanmeldScherm standaardWerkplek="Regie links" opAanmelden={meldAan} />;
+  }
+
   return (
     <RegieBron toegang={toegang} afmelden={afmelden}>
-      <Schil />
+      {popoutMonitors ? <PopoutMonitoren /> : <DeckShell />}
     </RegieBron>
   );
 }
 
-/** De eerste keer openen: een naam voor deze Werkplek kiezen, zonder inlog, en de sleutel van de server. */
-export function Aanmelden({ klaar, titel = "Regie", standaardNaam = "" }: { klaar: (t: Toegang) => void; titel?: string; standaardNaam?: string }) {
-  const [werkplek, setWerkplek] = useState(standaardNaam);
-  const [sleutel, setSleutel] = useState("");
-  const verstuur = (e: FormEvent) => {
-    e.preventDefault();
-    if (werkplek.trim() && sleutel) klaar({ werkplek: werkplek.trim(), sleutel });
-  };
+function PopoutMonitoren() {
   return (
-    <main className="aanmelden">
-      <form className="aanmelden-vak" onSubmit={verstuur}>
-        <h1 className="kop-regel">{titel}</h1>
-        <label className="veld">
-          <span className="label">Naam van deze Werkplek</span>
-          <input value={werkplek} onChange={(e) => setWerkplek(e.target.value)} placeholder="Regie links" autoFocus={!standaardNaam} />
-          <span className="zacht">Staat bij alles wat je klaarzet, zoals "klaargezet door Regie links".</span>
-        </label>
-        <label className="veld">
-          <span className="label">Sleutel van de server</span>
-          <input type="password" value={sleutel} onChange={(e) => setSleutel(e.target.value)} autoFocus={!!standaardNaam} />
-        </label>
-        <button className="knop knop-hoofd" type="submit" disabled={!werkplek.trim() || !sleutel}>
-          Verbinden
-        </button>
-      </form>
-    </main>
-  );
-}
-
-/** De vaste opbouw: tabbladen met status, de multiviewer-rij, en het werkvlak dat scrolt. */
-function Schil() {
-  const regie = useRegie();
-  const [actief, setActief] = useState(() => ONDERDELEN.find((o) => o.Werkvlak)?.id ?? "");
-  const onderdeel = ONDERDELEN.find((o) => o.id === actief);
-  const Werkvlak = onderdeel?.Werkvlak;
-
-  // Een klik op een knop geeft hem geen focus: zo blijft de spatie daarna altijd Toon, en drukt hij
-  // niet nog eens de knop die je net met de muis gebruikte (zoals Wissen of Uit beeld).
-  useEffect(() => {
-    const geenFocus = (e: MouseEvent) => {
-      const el = e.target instanceof Element ? e.target.closest("button, [role=tab]") : null;
-      if (!el || (el as HTMLButtonElement).disabled) return;
-      e.preventDefault();
-      // De focus gaat ook weg van wat hem nog had. Een veld (zoals een Zetelaantal) rondt zo eerst af, zodat
-      // de laatste waarde vóór de klik binnenkomt (Opdrachten gaan op volgorde). En een knop waar je eerder
-      // met Tab op kwam (zoals Uit beeld) drukt Spatie daarna niet meer: Spatie is weer Take.
-      const actief = document.activeElement;
-      if (actief instanceof HTMLElement && doelVan(actief) !== "elders") actief.blur();
-    };
-    window.addEventListener("mousedown", geenFocus);
-    return () => window.removeEventListener("mousedown", geenFocus);
-  }, []);
-
-  useEffect(() => {
-    const toets = (e: KeyboardEvent) => {
-      if (e.key === "Escape" && doelVan(e.target) === "tekstveld") {
-        (e.target as HTMLElement).blur();
-        return;
-      }
-      // Te smal: het dashboard staat niet in beeld, dus de sneltoetsen ook niet.
-      if (window.matchMedia("(max-width: 899px)").matches) return;
-      const actie = actieVoorToets({ key: e.key, shiftKey: e.shiftKey, ctrlKey: e.ctrlKey, metaKey: e.metaKey, altKey: e.altKey, doel: doelVan(e.target) });
-      if (!actie || e.repeat) return;
-      e.preventDefault();
-      voerUit(regie, actie);
-    };
-    window.addEventListener("keydown", toets);
-    return () => window.removeEventListener("keydown", toets);
-  }, [regie]);
-
-  return (
-    <div className="schil">
-      <header className="tabstrook">
-        <nav className="tabs" role="tablist" aria-label="Onderdelen">
-          {ONDERDELEN.map((o) => (
-            <button
-              key={o.id}
-              role="tab"
-              className="tab"
-              aria-selected={o.id === actief}
-              disabled={!o.Werkvlak}
-              title={o.Werkvlak ? undefined : "Komt later"}
-              onClick={() => setActief(o.id)}
-            >
-              {o.naam}
-              <TabTelling id={o.id} />
-            </button>
-          ))}
-        </nav>
-        <Status />
-      </header>
-      {regie.staat !== "verbonden" && (
-        <div className="storing" role="alert">
-          {regie.staat === "geweigerd"
-            ? "De server weigert de verbinding: controleer de sleutel onder Systeem"
-            : regie.staat === "verbinden"
-              ? "Verbinden met de server"
-              : "Geen verbinding met de server. Het dashboard probeert het elke seconde opnieuw."}
-        </div>
-      )}
-      <Multiviewer />
-      <main className="werkvlak">{Werkvlak && <Werkvlak kiesOnderdeel={setActief} />}</main>
-      <div className="te-smal" role="alert">
-        <h1 className="kop-regel">De Regie werkt op een laptop</h1>
-        <p>Dit scherm is te smal voor de multiviewer en de lijsten. Maak het venster breder, of open op een tablet of telefoon de tablet van de Presentator.</p>
-        <a className="knop knop-hoofd" href="/tablet">
-          Naar de tablet van de Presentator
-        </a>
-      </div>
+    <div className="popout-shell">
+      <Monitoren hoogte={600} opHoogte={() => {}} popout />
     </div>
   );
 }
 
-/** Open werk achter een tabblad: Stemmingen voor de uitzending die nog niet vastliggen, en in amber
- * de Stemmingen waarvan de controle na de uitzending een verschil vond. */
-function TabTelling({ id }: { id: string }) {
-  const { stand } = useRegie();
-  if (id !== "stemmingen" || !stand) return null;
-  const lijst = stand.stand.stemmingen.lijst;
-  const open = lijst.filter((x) => x.voor_uitzending && !x.vastgelegd).length;
-  const controle = lijst.filter((x) => x.controle.status && x.controle.status !== "Gelijk" && !x.controle.afgehandeld).length;
+function DeckShell() {
+  const regie = useRegie();
+  const stand = regie.stand?.stand;
+  const [pagina, setPagina] = useState<Pagina>("regie");
+  const [systeemOpen, setSysteemOpen] = useState(false);
+  const [monitorHoogte, setMonitorHoogte] = useState<number>(() => {
+    const opgeslagen = Number(localStorage.getItem(HOOGTE_KEY));
+    if (Number.isFinite(opgeslagen) && opgeslagen >= 190 && opgeslagen <= 700) return opgeslagen;
+    return Math.round(Math.min(360, Math.max(240, window.innerHeight * 0.36)));
+  });
+
+  function wijzigHoogte(h: number) {
+    setMonitorHoogte(h);
+    localStorage.setItem(HOOGTE_KEY, String(h));
+  }
+
+  // Globale sneltoetsen (Spatie = Take, X = Take out, Z = Kleur uit, 1-9 = Presets, A-H/Q-U/J-L = Camera, Ctrl+Z = Undo)
+  // Enter triggert NOOIT Take.
+  useEffect(() => {
+    const onKeyDown = (e: KeyboardEvent) => {
+      const actie = actieVoorToets({
+        key: e.key,
+        shiftKey: e.shiftKey,
+        ctrlKey: e.ctrlKey,
+        metaKey: e.metaKey,
+        altKey: e.altKey,
+        doel: doelVan(e.target),
+      });
+      if (!actie) return;
+      e.preventDefault();
+      voerUit(regie, actie);
+    };
+    const updateTypt = () => {
+      document.body.classList.toggle("typt", doelVan(document.activeElement) === "tekstveld");
+    };
+    window.addEventListener("keydown", onKeyDown);
+    window.addEventListener("focusin", updateTypt);
+    window.addEventListener("focusout", updateTypt);
+    return () => {
+      window.removeEventListener("keydown", onKeyDown);
+      window.removeEventListener("focusin", updateTypt);
+      window.removeEventListener("focusout", updateTypt);
+    };
+  }, [regie]);
+
+  const inStudio = pagina === "studio";
+
   return (
-    <>
-      {open > 0 && (
-        <span className="tab-telling" title={`${open} Stemmingen voor de uitzending liggen nog niet vast`}>
-          {open} open
-        </span>
+    <div className="deck-shell">
+      {!inStudio && (
+        <>
+          <Monitoren hoogte={monitorHoogte} opHoogte={wijzigHoogte} />
+          <TransportBalk opOpenSysteem={() => setSysteemOpen(true)} />
+        </>
       )}
-      {controle > 0 && (
-        <span className="tab-telling tab-telling-let-op" title={`${controle} Stemmingen wijken af van de officiële uitslag`}>
-          {controle} verschil
-        </span>
-      )}
-    </>
+
+      <main className="deck-main">
+        {pagina === "regie" && <RegieWerkruimte opGaNaarZaal={() => setPagina("zaal")} />}
+        {pagina === "zaal" && <ZaalCameraWerkruimte />}
+        {pagina === "stemmingen" && <StemmingenWerkruimte />}
+        {pagina === "coalitie" && <CoalitieWerkruimte />}
+        {pagina === "cijfers" && <CijfersWerkruimte />}
+        {pagina === "studio" && <StudioWerkruimte opTerug={() => setPagina("regie")} />}
+      </main>
+
+      {/* DaVinci onderste paginabalk */}
+      <nav className="page-bar" aria-label="Werkruimtes">
+        <button
+          type="button"
+          className={`page-tab${pagina === "regie" ? " active" : ""}`}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setPagina("regie")}
+        >
+          <Layers size={14} />
+          <span>Regie</span>
+          {stand && stand.presets.length > 0 && <span className="page-tab-badge">{stand.presets.length}</span>}
+        </button>
+        <button
+          type="button"
+          className={`page-tab${pagina === "zaal" ? " active" : ""}`}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setPagina("zaal")}
+        >
+          <Camera size={14} />
+          <span>Zaal & Camera</span>
+        </button>
+        <button
+          type="button"
+          className={`page-tab${pagina === "stemmingen" ? " active" : ""}`}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setPagina("stemmingen")}
+        >
+          <Vote size={14} />
+          <span>Stemmingen</span>
+        </button>
+        <button
+          type="button"
+          className={`page-tab${pagina === "coalitie" ? " active" : ""}`}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setPagina("coalitie")}
+        >
+          <PieChart size={14} />
+          <span>Coalitie</span>
+        </button>
+        <button
+          type="button"
+          className={`page-tab${pagina === "cijfers" ? " active" : ""}`}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setPagina("cijfers")}
+        >
+          <BarChart3 size={14} />
+          <span>Cijfers</span>
+        </button>
+        <button
+          type="button"
+          className={`page-tab${pagina === "studio" ? " active" : ""}`}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setPagina("studio")}
+        >
+          <Palette size={14} />
+          <span>Studio</span>
+        </button>
+      </nav>
+
+      {systeemOpen && <SysteemDrawer opSluit={() => setSysteemOpen(false)} />}
+    </div>
   );
 }
 
-function Status() {
-  const { staat, rendererstatus } = useRegie();
-  const [nu, setNu] = useState(() => new Date());
-  useEffect(() => {
-    const t = window.setInterval(() => setNu(new Date()), 1000);
-    return () => window.clearInterval(t);
-  }, []);
-  // Bovenin alleen Server, Ether en Reserve (DESIGN.md); het Voorbeeld staat onder Systeem.
-  const punten = statusVan(staat, rendererstatus).filter((r) => r.naam !== "Voorbeeld");
-  const twee = (n: number) => String(n).padStart(2, "0");
+function AanmeldScherm({
+  standaardWerkplek,
+  opAanmelden,
+}: {
+  standaardWerkplek: string;
+  opAanmelden: (t: Toegang) => void;
+}) {
+  const [werkplek, setWerkplek] = useState(standaardWerkplek);
+  const [sleutel, setSleutel] = useState("");
+
+  function verstuur(e: React.FormEvent) {
+    e.preventDefault();
+    if (!werkplek.trim() || !sleutel.trim()) return;
+    opAanmelden({ werkplek: werkplek.trim(), sleutel: sleutel.trim() });
+  }
+
   return (
-    <div className="status">
-      {punten.map((p) => (
-        <span key={p.naam} className={`status-punt status-${p.toon}`} title={p.status}>
-          <span className={`punt punt-${p.toon}`} />
-          {p.label}
-          {p.toon !== "goed" && <span className="status-tekst">{p.status.toLowerCase()}</span>}
-        </span>
-      ))}
-      <time className="klok">
-        {twee(nu.getHours())}.{twee(nu.getMinutes())}.{twee(nu.getSeconds())}
-      </time>
+    <div className="login-screen">
+      <form className="login-card" onSubmit={verstuur}>
+        <div>
+          <h1 style={{ fontSize: 18, fontWeight: 700 }}>uitslagavond-tv</h1>
+          <p style={{ fontSize: 12.5, color: "var(--text-2)", marginTop: 3 }}>Regie-werkplek aanmelden</p>
+        </div>
+        <div className="field">
+          <label htmlFor="login-werkplek">Werkplek</label>
+          <input
+            id="login-werkplek"
+            className="input"
+            value={werkplek}
+            onChange={(e) => setWerkplek(e.target.value)}
+            placeholder="Bijv. Regie links"
+            autoFocus
+          />
+        </div>
+        <div className="field">
+          <label htmlFor="login-sleutel">Gedeelde sleutel</label>
+          <input
+            id="login-sleutel"
+            className="input"
+            type="password"
+            value={sleutel}
+            onChange={(e) => setSleutel(e.target.value)}
+            placeholder="Sleutel van de server"
+          />
+        </div>
+        <button type="submit" className="btn lg amber" disabled={!werkplek.trim() || !sleutel.trim()}>
+          Verbinden
+        </button>
+      </form>
     </div>
   );
 }

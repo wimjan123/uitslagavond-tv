@@ -1,250 +1,213 @@
-// De tablet van de Presentator op /tablet (besluit #10, ontwerp T2): twee grote tabbladen onderin,
-// Presets en Coalitiebouwer. Een tik zet een Preset klaar; de Regie drukt daarna op Toon. In de
-// Coalitiebouwer werkt elke aangetikte Partij de Coalitie in beeld direct bij. De tablet meldt zich
-// als Werkplek van de soort Tablet; de server weigert alles buiten klaarzetten en de Coalitiebouwer.
-import { useCallback, useEffect, useState } from "react";
-import { Aanmelden } from "../App";
-import { bouwer, nuVanLive, wissel } from "../coalitie/coalitie";
-import { graphicTekst, nieuwereCijfers, sjabloonNaam, uurMinuut } from "../graphic";
-import { HerstelKnop } from "../multiviewer/vakken";
-import { CoalitieBoog, biedCoalitieHerstel } from "../onderdelen/Coalitie";
-import { TweeKeerKnop } from "../onderdelen/TweeKeerKnop";
-import type { Boogmaat } from "../onderdelen/Coalitie";
-import { Schets } from "../presets/Schets";
-import { filterPresets, statusVan } from "../presets/presets";
+// Presentator-tablet (/tablet) in DaVinci Deck tokens:
+// Behoudt de T2 2-tab indeling (Presets + Coalitiebouwer) met ondersteuning voor Stoelbeeld-presets.
+// De tablet zet alleen klaar in Preview; de Regie drukt op Take.
+import { useMemo, useState } from "react";
+import { Check, LogOut, Sparkles } from "lucide-react";
 import { RegieBron, useRegie } from "../regie/regie";
 import type { Toegang } from "../regie/regie";
-import type { Graphic } from "../typen/Graphic";
-import type { Preset } from "../typen/Preset";
-import type { Stand } from "../typen/Stand";
-import "./tablet.css";
+import { presetTitel, statusVan } from "../presets/presets";
+import { Schets } from "../presets/Schets";
 
-const OPSLAG = "uitslagavond.tablet";
-/** Waar een weigering op de tablet komt te staan. */
-const TABLET = "tablet";
-
-function leesToegang(): Toegang | null {
-  try {
-    const t = JSON.parse(localStorage.getItem(OPSLAG) ?? "null") as Toegang | null;
-    return t?.sleutel && t.werkplek ? { ...t, tablet: true } : null;
-  } catch {
-    return null;
-  }
-}
+const SLEUTEL_KEY = "uitslagavond.tablet.sleutel";
+const NAAM_KEY = "uitslagavond.tablet.naam";
 
 export function TabletApp() {
-  const [toegang, setToegang] = useState<Toegang | null>(leesToegang);
-  const afmelden = useCallback(() => {
-    localStorage.removeItem(OPSLAG);
-    setToegang(null);
-  }, []);
+  const [toegang, setToegang] = useState<Toegang | null>(() => {
+    const sleutel = localStorage.getItem(SLEUTEL_KEY) || "";
+    const werkplek = localStorage.getItem(NAAM_KEY) || "Tablet";
+    return sleutel ? { sleutel, werkplek, tablet: true } : null;
+  });
+
   if (!toegang) {
     return (
-      <Aanmelden
-        titel="Tablet van de Presentator"
-        standaardNaam="Tablet"
-        klaar={(t) => {
-          const tablet = { ...t, tablet: true };
-          localStorage.setItem(OPSLAG, JSON.stringify(tablet));
-          setToegang(tablet);
+      <TabletLogin
+        opAanmelden={(sleutel, naam) => {
+          localStorage.setItem(SLEUTEL_KEY, sleutel);
+          localStorage.setItem(NAAM_KEY, naam);
+          setToegang({ sleutel, werkplek: naam, tablet: true });
         }}
       />
     );
   }
+
   return (
-    <RegieBron toegang={toegang} afmelden={afmelden}>
-      <Tablet />
+    <RegieBron
+      toegang={toegang}
+      afmelden={() => {
+        localStorage.removeItem(SLEUTEL_KEY);
+        setToegang(null);
+      }}
+    >
+      <TabletScherm />
     </RegieBron>
   );
 }
 
-type Tab = "presets" | "coalitie";
-
-function Tablet() {
+function TabletScherm() {
   const regie = useRegie();
-  const [tab, setTab] = useState<Tab>("presets");
-  const s = regie.stand?.stand;
+  const stand = regie.stand?.stand;
+  const [tab, setTab] = useState<"presets" | "coalitie">("presets");
+
+  const tabletPresets = useMemo(
+    () => (stand ? stand.presets.filter((p) => p.op_tablet) : []),
+    [stand?.presets],
+  );
+
+  const coalitieSet = stand?.cijfers.sets[0];
+  const gekozen = useMemo(() => {
+    const g = stand?.klaar?.graphic;
+    if (g && (g.sjabloon === "Coalitie" || g.sjabloon === "Coalitiebalk")) return g.partijen;
+    return [] as string[];
+  }, [stand?.klaar]);
+
+  const totaal = gekozen.reduce((s, k) => s + (coalitieSet?.zetels[k] ?? 0), 0);
+
   return (
-    <div className="tablet">
-      <header className="tablet-kop">
-        <span className="titel-cel">{regie.werkplek}</span>
-        <span className="status-punt">
-          <span className={`punt punt-${regie.staat === "verbonden" ? "goed" : regie.staat === "verbinden" ? "let-op" : "fout"}`} />
-          Server
-        </span>
-        <span className="tablet-ruimte" />
-        <TweeKeerKnop className="knop knop-stil" tweeKeer vraag="Tik nog eens om af te melden" onClick={regie.afmelden}>
-          Afmelden
-        </TweeKeerKnop>
+    <div className="tablet-shell">
+      <header className="tablet-bar">
+        <div className="tablet-tabs">
+          <button type="button" className={`tablet-tab${tab === "presets" ? " active" : ""}`} onClick={() => setTab("presets")}>
+            Presets ({tabletPresets.length})
+          </button>
+          <button type="button" className={`tablet-tab${tab === "coalitie" ? " active" : ""}`} onClick={() => setTab("coalitie")}>
+            Coalitiebouwer
+          </button>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <span className="chip">
+            <span className={`dot ${regie.staat === "verbonden" ? "ok" : "live"}`} />
+            {regie.staat === "verbonden" ? "Verbonden" : regie.staat}
+          </span>
+          <button type="button" className="btn sm ghost" onClick={regie.afmelden} title="Afmelden">
+            <LogOut size={14} />
+          </button>
+        </div>
       </header>
-      {regie.staat !== "verbonden" && (
-        <div className="storing" role="alert">
-          {regie.staat === "geweigerd"
-            ? "De server weigert de verbinding: meld af en vul de sleutel opnieuw in"
-            : regie.staat === "verbinden"
-              ? "Verbinden met de server"
-              : "Geen verbinding met de server. De tablet probeert het elke seconde opnieuw."}
-        </div>
-      )}
-      {regie.melding?.bij === TABLET && (
-        <p className="tablet-melding" role="alert">
-          {regie.melding.tekst}
-        </p>
-      )}
-      {s && <NuInBeeld stand={s} />}
-      <main className="tablet-vlak">{s && (tab === "presets" ? <Presets stand={s} /> : <Coalitiebouwer stand={s} />)}</main>
-      <nav className="tablet-tabs" role="tablist" aria-label="Tabbladen">
-        <button role="tab" className="tablet-tab" aria-selected={tab === "presets"} onClick={() => setTab("presets")}>
-          Presets
-        </button>
-        <button role="tab" className="tablet-tab" aria-selected={tab === "coalitie"} onClick={() => setTab("coalitie")}>
-          Coalitiebouwer
-        </button>
-      </nav>
-    </div>
-  );
-}
 
-/** Wat nu in beeld is en wat klaarstaat, ook als de Regie het zelf klaarzette. */
-function NuInBeeld({ stand: s }: { stand: Stand }) {
-  const tekst = (g: Graphic) => `${sjabloonNaam(g, s.sjablonen)} · ${graphicTekst(g)}`;
-  return (
-    <div className="tablet-nu">
-      <span className="tablet-nu-deel">
-        <span className="stempel stempel-live">Live</span>
-        <span className="een-regel">{s.ether ? tekst(s.ether.graphic) : <span className="zacht">niets</span>}</span>
-      </span>
-      <span className="tablet-nu-deel">
-        <span className="stempel stempel-klaar">Klaar</span>
-        <span className="een-regel">{s.klaar ? tekst(s.klaar.graphic) : <span className="zacht">niets</span>}</span>
-      </span>
-    </div>
-  );
-}
+      <main className="tablet-body">
+        {!stand ? (
+          <div style={{ color: "var(--text-3)", textAlign: "center", padding: 32 }}>Wachten op server…</div>
+        ) : tab === "presets" ? (
+          tabletPresets.length === 0 ? (
+            <div style={{ color: "var(--text-3)", textAlign: "center", padding: 32 }}>
+              Nog geen Presets voor de tablet klaargezet door de Regie.
+            </div>
+          ) : (
+            <div className="tablet-grid">
+              {tabletPresets.map((p) => {
+                const st = statusVan(p, stand);
+                return (
+                  <button
+                    key={p.nummer}
+                    type="button"
+                    className={`tablet-card${st.live ? " is-live" : st.klaar ? " is-preview" : ""}`}
+                    onClick={() => void regie.stuur({ soort: "ZetPresetKlaar", nummer: p.nummer }, "tablet")}
+                  >
+                    <div className="preset-thumb">
+                      {p.zonder_graphic ? (
+                        <div className="monitor-placeholder" style={{ background: "#121826", color: "var(--text-2)" }}>
+                          <Sparkles size={22} color="var(--amber)" />
+                          <span>Stoelbeeld</span>
+                        </div>
+                      ) : (
+                        <Schets graphic={p.graphic} kleuren={stand.stijl.kleuren} />
+                      )}
+                      <div className="preset-thumb-badges">
+                        <span className="preset-num">{p.nummer}</span>
+                        <div>
+                          {st.live && <span className="preset-tally-pill live">LIVE</span>}
+                          {st.klaar && <span className="preset-tally-pill preview">KLAAR</span>}
+                        </div>
+                      </div>
+                    </div>
+                    <div style={{ padding: "10px 12px", fontWeight: 600, fontSize: 14 }}>{presetTitel(p, stand)}</div>
+                  </button>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 14, maxWidth: 920, margin: "0 auto" }}>
+            <div className="deck-card">
+              <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between" }}>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10 }}>
+                  <span className="mono" style={{ fontSize: 36, fontWeight: 700, color: totaal >= 76 ? "var(--preview-bright)" : "var(--text)" }}>
+                    {totaal}
+                  </span>
+                  <span style={{ color: "var(--text-2)" }}>/ 76 zetels</span>
+                  {totaal >= 76 && (
+                    <span className="chip preview">
+                      <Check size={12} /> Meerderheid
+                    </span>
+                  )}
+                </div>
+                {gekozen.length > 0 && (
+                  <button type="button" className="btn sm" onClick={() => void regie.stuur({ soort: "ZetCoalitie", partijen: [] }, "tablet")}>
+                    Wis
+                  </button>
+                )}
+              </div>
+            </div>
 
-/** Alleen de Presets die de Regie op de tablet zette. */
-function Presets({ stand: s }: { stand: Stand }) {
-  const lijst = filterPresets(s.presets, null, true);
-  return (
-    <section className="tablet-presets" aria-label="Presets">
-      {lijst.length === 0 && <p className="tablet-leeg">De Regie heeft nog geen Presets op de tablet gezet.</p>}
-      {lijst.map((p) => (
-        <Rij key={p.nummer} preset={p} stand={s} />
-      ))}
-    </section>
-  );
-}
-
-function Rij({ preset: p, stand: s }: { preset: Preset; stand: Stand }) {
-  const regie = useRegie();
-  const status = statusVan(p, s);
-  const rij = status.live ? "tablet-rij rij-live" : status.klaar ? "tablet-rij rij-klaar" : "tablet-rij";
-  return (
-    <article className={rij}>
-      <Schets graphic={p.graphic} kleuren={s.stijl.kleuren} />
-      <div className="tablet-rij-tekst">
-        <div className="tablet-rij-naam">
-          <span className="toets-kap">{p.nummer}</span> {sjabloonNaam(p.graphic)}
-          {status.live && <span className="stempel stempel-live">Live</span>}
-          {status.klaar && <span className="stempel stempel-klaar">Klaar</span>}
-        </div>
-        <div className="zacht een-regel">{graphicTekst(p.graphic)}</div>
-        {nieuwereCijfers(s, p.graphic) && (
-          <div className="tablet-oud" >
-            Preset bewaard om {uurMinuut(p.bewaard_ms)} · nieuwere cijfers beschikbaar
+            <div className="partij-grid" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(156px, 1fr))", gap: 10 }}>
+              {stand.cijfers.partijen
+                .filter((p) => (coalitieSet?.zetels[p.sleutel] ?? 0) > 0)
+                .sort((a, b) => (coalitieSet?.zetels[b.sleutel] ?? 0) - (coalitieSet?.zetels[a.sleutel] ?? 0))
+                .map((p) => {
+                  const z = coalitieSet?.zetels[p.sleutel] ?? 0;
+                  const aan = gekozen.includes(p.sleutel);
+                  return (
+                    <button
+                      key={p.sleutel}
+                      type="button"
+                      className={`partij-btn${aan ? " active" : ""}`}
+                      style={{ minHeight: 48, padding: "10px 12px", justifyContent: "space-between", fontSize: 14 }}
+                      onClick={() => {
+                        const nieuw = aan ? gekozen.filter((x) => x !== p.sleutel) : [...gekozen, p.sleutel];
+                        void regie.stuur({ soort: "ZetCoalitie", partijen: nieuw }, "tablet");
+                      }}
+                    >
+                      <span style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
+                        <span className="partij-swatch" style={{ background: p.kleur, width: 14, height: 14 }} />
+                        <span>{p.kort || p.naam}</span>
+                      </span>
+                      <span className="mono" style={{ fontWeight: 700 }}>{z}</span>
+                    </button>
+                  );
+                })}
+            </div>
           </div>
         )}
-      </div>
-      <button
-        className={`knop tablet-klaarzetten${status.live && !status.klaar ? " tablet-opnieuw" : ""}`}
-        // Staat hij al klaar, dan zou een tweede tik de Regie alleen een nieuwe versie geven.
-        disabled={regie.staat !== "verbonden" || status.klaar}
-        onClick={() => void regie.stuur({ soort: "ZetPresetKlaar", nummer: p.nummer }, TABLET)}
-      >
-        {status.klaar ? "Staat klaar" : status.live ? "Opnieuw klaarzetten" : "Klaarzetten"}
-        {/* Klaarzetten vervangt wat de Regie klaar had staan: zeg dat op de knop. */}
-        {!status.klaar && s.klaar && <span className="tablet-vervangt">vervangt {sjabloonNaam(s.klaar.graphic)}</span>}
-      </button>
-    </article>
+      </main>
+    </div>
   );
 }
 
-/** De boog zo groot als de tablet toelaat, liggend en staand. */
-function useBoogmaat(): Boogmaat {
-  const [breedte, setBreedte] = useState(() => window.innerWidth);
-  useEffect(() => {
-    const meet = () => setBreedte(window.innerWidth);
-    window.addEventListener("resize", meet);
-    return () => window.removeEventListener("resize", meet);
-  }, []);
-  const b = Math.min(1040, breedte - 48);
-  const straal = b / 2 - 46;
-  // Staand is er ruimte in de hoogte: een hogere boog, zodat de tegels aan de uiteinden niet overlappen.
-  const plat = breedte < 900 ? 1.15 : 0.8;
-  return { breedte: b, hoogte: Math.round(straal * plat + 96), straal, plat };
-}
-
-/** De Coalitie die klaarstaat of in beeld is: elke tik werkt haar direct bij. Een nieuwe Coalitie
- * klaarzetten doet de Regie, of de Presentator met een Preset. */
-function Coalitiebouwer({ stand: s }: { stand: Stand }) {
-  const regie = useRegie();
-  const maat = useBoogmaat();
-  const b = bouwer(s, "", []);
-  const { inBeeld } = b;
-  if (!inBeeld) {
-    const coalities = filterPresets(s.presets, "Coalitiebouwer", true);
-    return (
-      <section className="tablet-presets">
-        <p className="tablet-uitleg zacht">
-          Er staat geen Coalitie klaar of in beeld.{" "}
-          {coalities.length > 0 ? "Zet er een klaar; daarna tik je hier Partijen aan en af." : "Vraag de Regie een Coalitie op de tablet te zetten."}
-        </p>
-        {coalities.map((p) => (
-          <Rij key={p.nummer} preset={p} stand={s} />
-        ))}
-      </section>
-    );
-  }
-  const inEther = s.ether?.graphic === inBeeld;
-  const stuur = (partijen: string[], tekst: string) => {
-    void regie.stuur({ soort: "ZetCoalitie", partijen }, TABLET);
-    // Live is elke tik meteen in de uitzending: daarom een tijd lang "Zet terug", net als op het dashboard.
-    if (inEther) biedCoalitieHerstel(s, b.partijen, partijen, tekst, TABLET);
-  };
-  const kort = (sleutel: string) => b.volgorde.find((p) => p.sleutel === sleutel)?.kort ?? sleutel;
+function TabletLogin({ opAanmelden }: { opAanmelden: (sleutel: string, naam: string) => void }) {
+  const [naam, setNaam] = useState("Presentator");
+  const [sleutel, setSleutel] = useState("");
   return (
-    <section className="tablet-coalitie">
-      {!inEther && (
-        <p className="tablet-uitleg">
-          <span className="stempel stempel-klaar">Klaar</span>
-          <span className="zacht">Elke tik werkt bij in de klaargezette Coalitie</span>
-        </p>
-      )}
-      <CoalitieBoog
-        bouwer={b}
-        uit={regie.staat !== "verbonden"}
-        tik={(sleutel) => {
-          const nieuw = wissel(b.partijen, sleutel);
-          stuur(nieuw, `${kort(sleutel)} ${nieuw.includes(sleutel) ? "erbij" : "eraf"}`);
+    <div className="login-screen">
+      <form
+        className="login-card"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (sleutel.trim()) opAanmelden(sleutel.trim(), naam.trim() || "Tablet");
         }}
-        leeg="Geen Zetels in de set van deze Coalitie."
-        live={inEther}
-        nu={inEther ? nuVanLive(s)?.nu : undefined}
-        gebaar="tik"
-        maat={maat}
-      />
-      <HerstelKnop toets={false} />
-      <TweeKeerKnop
-        className="knop tablet-wis"
-        tweeKeer={inEther}
-        vraag="Tik nog eens: wis alle Partijen uit Live"
-        geldigVoor={inEther ? b.partijen.join(",") : ""}
-        disabled={regie.staat !== "verbonden" || b.partijen.length === 0}
-        onClick={() => stuur([], "Coalitie gewist")}
       >
-        Wis coalitie
-      </TweeKeerKnop>
-    </section>
+        <h1 style={{ fontSize: 18, fontWeight: 700 }}>Presentator-tablet</h1>
+        <div className="field">
+          <label>Naam</label>
+          <input className="input" value={naam} onChange={(e) => setNaam(e.target.value)} />
+        </div>
+        <div className="field">
+          <label>Gedeelde sleutel</label>
+          <input className="input" type="password" value={sleutel} onChange={(e) => setSleutel(e.target.value)} autoFocus />
+        </div>
+        <button type="submit" className="btn lg amber" disabled={!sleutel.trim()}>
+          Verbinden
+        </button>
+      </form>
+    </div>
   );
 }
-

@@ -19,8 +19,78 @@ pub struct BeeldPlugin;
 impl Plugin for BeeldPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(ClearColor(Color::srgb_u8(0x0d, 0x12, 0x20)))
+            .init_resource::<OvervloeiStand>()
             .add_systems(Startup, bouw)
-            .add_systems(Update, toon_info);
+            .add_systems(Update, (toon_info, maak_overvloei_laag, animeer_overvloei));
+    }
+}
+
+/// Volgt `stand.camera.overvloei_sinds` zodat elke Ether-camera bij een Take met Overvloeien
+/// (Fade, ADR 0005) vloeiend overvloeit in `overvloei_ms` milliseconden.
+#[derive(Resource, Default)]
+struct OvervloeiStand {
+    begonnen: bool,
+    laatste_sinds: u64,
+    resterend: f32,
+    duur: f32,
+}
+
+#[derive(Component)]
+struct OvervloeiDoek;
+
+fn maak_overvloei_laag(mut commands: Commands, cameras: Query<(Entity, &Bron), Added<Bron>>) {
+    for (camera, bron) in &cameras {
+        if *bron != Bron::Ether {
+            continue;
+        }
+        commands.spawn((
+            OvervloeiDoek,
+            UiTargetCamera(camera),
+            GlobalZIndex(100),
+            Node {
+                position_type: PositionType::Absolute,
+                width: Val::Percent(100.0),
+                height: Val::Percent(100.0),
+                ..default()
+            },
+            BackgroundColor(Color::srgba(0.05, 0.06, 0.08, 0.0)),
+        ));
+    }
+}
+
+fn animeer_overvloei(
+    standen: Res<Standen>,
+    tijd: Res<Time>,
+    mut staat: ResMut<OvervloeiStand>,
+    mut doeken: Query<&mut BackgroundColor, With<OvervloeiDoek>>,
+) {
+    if standen.is_changed()
+        && let Some(huidig) = &standen.huidig
+    {
+        let sinds = huidig.stand.camera.overvloei_sinds;
+        if !staat.begonnen {
+            staat.begonnen = true;
+            staat.laatste_sinds = sinds;
+        } else if sinds > staat.laatste_sinds {
+            staat.laatste_sinds = sinds;
+            staat.duur = (f32::from(huidig.stand.camera.overvloei_ms) / 1000.0).max(0.15);
+            staat.resterend = staat.duur;
+        }
+    }
+    if staat.resterend > 0.0 {
+        staat.resterend = (staat.resterend - tijd.delta_secs()).max(0.0);
+        let f = (staat.resterend / staat.duur.max(0.01)).clamp(0.0, 1.0);
+        // smoothstep fade-in op de nieuwe camera
+        let dekking = f * f * (3.0 - 2.0 * f) * 0.92;
+        for mut bg in &mut doeken {
+            bg.0 = Color::srgba(0.05, 0.06, 0.08, dekking);
+        }
+    } else {
+        for mut bg in &mut doeken {
+            if bg.0.alpha() > 0.0 {
+                bg.0 = Color::srgba(0.05, 0.06, 0.08, 0.0);
+            }
+        }
     }
 }
 
@@ -148,8 +218,13 @@ pub fn zaalcamera() -> impl Bundle {
         Occlusie::new(b.occlusie_straal, b.occlusie),
         Msaa::Sample4,
         crate::schil::ZietSchil,
-        // tot de eerste keuze van de schil: binnen, alles in beeld
-        bevy::camera::visibility::RenderLayers::from_layers(&[0, 1]),
+        // tot de eerste keuze van de schil: binnen, met eigen stoellaag
+        bevy::camera::visibility::RenderLayers::from_layers(&[
+            0,
+            1,
+            crate::schil::STOEL_KLAAR_LAAG,
+            crate::schil::STOEL_ETHER_LAAG,
+        ]),
     )
 }
 

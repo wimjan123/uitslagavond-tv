@@ -595,7 +595,7 @@ impl Doel {
     fn beweging(&self, tik: u64, van: Camerastand, knip: bool, ruimte: &Ruimte) -> (Beweging, bool) {
         match self {
             Doel::Standpunt(s) => {
-                if knip || s.overgang.soort == OvergangSoort::Knippen {
+                if knip || matches!(s.overgang.soort, OvergangSoort::Knippen | OvergangSoort::Overvloeien) {
                     (Beweging::knip(tik, s.stand, s.na_aankomst), true)
                 } else {
                     let mut b = Beweging::overgang(tik, van, s.stand, s.overgang, ruimte);
@@ -614,6 +614,18 @@ impl Doel {
                 };
                 b.rit = Some(baan);
                 (b, knip)
+            }
+        }
+    }
+
+    /// Het beginbeeld van dit Doel voor het Voorbeeld: een Standpunt of het startpunt van een
+    /// klaargezette Camerarit (stilstaand, zodat de rit pas bij Take op Live begint; ADR 0005).
+    fn beginbeeld(&self, tik: u64) -> Beweging {
+        match self {
+            Doel::Standpunt(s) => Beweging::knip(tik, s.stand, NaAankomst::Stil),
+            Doel::Rit(r) => {
+                let baan = r.baan();
+                Beweging::knip(tik, baan.standen[0], NaAankomst::Stil)
             }
         }
     }
@@ -791,22 +803,27 @@ impl Cameraregie {
         if speelt_af {
             return;
         }
-        // blijft de camera staan bij de klaargezette Graphic, dan toont het Voorbeeld de Ether
-        if stand.klaar.as_ref().is_some_and(|k| k.standpunt() == BLIJF) {
+        // Los klaargezette camera (ZetCameraKlaar, ADR 0005) gaat voor; anders de klaargezette Graphic.
+        let letter: std::borrow::Cow<'_, str> = if let Some(l) = c.klaar_standpunt.as_deref() {
+            std::borrow::Cow::Borrowed(l)
+        } else if let Some(k) = stand.klaar.as_ref() {
+            k.standpunt()
+        } else {
+            std::borrow::Cow::Borrowed(c.standpunt.as_str())
+        };
+        // blijft de camera staan, dan toont het Voorbeeld de Ether
+        if letter == BLIJF {
             if self.bron != Voorbeeldbron::Ether {
                 self.voorbeeld.snede = self.voorbeeld.snede.wrapping_add(1);
                 self.bron = Voorbeeldbron::Ether;
             }
             return;
         }
-        let letter = stand
-            .klaar
-            .as_ref()
-            .map_or(std::borrow::Cow::Borrowed(c.standpunt.as_str()), |k| k.standpunt());
         let doel = Doel::of_a(stand, &letter);
         if self.bron != Voorbeeldbron::Doel(doel.clone()) {
-            let van = self.voorbeeld.stand(tik, &self.ruimte);
-            self.voorbeeld.ga_naar(tik, van, &doel, true, &self.ruimte);
+            self.voorbeeld.beweging = doel.beginbeeld(tik);
+            self.voorbeeld.vrij = None;
+            self.voorbeeld.snede = self.voorbeeld.snede.wrapping_add(1);
             self.bron = Voorbeeldbron::Doel(doel);
         }
     }
@@ -1963,5 +1980,32 @@ mod tests {
         doe(&mut stand, &mut v, Opdracht::ZetKlaar { graphic, standpunt: Some("G".into()) });
         regie.volg(&stand, 3 * T);
         assert!(ongeveer(regie.beeld(3 * T).voorbeeld.stand, standpunt(&stand, "G")));
+    }
+
+    #[test]
+    fn klaargezette_camerarit_wacht_op_beginpunt_in_voorbeeld_en_start_bij_take_op_live() {
+        let mut stand = Stand::default();
+        let mut v = 0;
+        let r = met_rit(&mut stand, &mut v);
+        let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
+
+        // Zet Camerarit klaar in Preview
+        doe(&mut stand, &mut v, Opdracht::ZetCameraKlaar { letter: Some(r.clone()) });
+        regie.volg(&stand, 0);
+
+        // Live blijft op A; Voorbeeld staat stil op het beginpunt van de rit (-2.0)
+        assert!(ongeveer(regie.beeld(0).ether.stand, standpunt(&stand, "A")));
+        assert!((regie.beeld(0).voorbeeld.stand.positie[0] + 2.0).abs() < 1e-3);
+        assert!((regie.beeld(2 * T).voorbeeld.stand.positie[0] + 2.0).abs() < 1e-3, "wacht stil op beginpunt");
+
+        // Take met Fade (Overvloeien): Live knipt naar beginpunt en rijdt de rit
+        doe(&mut stand, &mut v, Opdracht::ZetOvergang {
+            overgang: Some(OvergangSoort::Overvloeien),
+            overvloei_ms: Some(600),
+        });
+        doe(&mut stand, &mut v, Opdracht::Toon { versie: None });
+        regie.volg(&stand, 3 * T);
+        assert!((regie.beeld(3 * T).ether.stand.positie[0] + 2.0).abs() < 1e-3);
+        assert!((regie.beeld(4 * T).ether.stand.positie[0] + 1.0).abs() < 1e-3, "rit rijdt nu live");
     }
 }
