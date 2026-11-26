@@ -15,8 +15,7 @@ use std::sync::{Arc, LazyLock};
 use gedeeld::Stand;
 use gedeeld::camera::{
     CameraOvergang, Camerabeeld, Camerakeuze, Camerapunt, Camerastand, NaAankomst, OvergangSoort,
-    BLIJF, SCHUIVEN_S, Standpunt, TIKKEN_PER_SECONDE, aanschuif_overgang, aanschuif_stand, aanschuif_uit_sleutel,
-    shot_op_stoel, stoel_uit_sleutel,
+    BLIJF, Partijbeweging, SCHUIVEN_S, Standpunt, Stoelbeweging, TIKKEN_PER_SECONDE, aanschuif_overgang,
 };
 use gedeeld::camerarit::{Camerarit, OPNAME_MAX_S, RitBegin, Ritbaan, als_opnamepunt};
 use serde::Deserialize;
@@ -531,45 +530,61 @@ fn geschoven(sec: f32) -> f32 {
     op(t) - op((t - (SCHUIVEN_S - 1.0)).max(0.0))
 }
 
-/// Waar een camera heen gaat: een Standpunt of een Camerarit.
+/// Waar een camera heen gaat: een Standpunt, een opgenomen Camerarit, of een berekende ritbaan
+/// (zoals een gerichte beweging naar een Partij of Stoel).
 #[derive(Clone, Debug, PartialEq)]
 enum Doel {
     Standpunt(Standpunt),
     Rit(Camerarit),
+    Baan {
+        sleutel: String,
+        baan: Ritbaan,
+    },
 }
 
 impl Doel {
-    /// Het Standpunt of de Camerarit met deze sleutel, of het shot van een Stoel (Persoonskaart):
-    /// dat gaat als een Standpunt met de gewone overgang, en staat daarna stil.
+    /// Het Standpunt of de Camerarit met deze sleutel, of een gerichte beweging naar een Stoel
+    /// (Persoonskaart) of Partijblok (Partij uitgelicht).
     fn van(stand: &Stand, letter: &str) -> Option<Doel> {
         stand
             .standpunt(letter)
             .map(|s| Doel::Standpunt(s.clone()))
             .or_else(|| stand.camerarit(letter).map(|r| Doel::Rit(r.clone())))
             .or_else(|| {
-                let stoel = stoel_uit_sleutel(letter)?;
-                Some(Doel::Standpunt(Standpunt {
-                    letter: letter.into(),
-                    naam: format!("Stoel {}-{}-{}", stoel.vak, stoel.rij, stoel.nummer),
-                    vast: true,
-                    toets: None,
-                    stand: shot_op_stoel(stoel)?,
-                    overgang: CameraOvergang::default(),
-                    na_aankomst: NaAankomst::Stil,
-                }))
+                let (beweging, stoel) = Stoelbeweging::uit_doelsleutel(letter)?;
+                if beweging.is_rit() {
+                    Some(Doel::Baan { sleutel: letter.into(), baan: beweging.baan(stoel)? })
+                } else {
+                    Some(Doel::Standpunt(Standpunt {
+                        letter: letter.into(),
+                        naam: format!("Stoel {}-{}-{}", stoel.vak, stoel.rij, stoel.nummer),
+                        vast: true,
+                        toets: None,
+                        stand: beweging.stand_op(stoel, 1.0)?,
+                        overgang: CameraOvergang::default(),
+                        na_aankomst: NaAankomst::Stil,
+                    }))
+                }
             })
             .or_else(|| {
-                // Aanschuiven: langzaam naar het blok van een Partij, en daarna stil
-                let (van, tot) = aanschuif_uit_sleutel(letter)?;
-                Some(Doel::Standpunt(Standpunt {
-                    letter: letter.into(),
-                    naam: "Aanschuiven".into(),
-                    vast: true,
-                    toets: None,
-                    stand: aanschuif_stand(van, tot)?,
-                    overgang: aanschuif_overgang(),
-                    na_aankomst: NaAankomst::Stil,
-                }))
+                let (beweging, van, tot) = Partijbeweging::uit_doelsleutel(letter)?;
+                if beweging.is_rit() {
+                    Some(Doel::Baan { sleutel: letter.into(), baan: beweging.baan(van, tot)? })
+                } else {
+                    let overgang = match beweging {
+                        Partijbeweging::Aanschuiven => aanschuif_overgang(),
+                        _ => CameraOvergang::default(),
+                    };
+                    Some(Doel::Standpunt(Standpunt {
+                        letter: letter.into(),
+                        naam: beweging.naam().into(),
+                        vast: true,
+                        toets: None,
+                        stand: beweging.stand_op(van, tot, 1.0)?,
+                        overgang,
+                        na_aankomst: NaAankomst::Stil,
+                    }))
+                }
             })
             .or_else(|| {
                 (letter == gedeeld::camera::BOVEN_HET_PANEEL).then(|| {
@@ -607,6 +622,17 @@ impl Doel {
                 let baan = Arc::new(r.baan());
                 let begin = baan.standen[0];
                 let knip = knip || r.bijschaving.begin == RitBegin::Knippen;
+                let mut b = if knip {
+                    Beweging::knip(tik, begin, NaAankomst::Stil)
+                } else {
+                    Beweging::overgang(tik, van, begin, CameraOvergang::default(), ruimte)
+                };
+                b.rit = Some(baan);
+                (b, knip)
+            }
+            Doel::Baan { baan, .. } => {
+                let baan = Arc::new(baan.clone());
+                let begin = baan.standen[0];
                 let mut b = if knip {
                     Beweging::knip(tik, begin, NaAankomst::Stil)
                 } else {
@@ -920,6 +946,7 @@ fn lerp3(a: [f32; 3], b: [f32; 3], t: f32) -> [f32; 3] {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use gedeeld::camera::{aanschuif_stand, shot_op_stoel};
     use gedeeld::zaalkaart::{HANGLAMPEN, STOELPLEKKEN};
     use gedeeld::{Graphic, Herkomst, Opdracht};
 
@@ -1846,6 +1873,141 @@ mod tests {
         let doel = aanschuif_stand(40, 65).unwrap();
         assert!(len(sub(regie.beeld(4 * T).ether.stand.positie, doel.positie)) > 0.1, "na 4 s nog onderweg");
         assert!(len(sub(regie.beeld(8 * T + 2).ether.stand.positie, doel.positie)) < 1e-3, "na 8 s aangekomen");
+    }
+
+    #[test]
+    fn alle_partijbewegingen_blijven_in_de_ruimte_en_kijken_naar_het_blok() {
+        let r = ruimte();
+        let volgorde = gedeeld::uitslagindeling::stoelen_van_links_naar_rechts();
+        // representatieve blokken over de hele Zaal: links, midden, rechts, klein (1 zetel) tot heel groot
+        let blokken: &[(usize, usize)] = &[
+            (0, 0),
+            (0, 4),
+            (0, 29),
+            (15, 35),
+            (40, 65),
+            (60, 89),
+            (74, 75),
+            (100, 125),
+            (120, 149),
+            (149, 149),
+            (0, 149),
+        ];
+        for b in Partijbeweging::ALLE {
+            for &(van, tot) in blokken {
+                let n = (tot - van + 1) as f32;
+                let midden: [f32; 3] = std::array::from_fn(|k| {
+                    volgorde[van..=tot].iter().map(|&i| STOELPLEKKEN[i][k]).sum::<f32>() / n
+                });
+                let stappen = if b.is_rit() { 20 } else { 1 };
+                for stap in 0..=stappen {
+                    let t = stap as f32 / stappen as f32;
+                    let s = b.stand_op(van, tot, t).unwrap();
+                    assert!(
+                        r.bevat(s.positie, 0.05),
+                        "{b:?} {van}-{tot} t={t:.2}: {:?} buiten de ruimte",
+                        s.positie
+                    );
+                    assert!(
+                        onder_de_lampen(s.positie),
+                        "{b:?} {van}-{tot} t={t:.2}: {:?} tegen een lamp",
+                        s.positie
+                    );
+                    // bij Langs glijdt de camera langs het blok (dus er staan steeds Stoelen van het blok midden in beeld);
+                    // bij de andere bewegingen blijft het midden van het blok zelf in beeld
+                    if b == Partijbeweging::Langs {
+                        let ziet_stoel = volgorde[van..=tot].iter().any(|&i| {
+                            s.in_beeld(STOELPLEKKEN[i])
+                                .is_some_and(|[x, y]| x.abs() < 0.5 && y.abs() < 0.7)
+                        });
+                        assert!(ziet_stoel, "{b:?} {van}-{tot} t={t:.2}: geen Stoel van de Partij in beeld");
+                    } else {
+                        let [x, y] = s.in_beeld(midden).unwrap_or_else(|| {
+                            panic!("{b:?} {van}-{tot} t={t:.2}: midden achter camera")
+                        });
+                        assert!(x.abs() < 0.95 && y.abs() < 0.95, "{b:?} {van}-{tot} t={t:.2}: midden op ({x:.2}, {y:.2})");
+                    }
+                }
+                if b.is_rit() {
+                    let begin = b.stand_op(van, tot, 0.0).unwrap();
+                    let eind = b.stand_op(van, tot, 1.0).unwrap();
+                    let bewogen = len(sub(eind.positie, begin.positie)) > 0.25
+                        || (eind.beeldhoek - begin.beeldhoek).abs() > 0.05;
+                    assert!(bewogen, "{b:?} {van}-{tot} beweegt niet zichtbaar");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn alle_stoelbewegingen_houden_elke_stoel_links_van_de_kaart_en_in_de_ruimte() {
+        use gedeeld::Stoel;
+        let r = ruimte();
+        let kaart = 1166.0 / 960.0 - 1.0;
+        for b in Stoelbeweging::ALLE {
+            let stappen = if b.is_rit() { 10 } else { 1 };
+            for (i, stoel) in Stoel::alle().enumerate() {
+                let p = STOELPLEKKEN[i];
+                for stap in 0..=stappen {
+                    let t = stap as f32 / stappen as f32;
+                    let s = b.stand_op(stoel, t).unwrap();
+                    assert!(
+                        r.bevat(s.positie, 0.05),
+                        "{b:?} {stoel:?} t={t:.2}: {:?} buiten de ruimte",
+                        s.positie
+                    );
+                    assert!(
+                        onder_de_lampen(s.positie),
+                        "{b:?} {stoel:?} t={t:.2}: {:?} tegen een lamp",
+                        s.positie
+                    );
+                    let [x, y] = s.in_beeld(p).expect("Stoel voor de camera");
+                    assert!(
+                        (-0.85..kaart - 0.15).contains(&x),
+                        "{b:?} {stoel:?} t={t:.2}: Stoel niet links van kaart: x={x:.2}"
+                    );
+                    assert!(
+                        (-0.75..0.6).contains(&y),
+                        "{b:?} {stoel:?} t={t:.2}: Stoel te hoog/laag: y={y:.2}"
+                    );
+                    let voor = (s.positie[0] - p[0]) * -p[0] + (s.positie[2] - p[2]) * -p[2];
+                    assert!(voor > 0.0, "{b:?} {stoel:?} t={t:.2}: camera achter de Stoel");
+                }
+                if b.is_rit() {
+                    let begin = b.stand_op(stoel, 0.0).unwrap();
+                    let eind = b.stand_op(stoel, 1.0).unwrap();
+                    let bewogen = len(sub(eind.positie, begin.positie)) > 0.4
+                        || (eind.beeldhoek - begin.beeldhoek).abs() > 0.05;
+                    assert!(bewogen, "{b:?} {stoel:?} beweegt niet zichtbaar");
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn een_gerichte_partij_en_stoelrit_rijdt_van_begin_tot_eind_in_de_ether() {
+        let mut stand = Stand::default();
+        let mut v = 0;
+        let mut regie = Cameraregie::nieuw(&stand, 0, ruimte());
+        // Partijbeweging::Boog op blok 40..=65
+        let sleutel = Partijbeweging::Boog.doelsleutel(40, 65);
+        doe(&mut stand, &mut v, kies(&sleutel, false));
+        regie.volg(&stand, 0);
+        let begin = Partijbeweging::Boog.stand_op(40, 65, 0.0).unwrap();
+        let eind = Partijbeweging::Boog.stand_op(40, 65, 1.0).unwrap();
+        // na 2 s overgang op het beginpunt, na 2 + 12 s op het eindpunt
+        assert!(len(sub(regie.beeld(2 * T).ether.stand.positie, begin.positie)) < 1e-2);
+        assert!(len(sub(regie.beeld(14 * T + 2).ether.stand.positie, eind.positie)) < 1e-2);
+
+        // Stoelbeweging::Langs op Stoel 2-3-1
+        let stoel = gedeeld::Stoel { vak: 2, rij: 3, nummer: 1 };
+        let stoel_sleutel = Stoelbeweging::Langs.doelsleutel(stoel);
+        doe(&mut stand, &mut v, kies(&stoel_sleutel, true));
+        regie.volg(&stand, 20 * T);
+        let s_begin = Stoelbeweging::Langs.stand_op(stoel, 0.0).unwrap();
+        let s_eind = Stoelbeweging::Langs.stand_op(stoel, 1.0).unwrap();
+        assert!(len(sub(regie.beeld(20 * T).ether.stand.positie, s_begin.positie)) < 1e-2);
+        assert!(len(sub(regie.beeld(30 * T + 2).ether.stand.positie, s_eind.positie)) < 1e-2);
     }
 
     #[test]

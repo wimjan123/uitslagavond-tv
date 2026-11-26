@@ -331,6 +331,19 @@ const SHOT_PLEK_Y: f32 = -0.65;
 /// van het blok van de gekozen Partij ([`aanschuifsleutel`]); zonder Partij het Standpunt van de
 /// soort Graphic.
 pub const AANSCHUIVEN: &str = "aanschuiven";
+/// Gerichte camerabewegingen naar het blok van een gekozen Partij.
+pub const PARTIJ_BOOG: &str = "partij-boog";
+pub const PARTIJ_INDALEN: &str = "partij-indalen";
+pub const PARTIJ_LANGS: &str = "partij-langs";
+pub const PARTIJ_UITZOOMEN: &str = "partij-uitzoomen";
+pub const PARTIJ_VAST: &str = "partij-vast";
+
+/// Gerichte camerabewegingen naar de Stoel van een Kamerlid op de Persoonskaart.
+pub const STOEL_SHOT: &str = "stoel-shot";
+pub const STOEL_AANSCHUIVEN: &str = "stoel-aanschuiven";
+pub const STOEL_LANGS: &str = "stoel-langs";
+pub const STOEL_INDALEN: &str = "stoel-indalen";
+pub const STOEL_UITZOOMEN: &str = "stoel-uitzoomen";
 
 /// Camera blijft staan: de keuze in een Sjabloon, Graphic of Preset die de camera van de Ether
 /// laat waar hij is bij Toon en Bijwerken, ook een Vrije camera of een lopende Camerarit. Het
@@ -345,25 +358,473 @@ pub fn aanschuif_overgang() -> CameraOvergang {
     CameraOvergang { duur_s: AANSCHUIVEN_S, ..CameraOvergang::default() }
 }
 
+/// Een camerabeweging die zich richt op het blok Stoelen van de gekozen Partij. Anders dan een
+/// vaste Camerarit hangt de route af van waar die Partij in de uitslag zit.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[ts(export)]
+pub enum Partijbeweging {
+    /// Langzaam en zacht naar schuin voor het blok van de gekozen Partij schuiven.
+    Aanschuiven,
+    /// In een rustige boog voor het blok van de Partij langs draaien.
+    Boog,
+    /// Van hoog boven de Zaal rustig indalen op het blok van de Partij.
+    Indalen,
+    /// Laag langs de voorste banken van het blok glijden.
+    Langs,
+    /// Dichtbij beginnen op de Partij en uitzoomen tot het hele blok in beeld staat.
+    Uitzoomen,
+    /// Vlotte gewone overgang naar een stilstaand shot op het blok van de Partij.
+    Vast,
+}
+
+impl Partijbeweging {
+    pub const ALLE: [Partijbeweging; 6] = [
+        Partijbeweging::Aanschuiven,
+        Partijbeweging::Boog,
+        Partijbeweging::Indalen,
+        Partijbeweging::Langs,
+        Partijbeweging::Uitzoomen,
+        Partijbeweging::Vast,
+    ];
+
+    pub const fn sleutel(self) -> &'static str {
+        match self {
+            Partijbeweging::Aanschuiven => AANSCHUIVEN,
+            Partijbeweging::Boog => PARTIJ_BOOG,
+            Partijbeweging::Indalen => PARTIJ_INDALEN,
+            Partijbeweging::Langs => PARTIJ_LANGS,
+            Partijbeweging::Uitzoomen => PARTIJ_UITZOOMEN,
+            Partijbeweging::Vast => PARTIJ_VAST,
+        }
+    }
+
+    pub const fn naam(self) -> &'static str {
+        match self {
+            Partijbeweging::Aanschuiven => "Aanschuiven naar de Partij",
+            Partijbeweging::Boog => "Boog om de Partij",
+            Partijbeweging::Indalen => "Indalen op de Partij",
+            Partijbeweging::Langs => "Langs de banken van de Partij",
+            Partijbeweging::Uitzoomen => "Dichtbij en uitzoomen",
+            Partijbeweging::Vast => "Vast shot op de Partij",
+        }
+    }
+
+    pub const fn toelichting(self) -> &'static str {
+        match self {
+            Partijbeweging::Aanschuiven => "Schuift langzaam naar schuin voor het blok van de gekozen Partij",
+            Partijbeweging::Boog => "Draait in een rustige boog voor het blok van de Partij langs",
+            Partijbeweging::Indalen => "Begint hoog boven de Zaal en daalt in naar het blok van de Partij",
+            Partijbeweging::Langs => "Glijdt laag langs de voorste banken van het blok",
+            Partijbeweging::Uitzoomen => "Begint dicht op de Stoelen en trekt terug tot het hele blok",
+            Partijbeweging::Vast => "Gaat vlot naar een stilstaand shot op het blok van de Partij",
+        }
+    }
+
+    pub const fn duur_s(self) -> f32 {
+        match self {
+            Partijbeweging::Aanschuiven => AANSCHUIVEN_S,
+            Partijbeweging::Boog => 12.0,
+            Partijbeweging::Indalen => 10.0,
+            Partijbeweging::Langs => 10.0,
+            Partijbeweging::Uitzoomen => 10.0,
+            Partijbeweging::Vast => 2.0,
+        }
+    }
+
+    /// Of deze beweging een meerpuntsbaan rijdt (zoals een Camerarit) in plaats van een enkele
+    /// overgang naar één eindstand.
+    pub const fn is_rit(self) -> bool {
+        matches!(
+            self,
+            Partijbeweging::Boog
+                | Partijbeweging::Indalen
+                | Partijbeweging::Langs
+                | Partijbeweging::Uitzoomen
+        )
+    }
+
+    /// De beweging bij een keuzesleutel (zoals `"aanschuiven"` of `"partij-boog"`).
+    pub fn uit_sleutel(sleutel: &str) -> Option<Self> {
+        Self::ALLE.into_iter().find(|b| b.sleutel() == sleutel)
+    }
+
+    /// De concrete sleutel voor het blok `van..=tot` van links naar rechts, zoals
+    /// `"aanschuiven-40-65"` of `"partij-boog-40-65"`.
+    pub fn doelsleutel(self, van: usize, tot: usize) -> String {
+        format!("{}-{van}-{tot}", self.sleutel())
+    }
+
+    /// Beweging en plaatsen `van..=tot` bij een sleutel van [`Partijbeweging::doelsleutel`].
+    pub fn uit_doelsleutel(sleutel: &str) -> Option<(Self, usize, usize)> {
+        for b in Self::ALLE {
+            if let Some(rest) = sleutel.strip_prefix(b.sleutel()).and_then(|r| r.strip_prefix('-')) {
+                let (van, tot) = rest.split_once('-')?;
+                let (van, tot) = (van.parse().ok()?, tot.parse().ok()?);
+                return (van <= tot && tot < crate::AANTAL_STOELEN).then_some((b, van, tot));
+            }
+        }
+        None
+    }
+
+    /// De camerastand op voortgang `t` (0 tot 1) voor het blok `van..=tot`.
+    pub fn stand_op(self, van: usize, tot: usize, t: f32) -> Option<Camerastand> {
+        let s = zachte_voortgang(t, 1.0, 1.0);
+        match self {
+            Partijbeweging::Aanschuiven | Partijbeweging::Vast => aanschuif_stand(van, tot),
+            Partijbeweging::Boog => {
+                let (midden, breed) = blok_midden_en_breedte(van, tot)?;
+                let kant = if midden[0] >= 0.0 { -1.0 } else { 1.0 };
+                let rand = (midden[0].abs() / 5.0).clamp(0.0, 1.0);
+                let start = (-14.0 + 20.0 * rand) * kant;
+                let eind = (14.0 + 14.0 * rand) * kant;
+                Some(partij_stand_om(
+                    midden,
+                    breed,
+                    start + (eind - start) * s,
+                    0.95,
+                    0.50,
+                    AANSCHUIF_BEELDHOEK,
+                    2.5,
+                    3.6,
+                ))
+            }
+            Partijbeweging::Indalen => {
+                let (midden, breed) = blok_midden_en_breedte(van, tot)?;
+                let kant = if midden[0] >= 0.0 { -1.0 } else { 1.0 };
+                Some(partij_stand_om(
+                    midden,
+                    breed,
+                    (18.0 + 6.0 * s) * kant,
+                    2.4 - 1.5 * s,
+                    0.34 + 0.16 * s,
+                    48.0 - 8.0 * s,
+                    2.5,
+                    4.1,
+                ))
+            }
+            Partijbeweging::Langs => partij_langs_stand(van, tot, s),
+            Partijbeweging::Uitzoomen => {
+                let (midden, breed) = blok_midden_en_breedte(van, tot)?;
+                let kant = if midden[0] >= 0.0 { -1.0 } else { 1.0 };
+                Some(partij_stand_om(
+                    midden,
+                    breed,
+                    (28.0 - 8.0 * s) * kant,
+                    0.75 + 0.55 * s,
+                    0.82 - 0.36 * s,
+                    30.0 + 14.0 * s,
+                    2.2 + 0.3 * s,
+                    3.8,
+                ))
+            }
+        }
+    }
+
+    /// De volledige baan van deze beweging (100 standen per seconde), voor ritten.
+    pub fn baan(self, van: usize, tot: usize) -> Option<crate::camerarit::Ritbaan> {
+        if !self.is_rit() {
+            return None;
+        }
+        let tikken = (self.duur_s() * TIKKEN_PER_SECONDE as f32).round().max(1.0) as usize;
+        let mut standen = Vec::with_capacity(tikken + 1);
+        for i in 0..=tikken {
+            standen.push(self.stand_op(van, tot, i as f32 / tikken as f32)?);
+        }
+        Some(crate::camerarit::Ritbaan::uit_standen(standen, false))
+    }
+}
+
+/// Een camerabeweging die zich richt op de Stoel van het Kamerlid op de Persoonskaart, met de
+/// Stoel steeds links van het zijpaneel.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[ts(export)]
+pub enum Stoelbeweging {
+    /// Vlotte overgang naar het vaste close-up shot op de Stoel, daarna stil.
+    Shot,
+    /// Langzaam en rustig richting de Stoel schuiven.
+    Aanschuiven,
+    /// Rustig zijdelings langs de Stoel glijden met diepte in de banken erachter.
+    Langs,
+    /// Van hoger boven de banken rustig indalen op de Stoel.
+    Indalen,
+    /// Dicht op de Stoel beginnen en iets terugtrekken zodat de rij eromheen zichtbaar wordt.
+    Uitzoomen,
+}
+
+impl Stoelbeweging {
+    pub const ALLE: [Stoelbeweging; 5] = [
+        Stoelbeweging::Shot,
+        Stoelbeweging::Aanschuiven,
+        Stoelbeweging::Langs,
+        Stoelbeweging::Indalen,
+        Stoelbeweging::Uitzoomen,
+    ];
+
+    pub const fn sleutel(self) -> &'static str {
+        match self {
+            Stoelbeweging::Shot => STOEL_SHOT,
+            Stoelbeweging::Aanschuiven => STOEL_AANSCHUIVEN,
+            Stoelbeweging::Langs => STOEL_LANGS,
+            Stoelbeweging::Indalen => STOEL_INDALEN,
+            Stoelbeweging::Uitzoomen => STOEL_UITZOOMEN,
+        }
+    }
+
+    pub const fn naam(self) -> &'static str {
+        match self {
+            Stoelbeweging::Shot => "Shot op de eigen Stoel",
+            Stoelbeweging::Aanschuiven => "Aanschuiven naar de Stoel",
+            Stoelbeweging::Langs => "Langs de Stoel glijden",
+            Stoelbeweging::Indalen => "Indalen naar de Stoel",
+            Stoelbeweging::Uitzoomen => "Uitzoomen vanaf de Stoel",
+        }
+    }
+
+    pub const fn toelichting(self) -> &'static str {
+        match self {
+            Stoelbeweging::Shot => "Gaat in 2 s naar het vaste shot op de Stoel, links van de kaart",
+            Stoelbeweging::Aanschuiven => "Schuift in 8 s rustig dichterbij richting de Stoel",
+            Stoelbeweging::Langs => "Glijdt in 10 s zijdelings langs de Stoel met diepte in de banken",
+            Stoelbeweging::Indalen => "Begint hoger boven de banken en daalt in 8 s naar de Stoel",
+            Stoelbeweging::Uitzoomen => "Begint dicht op de Stoel en trekt in 8 s iets terug",
+        }
+    }
+
+    pub const fn duur_s(self) -> f32 {
+        match self {
+            Stoelbeweging::Shot => 2.0,
+            Stoelbeweging::Aanschuiven => 8.0,
+            Stoelbeweging::Langs => 10.0,
+            Stoelbeweging::Indalen => 8.0,
+            Stoelbeweging::Uitzoomen => 8.0,
+        }
+    }
+
+    pub const fn is_rit(self) -> bool {
+        !matches!(self, Stoelbeweging::Shot)
+    }
+
+    /// De beweging bij een keuzesleutel (zoals `"stoel-shot"` of `"stoel-langs"`).
+    pub fn uit_sleutel(sleutel: &str) -> Option<Self> {
+        Self::ALLE.into_iter().find(|b| b.sleutel() == sleutel)
+    }
+
+    /// De concrete sleutel voor deze Stoel: voor [`Stoelbeweging::Shot`] blijft dat
+    /// `"stoel-{vak}-{rij}-{nummer}"` ([`stoelsleutel`]), voor de andere
+    /// `"{sleutel}-{vak}-{rij}-{nummer}"`.
+    pub fn doelsleutel(self, stoel: crate::Stoel) -> String {
+        match self {
+            Stoelbeweging::Shot => stoelsleutel(stoel),
+            _ => format!("{}-{}-{}-{}", self.sleutel(), stoel.vak, stoel.rij, stoel.nummer),
+        }
+    }
+
+    /// Beweging en Stoel bij een sleutel van [`Stoelbeweging::doelsleutel`].
+    pub fn uit_doelsleutel(sleutel: &str) -> Option<(Self, crate::Stoel)> {
+        if let Some(stoel) = stoel_uit_sleutel(sleutel) {
+            return Some((Stoelbeweging::Shot, stoel));
+        }
+        for b in Self::ALLE {
+            if b == Stoelbeweging::Shot {
+                continue;
+            }
+            if let Some(rest) = sleutel.strip_prefix(b.sleutel()).and_then(|r| r.strip_prefix('-')) {
+                let stoel = parse_stoel_delen(rest)?;
+                return Some((b, stoel));
+            }
+        }
+        None
+    }
+
+    /// De camerastand op voortgang `t` (0 tot 1) gericht op deze Stoel.
+    pub fn stand_op(self, stoel: crate::Stoel, t: f32) -> Option<Camerastand> {
+        let s = zachte_voortgang(t, 1.0, 1.0);
+        match self {
+            Stoelbeweging::Shot => shot_op_stoel(stoel),
+            Stoelbeweging::Aanschuiven => stand_op_stoel(
+                stoel,
+                4.4 - 1.1 * s,
+                24.0 + 4.0 * s,
+                1.25 - 0.30 * s,
+                30.0 - 8.0 * s,
+                SHOT_PLEK_X,
+                -0.50 - 0.15 * s,
+            ),
+            Stoelbeweging::Langs => stand_op_stoel(
+                stoel,
+                SHOT_AFSTAND,
+                14.0 + 26.0 * s,
+                SHOT_HOOGTE,
+                SHOT_BEELDHOEK,
+                SHOT_PLEK_X,
+                SHOT_PLEK_Y,
+            ),
+            Stoelbeweging::Indalen => stand_op_stoel(
+                stoel,
+                4.3 - 1.0 * s,
+                22.0 + 6.0 * s,
+                2.20 - 1.25 * s,
+                30.0 - 8.0 * s,
+                SHOT_PLEK_X,
+                -0.35 - 0.30 * s,
+            ),
+            Stoelbeweging::Uitzoomen => stand_op_stoel(
+                stoel,
+                3.0 + 1.5 * s,
+                30.0 - 8.0 * s,
+                0.95 + 0.50 * s,
+                19.0 + 13.0 * s,
+                SHOT_PLEK_X,
+                -0.65 + 0.20 * s,
+            ),
+        }
+    }
+
+    /// De volledige baan van deze beweging (100 standen per seconde), voor ritten.
+    pub fn baan(self, stoel: crate::Stoel) -> Option<crate::camerarit::Ritbaan> {
+        if !self.is_rit() {
+            return None;
+        }
+        let tikken = (self.duur_s() * TIKKEN_PER_SECONDE as f32).round().max(1.0) as usize;
+        let mut standen = Vec::with_capacity(tikken + 1);
+        for i in 0..=tikken {
+            standen.push(self.stand_op(stoel, i as f32 / tikken as f32)?);
+        }
+        Some(crate::camerarit::Ritbaan::uit_standen(standen, false))
+    }
+}
+
+/// Welke Standpunten en camerabewegingen bij een soort Graphic of Sjabloon passen, zodat de Regie
+/// nooit per ongeluk een standpunt kiest dat achter een paneel valt of een uitgelichte Partij of
+/// persoon mist.
+#[derive(Serialize, Deserialize, TS, Clone, Copy, Debug, PartialEq, Eq)]
+#[ts(export)]
+pub enum CameraProfiel {
+    /// Partij uitgelicht (of eigen Sjabloon dat één Partij uitlicht): gerichte bewegingen naar
+    /// die Partij en overzichten van de hele Zaal (A, G).
+    Partij,
+    /// Persoonskaart van een Kamerlid met een Stoel: alleen gerichte bewegingen naar die Stoel
+    /// (met de Stoel links van het zijpaneel).
+    PersoonMetStoel,
+    /// Persoonskaart zonder Stoel (eigen persoon of Kamerlid zonder Stoel): rustige Zaal-shots
+    /// zonder katheder of paneelstandpunt.
+    PersoonZonderStoel,
+    /// Het Sjabloon Persoonskaart in Vormgeving: zowel stoelbewegingen (voor Kamerleden met Stoel)
+    /// als rustige Zaal-shots (voor personen zonder Stoel).
+    PersoonSjabloon,
+    /// Zetelverdeling in de Zaal: overzichten waarin alle 150 Stoelen passen.
+    HeleZaal,
+    /// Coalitie in de Zaal: overzichten van de hele Zaal plus de Linkerflank op het coalitieblok.
+    CoalitieZaal,
+    /// Graphics met een breed paneel onderin (Zetelbalk, Twee sets naast elkaar, Coalitiebalk,
+    /// Uitslag van een Stemming): Totaal boven het paneel en hoge overzichten.
+    BovenPaneel,
+    /// Graphics met een schermvullend paneel op een donkere Zaal (Uitslag per Partij, Winst en
+    /// verlies, Fracties voor en tegen, Hoofdelijke stemming).
+    GrootPaneel,
+    /// Titelkaart en algemene eigen Sjablonen zonder uitgelichte Partij of paneel onderin.
+    Algemeen,
+    /// Eigen Sjabloon met een gekozen Partij: algemene Zaal-shots én partijbewegingen.
+    AlgemeenMetPartij,
+}
+
+impl CameraProfiel {
+    pub const ALLE: [CameraProfiel; 10] = [
+        CameraProfiel::Partij,
+        CameraProfiel::PersoonMetStoel,
+        CameraProfiel::PersoonZonderStoel,
+        CameraProfiel::PersoonSjabloon,
+        CameraProfiel::HeleZaal,
+        CameraProfiel::CoalitieZaal,
+        CameraProfiel::BovenPaneel,
+        CameraProfiel::GrootPaneel,
+        CameraProfiel::Algemeen,
+        CameraProfiel::AlgemeenMetPartij,
+    ];
+
+    /// De vaste Standpunten (uit A, S, D, F, G, H) die bij dit profiel passen.
+    pub const fn vaste_standpunten(self) -> &'static [&'static str] {
+        match self {
+            CameraProfiel::Partij => &["A", "G"],
+            CameraProfiel::PersoonMetStoel => &[],
+            CameraProfiel::PersoonZonderStoel | CameraProfiel::PersoonSjabloon => &["S", "D", "F", "A"],
+            CameraProfiel::HeleZaal => &["A", "G"],
+            CameraProfiel::CoalitieZaal => &["A", "D", "G"],
+            CameraProfiel::BovenPaneel => &["G"],
+            CameraProfiel::GrootPaneel => &["G", "A"],
+            CameraProfiel::Algemeen | CameraProfiel::AlgemeenMetPartij => &["A", "S", "D", "F", "G", "H"],
+        }
+    }
+
+    /// De vaste Cameraritten (uit Q, W, E, T, Y, U) die bij dit profiel passen.
+    pub const fn vaste_ritten(self) -> &'static [&'static str] {
+        match self {
+            CameraProfiel::Partij | CameraProfiel::PersoonMetStoel => &[],
+            CameraProfiel::PersoonZonderStoel | CameraProfiel::PersoonSjabloon => &["W", "T", "E"],
+            CameraProfiel::HeleZaal | CameraProfiel::CoalitieZaal => &["Q", "Y", "E"],
+            CameraProfiel::BovenPaneel => &["Y", "E"],
+            CameraProfiel::GrootPaneel => &["E", "W", "T"],
+            CameraProfiel::Algemeen | CameraProfiel::AlgemeenMetPartij => &["Q", "W", "E", "T", "Y", "U"],
+        }
+    }
+
+    pub const fn mag_boven_het_paneel(self) -> bool {
+        matches!(self, CameraProfiel::BovenPaneel)
+    }
+
+    pub const fn mag_partijbeweging(self) -> bool {
+        matches!(self, CameraProfiel::Partij | CameraProfiel::AlgemeenMetPartij)
+    }
+
+    pub const fn mag_stoelbeweging(self) -> bool {
+        matches!(self, CameraProfiel::PersoonMetStoel | CameraProfiel::PersoonSjabloon)
+    }
+
+    /// Of eigen Standpunten en eigen Cameraritten bij dit profiel mogen. Bij een uitgelichte
+    /// Partij of Persoonskaart met Stoel niet: die moeten de gekozen Partij of Stoel volgen.
+    pub const fn mag_eigen(self) -> bool {
+        !matches!(self, CameraProfiel::Partij | CameraProfiel::PersoonMetStoel)
+    }
+
+    /// Korte uitleg voor in een weigering als een gekozen camera niet bij dit profiel past.
+    pub const fn uitleg(self) -> &'static str {
+        match self {
+            CameraProfiel::Partij => "kies een beweging naar de Partij of een overzicht van de Zaal (A of G)",
+            CameraProfiel::PersoonMetStoel => "kies een beweging naar de Stoel van het Kamerlid",
+            CameraProfiel::PersoonZonderStoel => "kies een rustig Zaal-standpunt zonder katheder of paneelstandpunt",
+            CameraProfiel::PersoonSjabloon => "kies een beweging naar de Stoel of een rustig Zaal-standpunt",
+            CameraProfiel::HeleZaal => "kies een overzicht van de hele Zaal",
+            CameraProfiel::CoalitieZaal => "kies een overzicht van de Zaal of de Linkerflank",
+            CameraProfiel::BovenPaneel => "kies Totaal boven het paneel of een hoog overzicht",
+            CameraProfiel::GrootPaneel => "kies een overzicht of rustige rit voor achter het paneel",
+            CameraProfiel::Algemeen => "kies een algemeen Standpunt of een Camerarit",
+            CameraProfiel::AlgemeenMetPartij => "kies een beweging naar de Partij, een Standpunt of een Camerarit",
+        }
+    }
+}
+
 /// De sleutel van Aanschuiven naar de Stoelen op plaats `van` tot en met `tot` van links naar
 /// rechts ([`crate::uitslagindeling::stoelen_van_links_naar_rechts`]), zoals "aanschuiven-40-65".
 pub fn aanschuifsleutel(van: usize, tot: usize) -> String {
-    format!("{AANSCHUIVEN}-{van}-{tot}")
+    Partijbeweging::Aanschuiven.doelsleutel(van, tot)
 }
 
 /// De plaatsen van links naar rechts bij een sleutel van [`aanschuifsleutel`].
 pub fn aanschuif_uit_sleutel(sleutel: &str) -> Option<(usize, usize)> {
-    let (van, tot) = sleutel.strip_prefix(AANSCHUIVEN)?.strip_prefix('-')?.split_once('-')?;
-    let (van, tot) = (van.parse().ok()?, tot.parse().ok()?);
-    (van <= tot && tot < crate::AANTAL_STOELEN).then_some((van, tot))
+    match Partijbeweging::uit_doelsleutel(sleutel) {
+        Some((Partijbeweging::Aanschuiven, van, tot)) => Some((van, tot)),
+        _ => None,
+    }
 }
 
-/// Waar Aanschuiven eindigt: schuin van voren op het blok, vanaf de kant van de Voorzitter, zo ver
-/// dat het hele blok in beeld past, en hoog genoeg om over de banken ervoor te kijken.
-pub fn aanschuif_stand(van: usize, tot: usize) -> Option<Camerastand> {
+/// Het midden en de halve breedte van het blok Stoelen `van..=tot`.
+fn blok_midden_en_breedte(van: usize, tot: usize) -> Option<([f32; 3], f32)> {
     use crate::zaalkaart::STOELPLEKKEN;
     let volgorde = crate::uitslagindeling::stoelen_van_links_naar_rechts();
     let plekken: Vec<[f32; 3]> = volgorde.get(van..=tot)?.iter().map(|&i| STOELPLEKKEN[i]).collect();
+    if plekken.is_empty() {
+        return None;
+    }
     let n = plekken.len() as f32;
     let midden: [f32; 3] = std::array::from_fn(|k| plekken.iter().map(|p| p[k]).sum::<f32>() / n);
     let breed = plekken
@@ -371,28 +832,115 @@ pub fn aanschuif_stand(van: usize, tot: usize) -> Option<Camerastand> {
         .map(|p| (p[0] - midden[0]).hypot(p[2] - midden[2]))
         .fold(0.0_f32, f32::max)
         .max(0.8);
-    // van het blok naar de Voorzitter, schuin naar de middenlijn gedraaid, en zo ver dat het blok
-    // de helft van de breedte vult
+    Some((midden, breed))
+}
+
+/// Een camerastand gericht op het midden van een partijblok, vanuit de richting van de Voorzitter
+/// gedraaid over `opzij_graden`.
+#[allow(clippy::too_many_arguments)]
+fn partij_stand_om(
+    midden: [f32; 3],
+    breed: f32,
+    opzij_graden: f32,
+    hoogte: f32,
+    vulling: f32,
+    beeldhoek_graden: f32,
+    min_afstand: f32,
+    max_hoogte: f32,
+) -> Camerastand {
     let recht = [AANSCHUIF_VANAF[0] - midden[0], AANSCHUIF_VANAF[1] - midden[2]];
-    let kant = if midden[0] >= 0.0 { -1.0 } else { 1.0 };
-    let (s, c) = (kant * AANSCHUIF_OPZIJ).to_radians().sin_cos();
+    let (s, c) = opzij_graden.to_radians().sin_cos();
     let naar = [recht[0] * c - recht[1] * s, recht[0] * s + recht[1] * c];
     let lengte = naar[0].hypot(naar[1]).max(1e-3);
-    let beeldhoek = AANSCHUIF_BEELDHOEK.to_radians();
+    let beeldhoek = beeldhoek_graden.to_radians();
     let horizontaal = 2.0 * ((beeldhoek / 2.0).tan() * 16.0 / 9.0).atan();
-    let afstand = (breed / (horizontaal / 2.0 * AANSCHUIF_VULLING).tan()).clamp(2.5, lengte * 0.85);
+    let mut afstand = (breed / (horizontaal / 2.0 * vulling).tan()).clamp(min_afstand, (lengte * 0.85).max(min_afstand));
+    // blijf ruim voor de voorwand van de Zaal (voor_diepte = 4,50 m)
+    if naar[1] > 1e-3 {
+        let max_voor = ((4.2 - midden[2]) * lengte / naar[1]).max(min_afstand);
+        afstand = afstand.min(max_voor);
+    }
     let positie = [
         midden[0] + naar[0] / lengte * afstand,
-        (midden[1] + AANSCHUIF_HOOGTE + 0.12 * afstand).clamp(2.0, 3.6),
+        (midden[1] + hoogte + 0.12 * afstand).clamp(2.0, max_hoogte),
         midden[2] + naar[1] / lengte * afstand,
     ];
     let d = [midden[0] - positie[0], midden[1] - 0.2 - positie[1], midden[2] - positie[2]];
-    Some(Camerastand {
+    Camerastand {
         positie,
         draai: (-d[0]).atan2(-d[2]),
         helling: d[1].atan2(d[0].hypot(d[2])),
         beeldhoek,
+    }
+}
+
+/// Laag langs de voorzijde van het blok van een Partij glijden, van de linkerrand naar de
+/// rechterrand van haar Stoelen.
+fn partij_langs_stand(van: usize, tot: usize, s: f32) -> Option<Camerastand> {
+    use crate::zaalkaart::STOELPLEKKEN;
+    let volgorde = crate::uitslagindeling::stoelen_van_links_naar_rechts();
+    let plekken: Vec<[f32; 3]> = volgorde.get(van..=tot)?.iter().map(|&i| STOELPLEKKEN[i]).collect();
+    if plekken.is_empty() {
+        return None;
+    }
+    let n = plekken.len();
+    let gem = |slice: &[[f32; 3]]| -> [f32; 3] {
+        let len = slice.len() as f32;
+        std::array::from_fn(|k| slice.iter().map(|p| p[k]).sum::<f32>() / len)
+    };
+    let midden = gem(&plekken);
+    let k = (n / 4).max(1);
+    let links = gem(&plekken[..k]);
+    let rechts = gem(&plekken[n - k..]);
+    let breed = plekken
+        .iter()
+        .map(|p| (p[0] - midden[0]).hypot(p[2] - midden[2]))
+        .fold(0.0_f32, f32::max)
+        .max(0.8);
+    let mix = |a: [f32; 3], b: [f32; 3], u: f32| std::array::from_fn(|i| a[i] + (b[i] - a[i]) * u);
+    let start_doel = mix(links, midden, 0.35);
+    let eind_doel = mix(rechts, midden, 0.35);
+    let doel = mix(start_doel, eind_doel, s);
+    let kant = if doel[0] >= 0.0 { -1.0 } else { 1.0 };
+    let recht = [AANSCHUIF_VANAF[0] - doel[0], AANSCHUIF_VANAF[1] - doel[2]];
+    let opzij = (12.0 + 22.0 * s) * kant;
+    let (sn, cs) = opzij.to_radians().sin_cos();
+    let naar = [recht[0] * cs - recht[1] * sn, recht[0] * sn + recht[1] * cs];
+    let lengte = naar[0].hypot(naar[1]).max(1e-3);
+    let mut afstand = (breed * 0.85 + 2.2).clamp(2.8, (lengte * 0.80).max(2.8));
+    if naar[1] > 1e-3 {
+        let max_voor = ((4.2 - doel[2]) * lengte / naar[1]).max(2.5);
+        afstand = afstand.min(max_voor);
+    }
+    let positie = [
+        doel[0] + naar[0] / lengte * afstand,
+        (doel[1] + 0.85 + 0.08 * afstand).clamp(2.0, 3.2),
+        doel[2] + naar[1] / lengte * afstand,
+    ];
+    let d = [doel[0] - positie[0], doel[1] - 0.15 - positie[1], doel[2] - positie[2]];
+    Some(Camerastand {
+        positie,
+        draai: (-d[0]).atan2(-d[2]),
+        helling: d[1].atan2(d[0].hypot(d[2])),
+        beeldhoek: 38.0f32.to_radians(),
     })
+}
+
+/// Waar Aanschuiven eindigt: schuin van voren op het blok, vanaf de kant van de Voorzitter, zo ver
+/// dat het hele blok in beeld past, en hoog genoeg om over de banken ervoor te kijken.
+pub fn aanschuif_stand(van: usize, tot: usize) -> Option<Camerastand> {
+    let (midden, breed) = blok_midden_en_breedte(van, tot)?;
+    let kant = if midden[0] >= 0.0 { -1.0 } else { 1.0 };
+    Some(partij_stand_om(
+        midden,
+        breed,
+        kant * AANSCHUIF_OPZIJ,
+        AANSCHUIF_HOOGTE,
+        AANSCHUIF_VULLING,
+        AANSCHUIF_BEELDHOEK,
+        2.5,
+        3.6,
+    ))
 }
 
 /// Vanaf dit punt (x, z) kijkt Aanschuiven naar een blok: voor de Voorzitter, in het midden.
@@ -415,42 +963,60 @@ pub fn stoelsleutel(stoel: crate::Stoel) -> String {
     format!("stoel-{}-{}-{}", stoel.vak, stoel.rij, stoel.nummer)
 }
 
-/// De Stoel bij een sleutel van [`stoelsleutel`].
-pub fn stoel_uit_sleutel(sleutel: &str) -> Option<crate::Stoel> {
-    let mut d = sleutel.strip_prefix("stoel-")?.split('-').map(str::parse::<u8>);
+fn parse_stoel_delen(rest: &str) -> Option<crate::Stoel> {
+    let mut d = rest.split('-').map(str::parse::<u8>);
     let stoel = crate::Stoel { vak: d.next()?.ok()?, rij: d.next()?.ok()?, nummer: d.next()?.ok()? };
     (d.next().is_none() && stoel.index().is_some()).then_some(stoel)
 }
 
-/// Het shot van de Persoonskaart op een Stoel: schuin van voren, van de kant van het midden van
-/// de Zaal waar het Kamerlid naartoe kijkt, met de Stoel links in beeld (de kaart staat rechts).
-/// Het is een stand als die van een Standpunt; de server rekent de overgang erheen uit.
-pub fn shot_op_stoel(stoel: crate::Stoel) -> Option<Camerastand> {
+/// De Stoel bij een sleutel van [`stoelsleutel`].
+pub fn stoel_uit_sleutel(sleutel: &str) -> Option<crate::Stoel> {
+    parse_stoel_delen(sleutel.strip_prefix("stoel-")?)
+}
+
+/// Een camerastand gericht op een Stoel, vanaf schuin voor de Stoel naar de middenlijn van de Zaal,
+/// zodat de Stoel op `(plek_x, plek_y)` in beeld staat (links van het zijpaneel van de Persoonskaart).
+fn stand_op_stoel(
+    stoel: crate::Stoel,
+    afstand: f32,
+    opzij_graden: f32,
+    hoogte: f32,
+    beeldhoek_graden: f32,
+    plek_x: f32,
+    plek_y: f32,
+) -> Option<Camerastand> {
     let p = crate::zaalkaart::STOELPLEKKEN[stoel.index()?];
     // recht voor de Stoel: naar het midden van de Zaal
     let r = (p[0] * p[0] + p[2] * p[2]).sqrt().max(1e-3);
     let voor = [-p[0] / r, -p[2] / r];
     // schuin: opzij naar de middenlijn van de Zaal (x = 0), zodat de camera binnen blijft
     let kant = if p[0] >= 0.0 { -1.0 } else { 1.0 };
-    let (s, c) = (kant * SHOT_OPZIJ).to_radians().sin_cos();
+    let (s, c) = (kant * opzij_graden).to_radians().sin_cos();
     let richting = [voor[0] * c - voor[1] * s, voor[0] * s + voor[1] * c];
     let positie = [
-        p[0] + richting[0] * SHOT_AFSTAND,
-        p[1] + SHOT_HOOGTE,
-        p[2] + richting[1] * SHOT_AFSTAND,
+        p[0] + richting[0] * afstand,
+        (p[1] + hoogte).clamp(1.75, 4.1),
+        p[2] + richting[1] * afstand,
     ];
     let doel = [p[0], p[1] + SHOT_HOOFD, p[2]];
     let d = [doel[0] - positie[0], doel[1] - positie[1], doel[2] - positie[2]];
     let vlak = (d[0] * d[0] + d[2] * d[2]).sqrt();
-    let beeldhoek = SHOT_BEELDHOEK.to_radians();
-    // de camera draait zoveel naar rechts dat de Stoel op SHOT_PLEK_X komt
-    let opzij = (-SHOT_PLEK_X * (beeldhoek / 2.0).tan() * 16.0 / 9.0).atan();
+    let beeldhoek = beeldhoek_graden.to_radians();
+    // de camera draait zoveel naar rechts dat de Stoel op plek_x komt
+    let opzij = (-plek_x * (beeldhoek / 2.0).tan() * 16.0 / 9.0).atan();
     Some(Camerastand {
         positie,
         draai: (-d[0]).atan2(-d[2]) - opzij,
-        helling: d[1].atan2(vlak) - (SHOT_PLEK_Y * (beeldhoek / 2.0).tan()).atan(),
+        helling: d[1].atan2(vlak) - (plek_y * (beeldhoek / 2.0).tan()).atan(),
         beeldhoek,
     })
+}
+
+/// Het shot van de Persoonskaart op een Stoel: schuin van voren, van de kant van het midden van
+/// de Zaal waar het Kamerlid naartoe kijkt, met de Stoel links in beeld (de kaart staat rechts).
+/// Het is een stand als die van een Standpunt; de server rekent de overgang erheen uit.
+pub fn shot_op_stoel(stoel: crate::Stoel) -> Option<Camerastand> {
+    stand_op_stoel(stoel, SHOT_AFSTAND, SHOT_OPZIJ, SHOT_HOOGTE, SHOT_BEELDHOEK, SHOT_PLEK_X, SHOT_PLEK_Y)
 }
 
 impl Standpunt {
@@ -881,6 +1447,79 @@ mod tests {
             maat("voor_diepte"),
         );
         let pad = std::path::Path::new(&map).join("zaalkaart.ts");
+        if std::fs::read_to_string(&pad).ok().as_deref() != Some(tekst.as_str()) {
+            std::fs::write(&pad, tekst).unwrap();
+        }
+    }
+
+    /// Schrijft de gerichte bewegingen (Partij en Stoel) en cameraprofielen naar het dashboard
+    /// (`dashboard/src/typen/cameraBewegingen.ts`), zodat Rust en TypeScript altijd gelijk lopen.
+    #[test]
+    fn schrijf_de_camerabewegingen_voor_het_dashboard() {
+        let Some(map) = std::env::var_os("TS_RS_EXPORT_DIR") else {
+            return;
+        };
+        let mut partij = Vec::new();
+        for b in Partijbeweging::ALLE {
+            partij.push(format!(
+                "  {{ sleutel: {:?}, naam: {:?}, toelichting: {:?}, duur_s: {} }},",
+                b.sleutel(),
+                b.naam(),
+                b.toelichting(),
+                b.duur_s(),
+            ));
+        }
+        let mut stoel = Vec::new();
+        for b in Stoelbeweging::ALLE {
+            stoel.push(format!(
+                "  {{ sleutel: {:?}, naam: {:?}, toelichting: {:?}, duur_s: {} }},",
+                b.sleutel(),
+                b.naam(),
+                b.toelichting(),
+                b.duur_s(),
+            ));
+        }
+        let mut profielen = Vec::new();
+        for p in CameraProfiel::ALLE {
+            let naam = serde_json::to_string(&p).unwrap();
+            let vaste_s = serde_json::to_string(p.vaste_standpunten()).unwrap();
+            let vaste_r = serde_json::to_string(p.vaste_ritten()).unwrap();
+            profielen.push(format!(
+                "  {naam}: {{ vasteStandpunten: {vaste_s}, vasteRitten: {vaste_r}, bovenHetPaneel: {}, partij: {}, stoel: {}, eigen: {} }},",
+                p.mag_boven_het_paneel(),
+                p.mag_partijbeweging(),
+                p.mag_stoelbeweging(),
+                p.mag_eigen(),
+            ));
+        }
+        let tekst = format!(
+            "// Gemaakt door `cargo test -p gedeeld` uit crates/gedeeld/src/camera.rs; niet met de hand wijzigen.\n\
+             import type {{ CameraProfiel }} from \"./CameraProfiel\";\n\n\
+             export interface GerichteBeweging {{\n\
+               sleutel: string;\n\
+               naam: string;\n\
+               toelichting: string;\n\
+               duur_s: number;\n\
+             }}\n\n\
+             export interface ProfielRegels {{\n\
+               vasteStandpunten: readonly string[];\n\
+               vasteRitten: readonly string[];\n\
+               bovenHetPaneel: boolean;\n\
+               partij: boolean;\n\
+               stoel: boolean;\n\
+               eigen: boolean;\n\
+             }}\n\n\
+             /** De gerichte camerabewegingen naar het blok van de gekozen Partij. */\n\
+             export const PARTIJBEWEGINGEN: readonly GerichteBeweging[] = [\n{}\n];\n\n\
+             /** De gerichte camerabewegingen naar de Stoel van het Kamerlid. */\n\
+             export const STOELBEWEGINGEN: readonly GerichteBeweging[] = [\n{}\n];\n\n\
+             /** Welke vaste Standpunten, vaste Cameraritten en bewegingen bij elk CameraProfiel passen. */\n\
+             export const CAMERA_PROFIELEN: Readonly<Record<CameraProfiel, ProfielRegels>> = {{\n{}\n}};\n",
+            partij.join("\n"),
+            stoel.join("\n"),
+            profielen.join("\n"),
+        );
+        let pad = std::path::Path::new(&map).join("cameraBewegingen.ts");
         if std::fs::read_to_string(&pad).ok().as_deref() != Some(tekst.as_str()) {
             std::fs::write(&pad, tekst).unwrap();
         }

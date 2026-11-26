@@ -114,6 +114,13 @@ pub struct Ritbaan {
 }
 
 impl Ritbaan {
+    /// Een baan rechtstreeks uit berekende standen (één per tik), zoals een gerichte beweging naar
+    /// een Partij of Stoel.
+    pub fn uit_standen(standen: Vec<Camerastand>, herhalen: bool) -> Self {
+        let plek = (0..standen.len()).map(|i| i as f32).collect();
+        Ritbaan { standen, herhalen, plek }
+    }
+
     /// Waar in de opname de stand op tik `i` vandaan komt, in seconden.
     pub fn opname_s(&self, i: usize) -> f32 {
         self.plek[i.min(self.plek.len() - 1)] / TIKKEN_PER_SECONDE as f32

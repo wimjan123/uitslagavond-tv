@@ -4,8 +4,9 @@
 import { telling } from "../coalitie/coalitie";
 import { useState } from "react";
 import type { MouseEvent } from "react";
-import { graphicTekst, nieuwereCijfers, sjabloonNaam, standaardStandpunt, uurMinuut } from "../graphic";
-import { cameraKeuzes } from "../regie/camerarit";
+import { graphicTekst, nieuwereCijfers, sjabloonId, sjabloonNaam, standaardStandpunt, uurMinuut } from "../graphic";
+import { cameraKeuzes, gerichteBewegingNaam } from "../regie/camerarit";
+import { geldendSjabloon } from "../vormgeving/sjablonen";
 import { Plus, Tablet } from "../iconen";
 import { Schets } from "../presets/Schets";
 import { GROEPEN, bewaardAls, filterPresets, groepVan, statusVan } from "../presets/presets";
@@ -108,10 +109,9 @@ export function Presets({ kiesOnderdeel }: WerkvlakProps) {
 function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand; verbonden: boolean }) {
   const regie = useRegie();
   const status = statusVan(p, s);
-  const letter = p.standpunt ?? standaardStandpunt(p.graphic);
+  const letter = p.standpunt ?? geldendSjabloon(s.sjablonen, sjabloonId(p.graphic))?.standpunt ?? standaardStandpunt(p.graphic);
   const standpunt = cameraKeuzes(s.standpunten, s.cameraritten, true).find((x) => x.letter === letter);
-  // Een Persoonskaart met een Stoel gaat naar een shot op die Stoel: geen Standpunt, maar ook geen fout.
-  const stoel = /^stoel-(\d+)-(\d+)-(\d+)$/.exec(letter);
+  const gericht = gerichteBewegingNaam(letter);
   const rij = status.live ? "rij-live" : status.klaar ? "rij-klaar" : "";
   const zetKlaar = () => verbonden && void regie.stuur({ soort: "ZetPresetKlaar", nummer: p.nummer }, PRESETS);
   const oud = nieuwereCijfers(s, p.graphic);
@@ -159,11 +159,11 @@ function Rij({ preset: p, stand: s, verbonden }: { preset: Preset; stand: Stand;
           {oud && <span className="zacht"> · bewaard {uurMinuut(p.bewaard_ms)}</span>}
         </div>
       </td>
-      <td className="kol-camera" title={standpunt?.naam}>
+      <td className="kol-camera" title={gericht ?? standpunt?.naam}>
         <span className="camera-cel">
           {standpunt?.toets && <kbd>{standpunt.toets}</kbd>}
-          {stoel ? (
-            <span className="zacht een-regel">Shot op de eigen Stoel</span>
+          {gericht ? (
+            <span className="zacht twee-regels">{gericht}</span>
           ) : standpunt ? (
             <span className="zacht twee-regels">
               {standpunt.soort === "Camerarit" ? `Camerarit ${standpunt.naam}` : standpunt.naam}

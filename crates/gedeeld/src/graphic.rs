@@ -444,19 +444,30 @@ impl Graphic {
         }
     }
 
+    /// De concrete sleutel van een gerichte beweging naar het blok van de gekozen Partij, als de
+    /// Graphic een Partij en Zetels heeft ([`crate::camera::Partijbeweging::doelsleutel`]).
+    pub fn partij_sleutel(&self, beweging: crate::camera::Partijbeweging) -> Option<String> {
+        let (van, tot) = self.zetelstand()?.plaatsen_van(self.partij()?)?;
+        Some(beweging.doelsleutel(van, tot))
+    }
+
     /// De sleutel van Aanschuiven naar het blok van de gekozen Partij, als de Graphic een Partij
     /// en Zetels heeft ([`crate::camera::aanschuifsleutel`]).
     pub fn aanschuifsleutel(&self) -> Option<String> {
-        let (van, tot) = self.zetelstand()?.plaatsen_van(self.partij()?)?;
-        Some(crate::camera::aanschuifsleutel(van, tot))
+        self.partij_sleutel(crate::camera::Partijbeweging::Aanschuiven)
     }
 
-    /// Het Standpunt bij een keuze: Aanschuiven wordt het blok van de gekozen Partij, of zonder
-    /// Partij het Standpunt van de soort Graphic. Elke andere keuze blijft wat hij is.
+    /// Het Standpunt bij een keuze: gerichte partij- en stoelbewegingen worden ingevuld met het
+    /// blok van de gekozen Partij of de Stoel van het Kamerlid (zonder Partij of Stoel het
+    /// standaard Standpunt van de soort Graphic). Elke andere keuze blijft wat hij is.
     pub fn standpunt_bij<'a>(&self, keuze: Option<&'a str>) -> Cow<'a, str> {
         match keuze {
-            Some(crate::camera::AANSCHUIVEN) => match self.aanschuifsleutel() {
+            Some(l) if let Some(b) = crate::camera::Partijbeweging::uit_sleutel(l) => match self.partij_sleutel(b) {
                 Some(s) => Cow::Owned(s),
+                None => Cow::Owned(self.standaard_standpunt().into_owned()),
+            },
+            Some(l) if let Some(b) = crate::camera::Stoelbeweging::uit_sleutel(l) => match self.uitgelichte_stoel() {
+                Some(stoel) => Cow::Owned(b.doelsleutel(stoel)),
                 None => Cow::Owned(self.standaard_standpunt().into_owned()),
             },
             Some(l) => Cow::Borrowed(l),

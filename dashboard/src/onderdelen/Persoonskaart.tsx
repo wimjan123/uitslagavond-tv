@@ -4,10 +4,10 @@
 import { CameraKeuze } from "./CameraKeuze";
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
-import { kandidaten, opStoel, standpuntVoor, waarschuwingen, zoek } from "../persoonskaart/persoonskaart";
+import { kandidaten, opStoel, waarschuwingen, zoek } from "../persoonskaart/persoonskaart";
 import type { Kandidaat } from "../persoonskaart/persoonskaart";
 import { zetStoelkiezer } from "../persoonskaart/stoelkeuze";
-import { cameraKeuzes } from "../regie/camerarit";
+import { BLIJF, passendeCameraKeuzes, standaardCameraTekst } from "../regie/camerarit";
 import { useRegie } from "../regie/regie";
 import type { EigenPersoon } from "../typen/EigenPersoon";
 import type { Extra } from "../typen/Extra";
@@ -62,24 +62,30 @@ export function Persoonskaart({ uitleg }: { uitleg: string }) {
   const klaar = s.klaar;
   const graphic: Graphic | null = wie ? { sjabloon: "Persoonskaart", wie, regel: regel.trim(), extra } : null;
   const klaarIsPersoonskaart = klaar?.graphic.sjabloon === "Persoonskaart";
-  const keuzes = cameraKeuzes(s.standpunten, s.cameraritten);
-  const vanSjabloon = wie ? standpuntVoor(s, wie) : "S";
-  const sjabloonTekst = vanSjabloon.startsWith("stoel-")
-    ? `shot op Stoel ${vanSjabloon.slice(6)}`
-    : (keuzes.find((k) => k.letter === vanSjabloon)?.tekst ?? vanSjabloon);
+  const heeftStoel = !!gekozen?.stoel;
+  const keuzes = passendeCameraKeuzes(s.standpunten, s.cameraritten, heeftStoel ? "PersoonMetStoel" : "PersoonZonderStoel");
+  const geldigStandpunt =
+    standpunt === "" || standpunt === BLIJF || keuzes.some((k) => k.letter === standpunt) ? standpunt : "";
+  const sjabloonTekst = graphic
+    ? standaardCameraTekst(s, graphic, gekozen?.stoel ?? null)
+    : standaardCameraTekst(s, { sjabloon: "Persoonskaart", wie: { soort: "Eigen", id: "" }, regel: "", extra }, null);
   const melding = regie.melding?.bij === MAKEN ? regie.melding.tekst : null;
   const let_op = wie ? waarschuwingen(s, wie) : [];
 
   const zetKlaar = (e: FormEvent) => {
     e.preventDefault();
-    if (graphic) void regie.stuur({ soort: "ZetKlaar", graphic, standpunt: standpunt || undefined }, MAKEN);
+    if (graphic) void regie.stuur({ soort: "ZetKlaar", graphic, standpunt: geldigStandpunt || undefined }, MAKEN);
   };
   const wijzig = () => {
-    if (klaar && graphic) void regie.stuur({ soort: "WijzigKlaar", id: klaar.id, graphic, standpunt: standpunt || undefined }, MAKEN);
+    if (klaar && graphic) void regie.stuur({ soort: "WijzigKlaar", id: klaar.id, graphic, standpunt: geldigStandpunt || undefined }, MAKEN);
   };
   const kies = (k: Kandidaat) => {
     setWie(k.wie);
     setZoektekst("");
+    const volgende = passendeCameraKeuzes(s.standpunten, s.cameraritten, k.stoel ? "PersoonMetStoel" : "PersoonZonderStoel");
+    if (standpunt && standpunt !== BLIJF && !volgende.some((o) => o.letter === standpunt)) {
+      setStandpunt("");
+    }
     const eigen = k.wie.soort === "Eigen" ? s.personen.find((p) => p.id === k.wie.id) : undefined;
     if (eigen?.regel) setRegel(eigen.regel);
   };
@@ -151,10 +157,10 @@ export function Persoonskaart({ uitleg }: { uitleg: string }) {
           </button>
         </fieldset>
         <CameraKeuze
-          waarde={standpunt}
+          waarde={geldigStandpunt}
           zet={setStandpunt}
           standaard={sjabloonTekst}
-          opties={keuzes.map((k) => ({ waarde: k.letter, tekst: k.tekst, soort: k.soort }))}
+          opties={keuzes.map((k) => ({ waarde: k.letter, tekst: k.tekst, soort: k.soort, toelichting: k.toelichting }))}
         />
         <div className="knoppen">
           <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>

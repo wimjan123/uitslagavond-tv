@@ -4,7 +4,7 @@
 // Met Vrij of Oefenen aan komt er "Bewaar als Standpunt" bij.
 import { plaatsVan } from "../persoonskaart/persoonskaart";
 import { useStoelkiezer } from "../persoonskaart/stoelkeuze";
-import { AANSCHUIVEN, BLIJF, BLIJF_NAAM, BOVEN_HET_PANEEL, BOVEN_HET_PANEEL_NAAM, opnameTijd } from "../regie/camerarit";
+import { BLIJF, BLIJF_NAAM, BOVEN_HET_PANEEL, BOVEN_HET_PANEEL_NAAM, gerichteBewegingNaam, opnameTijd } from "../regie/camerarit";
 import { useCamera, useRegie } from "../regie/regie";
 import { CAMERA, kiesStandpunt, voerUit } from "../regie/take";
 import { toetsVan } from "../regie/toetsen";
@@ -18,12 +18,11 @@ export function nieuweNaam(standpunten: Standpunt[]): string {
   return `Eigen ${standpunten.filter((p) => !p.vast).length + 1}`;
 }
 
-/** De naam van het Standpunt of de Camerarit met deze sleutel, of van het shot op een Stoel (Persoonskaart). */
+/** De naam van het Standpunt, de Camerarit of de gerichte beweging met deze sleutel. */
 export function naamVan(s: Stand | undefined, letter: string | null): string {
   if (!s || !letter) return "";
-  const stoel = /^stoel-(\d+-\d+-\d+)$/.exec(letter);
-  if (stoel) return `Stoel ${stoel[1]}`;
-  if (letter === AANSCHUIVEN || letter.startsWith(`${AANSCHUIVEN}-`)) return "Aanschuiven";
+  const gericht = gerichteBewegingNaam(letter);
+  if (gericht) return gericht;
   if (letter === BLIJF) return BLIJF_NAAM;
   if (letter === BOVEN_HET_PANEEL) return BOVEN_HET_PANEEL_NAAM;
   return s.standpunten.find((p) => p.letter === letter)?.naam ?? s.cameraritten.find((r) => r.letter === letter)?.naam ?? "";

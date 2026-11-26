@@ -3,13 +3,12 @@
 // de Persoonskaart.
 import { useState } from "react";
 import type { FormEvent } from "react";
-import { sjabloonId, standaardStandpunt } from "../graphic";
-import { cameraKeuzes } from "../regie/camerarit";
+import { cameraProfielVanGraphic, cameraProfielVanSjabloon, passendeCameraKeuzes, standaardCameraTekst } from "../regie/camerarit";
 import { useRegie } from "../regie/regie";
 import type { Graphic } from "../typen/Graphic";
 import type { Indeling } from "../typen/Indeling";
 import type { Sjabloon } from "../typen/Sjabloon";
-import { benodigd, geldendSjabloon, standaardVan } from "../vormgeving/sjablonen";
+import { benodigd, standaardVan } from "../vormgeving/sjablonen";
 import { Schets } from "../presets/Schets";
 import { CameraKeuze } from "./CameraKeuze";
 import { Persoonskaart } from "./Persoonskaart";
@@ -126,10 +125,11 @@ function Titelkaart() {
   const [standpunt, setStandpunt] = useState("");
   const klaar = regie.stand?.stand.klaar ?? null;
   const verbonden = regie.staat === "verbonden";
+  const s = regie.stand?.stand;
   const graphic: Graphic = { sjabloon: "Titelkaart", kop: kop.trim(), regel: regel.trim() };
   const klaarIsTitelkaart = klaar?.graphic.sjabloon === "Titelkaart";
-  const keuzes = cameraKeuzes(regie.stand?.stand.standpunten ?? [], regie.stand?.stand.cameraritten ?? []);
-  const standaard = keuzes.find((p) => p.letter === standaardStandpunt(graphic));
+  const keuzes = passendeCameraKeuzes(s?.standpunten ?? [], s?.cameraritten ?? [], "Algemeen");
+  const standaard = s ? standaardCameraTekst(s, graphic) : null;
   const gekozen = standpunt || undefined;
   const zelfde =
     klaar?.graphic.sjabloon === "Titelkaart" &&
@@ -180,8 +180,8 @@ function Titelkaart() {
       <CameraKeuze
         waarde={standpunt}
         zet={setStandpunt}
-        standaard={standaard?.tekst ?? null}
-        opties={keuzes.map((k) => ({ waarde: k.letter, tekst: k.tekst, soort: k.soort }))}
+        standaard={standaard}
+        opties={keuzes.map((k) => ({ waarde: k.letter, tekst: k.tekst, soort: k.soort, toelichting: k.toelichting }))}
       />
       <div className="knoppen">
         <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic.kop}>
@@ -243,8 +243,8 @@ function Zetelverdeling() {
       : null;
   const zaal = s?.zaalmelding;
   const zaalLeeg = (s?.zaalindeling.stoelen.length ?? 0) === 0;
-  const standpunten = s?.standpunten ?? [];
-  const standaard = graphic ? standpunten.find((p) => p.letter === standaardStandpunt(graphic)) : undefined;
+  const keuzes = passendeCameraKeuzes(s?.standpunten ?? [], s?.cameraritten ?? [], "HeleZaal");
+  const standaard = s && graphic ? standaardCameraTekst(s, graphic) : null;
   const gekozen = standpunt || undefined;
   const klaarIsZetelverdeling = klaar?.graphic.sjabloon === "Zetelverdeling";
   const melding = regie.melding?.bij === MAKEN ? regie.melding.tekst : null;
@@ -310,8 +310,8 @@ function Zetelverdeling() {
       <CameraKeuze
         waarde={standpunt}
         zet={setStandpunt}
-        standaard={standaard ? `${standaard.letter} · ${standaard.naam}` : null}
-        opties={standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} · ${p.naam}` }))}
+        standaard={standaard}
+        opties={keuzes.map((k) => ({ waarde: k.letter, tekst: k.tekst, soort: k.soort, toelichting: k.toelichting }))}
       />
       <div className="knoppen">
         <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
@@ -377,8 +377,9 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
       : { sjabloon: soort, set: eerste.id, grootste: n };
   // de set die later in de lijst staat is de nieuwste (gelijk aan `Zetelstand::van_twee`)
   const [boven, onder] = eerste && ander && sets.indexOf(ander) < sets.indexOf(eerste) ? [ander, eerste] : [eerste, ander];
-  const standpunten = s?.standpunten ?? [];
-  const standaard = graphic ? standpunten.find((p) => p.letter === standaardStandpunt(graphic)) : undefined;
+  const profiel = soort === "UitslagPerPartij" ? "GrootPaneel" : "BovenPaneel";
+  const keuzes = passendeCameraKeuzes(s?.standpunten ?? [], s?.cameraritten ?? [], profiel);
+  const standaard = s && graphic ? standaardCameraTekst(s, graphic) : null;
   const gekozen = standpunt || undefined;
   const melding = regie.melding?.bij === MAKEN ? regie.melding.tekst : null;
 
@@ -440,8 +441,8 @@ function Zetelbalk({ soort, sjabloon }: { soort: Balksoort; sjabloon: (typeof SJ
       <CameraKeuze
         waarde={standpunt}
         zet={setStandpunt}
-        standaard={standaard ? `${standaard.letter} · ${standaard.naam}` : null}
-        opties={standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} · ${p.naam}` }))}
+        standaard={standaard}
+        opties={keuzes.map((k) => ({ waarde: k.letter, tekst: k.tekst, soort: k.soort, toelichting: k.toelichting }))}
       />
       <div className="knoppen">
         <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
@@ -499,7 +500,6 @@ function useCijferformulier() {
   const [set, setSet] = useState("");
   const [standpunt, setStandpunt] = useState("");
   const gekozenSet = sets.find((x) => x.id === set) ?? sets[sets.length - 1];
-  const standpunten = s?.standpunten ?? [];
   const stuur = (graphic: Graphic | null, wijzig: boolean) => {
     const klaar = s?.klaar;
     if (!graphic) return;
@@ -516,9 +516,12 @@ function useCijferformulier() {
       opties={sets.map((x) => ({ waarde: x.id, tekst: x.label }))}
     />
   );
-  const onderkant = (graphic: Graphic | null, sjabloon: Graphic["sjabloon"]) => {
-    const letter = graphic && (geldendSjabloon(s?.sjablonen ?? [], sjabloonId(graphic))?.standpunt ?? standaardStandpunt(graphic));
-    const standaard = standpunten.find((p) => p.letter === letter);
+  const onderkant = (graphic: Graphic | null, sjabloon: Graphic["sjabloon"], profielFallback?: import("../typen/CameraProfiel").CameraProfiel) => {
+    const profiel = graphic
+      ? cameraProfielVanGraphic(graphic, s?.sjablonen ?? [])
+      : (profielFallback ?? (sjabloon === "PartijUitgelicht" ? "Partij" : sjabloon === "WinstEnVerlies" ? "GrootPaneel" : "Algemeen"));
+    const keuzes = passendeCameraKeuzes(s?.standpunten ?? [], s?.cameraritten ?? [], profiel);
+    const standaard = s && graphic ? standaardCameraTekst(s, graphic) : null;
     const melding = regie.melding?.bij === MAKEN ? regie.melding.tekst : null;
     const verbonden = regie.staat === "verbonden";
     return (
@@ -526,8 +529,8 @@ function useCijferformulier() {
         <CameraKeuze
           waarde={standpunt}
           zet={setStandpunt}
-          standaard={standaard ? `${standaard.letter} · ${standaard.naam}` : null}
-          opties={standpunten.map((p) => ({ waarde: p.letter, tekst: `${p.letter} · ${p.naam}` }))}
+          standaard={standaard}
+          opties={keuzes.map((k) => ({ waarde: k.letter, tekst: k.tekst, soort: k.soort, toelichting: k.toelichting }))}
         />
         <div className="knoppen">
           <button className="knop knop-commit" type="submit" disabled={!verbonden || !graphic}>
@@ -671,7 +674,7 @@ function EigenGraphic({ sjabloon }: { sjabloon: Sjabloon }) {
       {nodig.partij && (
         <Keuze label="Partij" uitleg="Voor de Blokken met een Partij" waarde={gekozenPartij ?? ""} zet={setPartij} opties={partijen.map((p) => ({ waarde: p, tekst: kort(p) }))} />
       )}
-      {onderkant(graphic, "Eigen")}
+      {onderkant(graphic, "Eigen", cameraProfielVanSjabloon(sjabloon))}
     </form>
   );
 }

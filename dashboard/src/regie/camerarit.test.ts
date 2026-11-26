@@ -1,7 +1,21 @@
 // Cameraritten in het dashboard: `npm test` (node --test).
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { cameraKeuzes, duur, kanHerhalen, opnameS, opnameTijd, ritAangepast, ritTiming, routeVan, standaardRit, stukS } from "./camerarit.ts";
+import {
+  cameraKeuzes,
+  cameraProfielVanGraphic,
+  duur,
+  gerichteBewegingNaam,
+  kanHerhalen,
+  opnameS,
+  opnameTijd,
+  passendeCameraKeuzes,
+  ritAangepast,
+  ritTiming,
+  routeVan,
+  standaardRit,
+  stukS,
+} from "./camerarit.ts";
 import type { Camerarit } from "../typen/Camerarit";
 import type { Standpunt } from "../typen/Standpunt";
 
@@ -100,4 +114,78 @@ test("een vaste Camerarit krijgt zijn opname uit de software, 100 standen per se
   assert.equal(kanHerhalen(standaardRit("E")!), null, "het rondje herhaalt");
   assert.ok(!ritAangepast(w));
   assert.ok(ritAangepast({ ...w, bijschaving: { ...w.bijschaving, duur_s: 30 } }));
+});
+
+test("passendeCameraKeuzes geeft per profiel alleen bijpassende bewegingen en Standpunten", () => {
+  const basis: Standpunt = {
+    letter: "A",
+    naam: "Totaal vanaf voorzitter",
+    vast: true,
+    stand: { positie: [0, 13, 11], draai: 0, helling: -0.5, beeldhoek: 0.8 },
+    overgang: { soort: "Bewegen", duur_s: 2, zacht_starten: 1, zacht_stoppen: 1 },
+    na_aankomst: { soort: "Stil" },
+  };
+  const standpunten: Standpunt[] = [
+    basis,
+    { ...basis, letter: "S", naam: "Laag over de banken" },
+    { ...basis, letter: "D", naam: "Linkerflank" },
+    { ...basis, letter: "F", naam: "Rechterflank" },
+    { ...basis, letter: "G", naam: "Bovenaf" },
+    { ...basis, letter: "H", naam: "Katheder" },
+    { ...basis, letter: "E1", naam: "Eigen close-up", vast: false, toets: "J" },
+  ];
+  const ritten = [standaardRit("Q")!, standaardRit("U")!, standaardRit("Y")!];
+
+  const partij = passendeCameraKeuzes(standpunten, ritten, "Partij").map((k) => k.letter);
+  assert.ok(partij.includes("aanschuiven"));
+  assert.ok(partij.includes("partij-boog"));
+  assert.ok(partij.includes("partij-indalen"));
+  assert.ok(partij.includes("partij-langs"));
+  assert.ok(partij.includes("partij-uitzoomen"));
+  assert.ok(partij.includes("partij-vast"));
+  assert.ok(partij.includes("A"));
+  assert.ok(partij.includes("G"));
+  assert.ok(!partij.includes("H"), "Katheder past niet bij Partij uitgelicht");
+  assert.ok(!partij.includes("D"), "vaste flank past niet bij Partij uitgelicht");
+  assert.ok(!partij.includes("E1"), "eigen Standpunt past niet bij Partij uitgelicht");
+  assert.ok(!partij.includes("U"), "Naar de katheder past niet bij Partij uitgelicht");
+
+  const persoonMetStoel = passendeCameraKeuzes(standpunten, ritten, "PersoonMetStoel").map((k) => k.letter);
+  assert.deepEqual(persoonMetStoel, [
+    "blijf",
+    "stoel-shot",
+    "stoel-aanschuiven",
+    "stoel-langs",
+    "stoel-indalen",
+    "stoel-uitzoomen",
+  ]);
+
+  const bovenPaneel = passendeCameraKeuzes(standpunten, ritten, "BovenPaneel").map((k) => k.letter);
+  assert.ok(bovenPaneel.includes("boven-het-paneel"));
+  assert.ok(bovenPaneel.includes("G"));
+  assert.ok(bovenPaneel.includes("Y"));
+  assert.ok(bovenPaneel.includes("E1"));
+  assert.ok(!bovenPaneel.includes("A"));
+  assert.ok(!bovenPaneel.includes("H"));
+
+  assert.equal(
+    cameraProfielVanGraphic({ sjabloon: "PartijUitgelicht", set: "s", partij: "p" }),
+    "Partij",
+  );
+  assert.equal(
+    cameraProfielVanGraphic(
+      {
+        sjabloon: "Persoonskaart",
+        wie: { soort: "Kamerlid", id: "x" },
+        regel: "",
+        extra: { leeftijd: true, woonplaats: true, geboorteplaats: false, in_de_kamer_sinds: false },
+      },
+      [],
+      true,
+    ),
+    "PersoonMetStoel",
+  );
+  assert.equal(gerichteBewegingNaam("partij-boog-40-65"), "Boog om de Partij");
+  assert.equal(gerichteBewegingNaam("stoel-langs-2-3-1"), "Langs de Stoel glijden · Stoel 2-3-1");
+  assert.equal(gerichteBewegingNaam("stoel-2-3-1"), "Shot op Stoel 2-3-1");
 });

@@ -2566,7 +2566,8 @@ fn twee_sets() -> Sjabloon {
         snelheid: 100,
         achtergrond: Achtergrond::Zaal,
         stoelen: Stoelen::Gegevens,
-        standpunt: None,
+        // de Stoelen boven het paneel, net als de Zetelbalk en Coalitiebalk
+        standpunt: Some(crate::camera::BOVEN_HET_PANEEL.into()),
         blokken: vec![
             paneel(plek(96, 412, 1728, 594)),
             streepje,
@@ -2999,6 +3000,45 @@ impl Sjabloon {
             },
         );
         s
+    }
+
+    /// Of een van de Blokken van dit Sjabloon een gekozen Partij vraagt (gelijk aan `benodigd` in
+    /// het dashboard).
+    pub fn heeft_partij(&self) -> bool {
+        self.stoelen == Stoelen::PartijUitgelicht
+            || self.blokken.iter().any(|b| match &b.soort {
+                Bloksoort::Partijlogo { .. } | Bloksoort::Partijregel { .. } => true,
+                Bloksoort::Tekst { bron: Tekstbron::Partijnaam, .. } => true,
+                Bloksoort::Getal { bron: Getalbron::Zetels | Getalbron::Winst, .. } => true,
+                _ => false,
+            })
+    }
+
+    /// Welke Standpunten en camerabewegingen bij dit Sjabloon passen.
+    pub fn camera_profiel(&self) -> crate::camera::CameraProfiel {
+        use crate::camera::CameraProfiel;
+        match self.id.as_str() {
+            PARTIJ_UITGELICHT => CameraProfiel::Partij,
+            "persoonskaart" => CameraProfiel::PersoonSjabloon,
+            ZETELVERDELING => CameraProfiel::HeleZaal,
+            COALITIE => CameraProfiel::CoalitieZaal,
+            ZETELBALK | TWEE_SETS | COALITIEBALK | UITSLAG_STEMMING => CameraProfiel::BovenPaneel,
+            UITSLAG_PER_PARTIJ | WINST_EN_VERLIES | FRACTIES_VOOR_EN_TEGEN | HOOFDELIJKE_STEMMING => {
+                CameraProfiel::GrootPaneel
+            }
+            "titelkaart" => CameraProfiel::Algemeen,
+            _ => {
+                if self.stoelen == Stoelen::PartijUitgelicht {
+                    CameraProfiel::Partij
+                } else if self.heeft_partij() {
+                    CameraProfiel::AlgemeenMetPartij
+                } else if self.achtergrond == Achtergrond::ZaalDonker {
+                    CameraProfiel::GrootPaneel
+                } else {
+                    CameraProfiel::Algemeen
+                }
+            }
+        }
     }
 
     /// De bestanden die dit Sjabloon zelf noemt: eigen lettertypes en afbeeldingen. Lettertypes

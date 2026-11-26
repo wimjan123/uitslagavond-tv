@@ -5,7 +5,8 @@
 // wijziging geldt na Opslaan, in de Ether pas bij de volgende Toon.
 import { useRef, useState } from "react";
 import type { CSSProperties, PointerEvent as ReactPointerEvent } from "react";
-import { cameraKeuzes } from "../regie/camerarit";
+import { cameraProfielVanSjabloon, passendeCameraKeuzes } from "../regie/camerarit";
+import type { Camerakeus } from "../regie/camerarit";
 import { useRegie } from "../regie/regie";
 import type { Blok } from "../typen/Blok";
 import type { Bloksoort } from "../typen/Bloksoort";
@@ -305,15 +306,27 @@ export function SjablonenDeel() {
   );
 }
 
+const SJABLOON_CAMERA_GROEPEN: { soort: Camerakeus["soort"]; label: string }[] = [
+  { soort: "Partijbeweging", label: "Bewegingen naar de Partij" },
+  { soort: "Stoelbeweging", label: "Bewegingen naar de Stoel" },
+  { soort: "Standpunt", label: "Standpunten" },
+  { soort: "Camerarit", label: "Cameraritten" },
+];
+
 /** De instellingen van het hele Sjabloon: naam, achtergrond, Stoelen en hun Kleurovergang, Standpunt en snelheid. */
 function SjabloonVelden({ sjabloon: s, vast, zet }: { sjabloon: Sjabloon; vast: boolean; zet(s: Sjabloon): void }) {
   const regie = useRegie();
   const stand = regie.stand?.stand;
-  const keuzes = cameraKeuzes(stand?.standpunten ?? [], stand?.cameraritten ?? [], true);
+  const keuzes = passendeCameraKeuzes(stand?.standpunten ?? [], stand?.cameraritten ?? [], cameraProfielVanSjabloon(s));
   const stijlOvergang = (stand?.stijl ?? STANDAARD_STIJL).kleurovergang;
   const wijzig = (w: (s: Sjabloon) => void) => {
     const n = structuredClone(s);
     w(n);
+    // Als het cameraprofiel veranderde en het oude Standpunt niet meer past, terug naar standaard.
+    if (n.standpunt) {
+      const nieuw = passendeCameraKeuzes(stand?.standpunten ?? [], stand?.cameraritten ?? [], cameraProfielVanSjabloon(n));
+      if (!nieuw.some((k) => k.letter === n.standpunt)) n.standpunt = undefined;
+    }
     zet(n);
   };
   const a = s.achtergrond;
@@ -387,10 +400,10 @@ function SjabloonVelden({ sjabloon: s, vast, zet }: { sjabloon: Sjabloon; vast: 
         </span>
         <select value={s.standpunt ?? ""} onChange={(e) => wijzig((n) => (n.standpunt = e.target.value || undefined))}>
           <option value="">Zoals de soort Graphic</option>
-          {(["Standpunt", "Camerarit"] as const).map((soort) => (
-            <optgroup key={soort} label={soort === "Standpunt" ? "Standpunten" : "Cameraritten"}>
+          {SJABLOON_CAMERA_GROEPEN.filter((g) => keuzes.some((k) => k.soort === g.soort)).map((g) => (
+            <optgroup key={g.soort} label={g.label}>
               {keuzes
-                .filter((k) => k.soort === soort)
+                .filter((k) => k.soort === g.soort)
                 .map((k) => (
                   <option key={k.letter} value={k.letter}>
                     {k.tekst}
