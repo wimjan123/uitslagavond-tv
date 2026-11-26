@@ -52,6 +52,9 @@ const KLAAR_BIJ = "inspector";
 const CAMERA_GROEPEN: { soort: Camerakeus["soort"]; label: string }[] = [
   { soort: "Partijbeweging", label: "Bewegingen naar de Partij" },
   { soort: "Stoelbeweging", label: "Bewegingen naar de Stoel" },
+  { soort: "Zaalbeweging", label: "Zetelverdeling-bewegingen" },
+  { soort: "Coalitiebeweging", label: "Coalitie & 76-grens" },
+  { soort: "Paneelbeweging", label: "Bewegingen boven het paneel" },
   { soort: "Standpunt", label: "Standpunten" },
   { soort: "Camerarit", label: "Cameraritten" },
 ];
@@ -256,13 +259,19 @@ export function RegieWerkruimte({ opGaNaarZaal }: { opGaNaarZaal: () => void }) 
 
   function kiesSjabloon(id: TemplateKeuze) {
     setSjabloonKeuze(id);
-    // Bij Partij uitgelicht of Persoonskaart richt de camera zich standaard meteen op de Partij/Stoel.
+    // Bij gerichte Graphics schakelt de camera standaard meteen mee naar een passende beweging.
     if (id === "PartijUitgelicht") {
       setCameraModus("kies");
       setStandpuntKeuze("aanschuiven");
     } else if (id === "Persoonskaart") {
       setCameraModus("kies");
       setStandpuntKeuze("stoel-shot");
+    } else if (id === "Zetelverdeling") {
+      setCameraModus("kies");
+      setStandpuntKeuze("zaal-opbouw");
+    } else if (id === "Zetelbalk" || id === "TweeSets") {
+      setCameraModus("kies");
+      setStandpuntKeuze(BOVEN_HET_PANEEL);
     }
   }
 
@@ -772,7 +781,13 @@ export function RegieWerkruimte({ opGaNaarZaal }: { opGaNaarZaal: () => void }) 
                   ? "Naar Partij"
                   : cameraProfiel === "PersoonMetStoel"
                     ? "Naar Stoel"
-                    : "Wissel camera"}
+                    : cameraProfiel === "HeleZaal"
+                      ? "Zetelverdeling"
+                      : cameraProfiel === "CoalitieZaal"
+                        ? "Coalitie & 76"
+                        : cameraProfiel === "BovenPaneel"
+                          ? "Boven paneel"
+                          : "Wissel camera"}
               </button>
             </div>
             {cameraModus === "kies" && (

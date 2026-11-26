@@ -416,7 +416,10 @@ impl Stand {
                 || self.camerarit(letter).is_some()
                 || letter == crate::camera::BOVEN_HET_PANEEL
                 || crate::camera::Partijbeweging::uit_doelsleutel(letter).is_some()
-                || crate::camera::Stoelbeweging::uit_doelsleutel(letter).is_some();
+                || crate::camera::Stoelbeweging::uit_doelsleutel(letter).is_some()
+                || crate::camera::Zaalbeweging::uit_sleutel(letter).is_some()
+                || crate::camera::Coalitiebeweging::uit_sleutel(letter).is_some()
+                || crate::camera::Paneelbeweging::uit_sleutel(letter).is_some();
             if !bekend {
                 return Err(Weigering::OnbekendStandpunt(letter.into()));
             }

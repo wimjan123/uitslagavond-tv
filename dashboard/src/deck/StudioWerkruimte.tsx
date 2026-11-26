@@ -696,6 +696,9 @@ function SjabloonEditor() {
                 [
                   { soort: "Partijbeweging", label: "Bewegingen naar de Partij" },
                   { soort: "Stoelbeweging", label: "Bewegingen naar de Stoel" },
+                  { soort: "Zaalbeweging", label: "Zetelverdeling-bewegingen" },
+                  { soort: "Coalitiebeweging", label: "Coalitie & 76-grens" },
+                  { soort: "Paneelbeweging", label: "Bewegingen boven het paneel" },
                   { soort: "Standpunt", label: "Standpunten" },
                   { soort: "Camerarit", label: "Cameraritten" },
                 ] as { soort: Camerakeus["soort"]; label: string }[]

@@ -645,6 +645,10 @@ struct Golf {
     kracht: f32,
     /// En de nabijheid van de camera ([`crate::lens::Nabijheid`]).
     nabij: f32,
+    /// Het volgnummer van de laatste `Toon` in de Ether, zodat een nieuwe `Toon` met `Opbouw`
+    /// altijd opnieuw opbouwt (ook als de vorige Graphic, zoals Zetelbalk, al dezelfde eindkleuren
+    /// op de Stoelen had staan).
+    laatste_toon: Option<u64>,
 }
 
 /// Waar een Stoel in de Kleurovergang is.
@@ -1027,17 +1031,26 @@ fn kleur_stoelen(
             .map(|s| s.stand.stoelkleuren.as_slice())
             .unwrap_or_default();
         let doel: Vec<Option<Kleur>> = (0..AANTAL_STOELEN).map(|i| kleuren.get(i).copied()).collect();
+        let ether_toon = standen.huidig.as_ref().and_then(|s| s.stand.ether.as_ref()).map(|e| e.getoond);
         if !golf.begonnen || !nieuw_leer.is_empty() {
             golf.van = doel.iter().map(|k| lineair(*k)).collect();
             golf.van_straalt = doel.iter().map(|k| straalt(*k)).collect();
             golf.naar = doel;
             golf.bezig = false;
             golf.begonnen = standen.huidig.is_some();
+            golf.laatste_toon = ether_toon;
         } else {
             let (vorm, duur) = kleurovergang(&standen);
             // Opbouw overslaan: dezelfde kleuren, de rest met een andere overgang
             let overslaan = golf.bezig && golf.vorm == Overgangsvorm::Opbouw && vorm != Overgangsvorm::Opbouw;
-            if doel != golf.naar || overslaan {
+            // Nieuwe Toon met Opbouw: altijd opnieuw opbouwen, ook als de vorige Graphic al
+            // dezelfde eindkleuren op de Stoelen had (bijv. Zetelbalk → Zetelverdeling).
+            let nieuwe_opbouw = vorm == Overgangsvorm::Opbouw
+                && ether_toon.is_some()
+                && ether_toon != golf.laatste_toon
+                && doel.iter().any(Option::is_some);
+            golf.laatste_toon = ether_toon;
+            if doel != golf.naar || overslaan || nieuwe_opbouw {
                 // vanaf wat nu te zien is, ook midden in een vorige golf
                 let nu: Vec<(LinearRgba, LinearRgba)> = (0..AANTAL_STOELEN)
                     .map(|i| match golf.stand(i, &lineair, &straalt) {
@@ -1675,9 +1688,12 @@ const LIJN_76_GROEIT: f32 = 0.6;
 /// leest een lijn in de Zaal als een losse prop.
 const LIJN_76_NA_STIL: f32 = 0.25;
 /// Langzamer dan dit (meter en radialen per seconde) telt de camera als stil, ook bij langzaam
-/// schuiven na aankomst.
+/// schuiven na aankomst. Hoog in de virtuele studio (`y >= 6 m`) oogt een rustige boog of
+/// coalitiebeweging veel kalmer, dus daar mag de 76-lijn al tijdens de beweging opkomen.
 const STIL_M_PER_S: f32 = 0.15;
 const STIL_RAD_PER_S: f32 = 0.05;
+const STUDIO_STIL_M_PER_S: f32 = 2.0;
+const STUDIO_STIL_RAD_PER_S: f32 = 0.25;
 /// Het getal is licht dat op de vloer valt: het tapijt eronder blijft zichtbaar en er komt zoveel
 /// Accent bij (lineair, keer de dekking). Een vlak getal in licht pastelroze (lichtheid 0,86) met
 /// een dikke donkere rand las als een sticker, in een ander roze dan Accent in de Graphics
@@ -1860,12 +1876,16 @@ fn lijn_76_kleur(accent: Kleur) -> LinearRgba {
     LinearRgba::rgb(l.red.max(0.0), l.green.max(0.0), l.blue.max(0.0)) * GETAL_76_LICHT
 }
 
-/// Of de camera tussen twee beelden stilstond (of heel langzaam schoof).
+/// Of de camera tussen twee beelden stilstond (of rustig bewoog in de virtuele studio).
 fn camera_stil(vorig: &Transform, nu: &Transform, dt: f32) -> bool {
     let dt = dt.max(1e-4);
     let schuift = vorig.translation.distance(nu.translation) / dt;
     let draait = vorig.rotation.angle_between(nu.rotation) / dt;
-    schuift < STIL_M_PER_S && draait < STIL_RAD_PER_S
+    if nu.translation.y >= 6.0 {
+        schuift < STUDIO_STIL_M_PER_S && draait < STUDIO_STIL_RAD_PER_S
+    } else {
+        schuift < STIL_M_PER_S && draait < STIL_RAD_PER_S
+    }
 }
 
 /// Eén beeld verder voor de lijn bij 76: hoe ver hij zichtbaar is (0 tot 1) en hoe lang de camera

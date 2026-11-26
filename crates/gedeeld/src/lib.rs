@@ -1563,6 +1563,9 @@ impl Stand {
             .or_else(|| self.camerarit(letter).and_then(Camerarit::beginstand))
             .or_else(|| camera::Stoelbeweging::uit_doelsleutel(letter).and_then(|(b, s)| b.stand_op(s, 0.0)))
             .or_else(|| camera::Partijbeweging::uit_doelsleutel(letter).and_then(|(b, van, tot)| b.stand_op(van, tot, 0.0)))
+            .or_else(|| camera::Zaalbeweging::uit_sleutel(letter).map(|b| b.stand_op(0.0)))
+            .or_else(|| camera::Coalitiebeweging::uit_sleutel(letter).map(|b| b.stand_op(76, 0.0)))
+            .or_else(|| camera::Paneelbeweging::uit_sleutel(letter).map(|b| b.stand_op(0.0)))
             .or_else(|| (letter == camera::BOVEN_HET_PANEEL).then(camera::boven_het_paneel))
     }
 
@@ -1615,6 +1618,15 @@ impl Stand {
         {
             return profiel.mag_stoelbeweging();
         }
+        if camera::Zaalbeweging::uit_sleutel(letter).is_some() {
+            return profiel.mag_zaalbeweging();
+        }
+        if camera::Coalitiebeweging::uit_sleutel(letter).is_some() {
+            return profiel.mag_coalitiebeweging();
+        }
+        if camera::Paneelbeweging::uit_sleutel(letter).is_some() {
+            return profiel.mag_paneelbeweging();
+        }
         if let Some(s) = self.standpunt(letter) {
             return if s.vast { profiel.vaste_standpunten().contains(&s.letter.as_str()) } else { profiel.mag_eigen() };
         }
@@ -1637,6 +1649,15 @@ impl Stand {
         if let Some(b) = camera::Stoelbeweging::uit_sleutel(letter)
             .or_else(|| camera::Stoelbeweging::uit_doelsleutel(letter).map(|(b, _)| b))
         {
+            return b.naam().into();
+        }
+        if let Some(b) = camera::Zaalbeweging::uit_sleutel(letter) {
+            return b.naam().into();
+        }
+        if let Some(b) = camera::Coalitiebeweging::uit_sleutel(letter) {
+            return b.naam().into();
+        }
+        if let Some(b) = camera::Paneelbeweging::uit_sleutel(letter) {
             return b.naam().into();
         }
         if let Some(s) = self.standpunt(letter) {
@@ -1674,7 +1695,10 @@ impl Stand {
                     && camera::Partijbeweging::uit_sleutel(l).is_none()
                     && camera::Partijbeweging::uit_doelsleutel(l).is_none()
                     && camera::Stoelbeweging::uit_sleutel(l).is_none()
-                    && camera::Stoelbeweging::uit_doelsleutel(l).is_none() =>
+                    && camera::Stoelbeweging::uit_doelsleutel(l).is_none()
+                    && camera::Zaalbeweging::uit_sleutel(l).is_none()
+                    && camera::Coalitiebeweging::uit_sleutel(l).is_none()
+                    && camera::Paneelbeweging::uit_sleutel(l).is_none() =>
             {
                 Err(Weigering::OnbekendStandpunt(l.into()))
             }
